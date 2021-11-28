@@ -111,16 +111,38 @@ toFile { moduleName, identifier, languages } pairs =
 
                 placeholders =
                     Placeholder.getAlphabeticalPlaceholderNames template
+
+                placeholderPatterns =
+                    case placeholders of
+                        [] ->
+                            []
+
+                        [ single ] ->
+                            [ CG.varPattern <| Util.safeName single ]
+
+                        _ ->
+                            [ CG.varPattern "placeholders_" ]
+
+                placeholderFunctionArguments =
+                    case placeholders of
+                        [] ->
+                            []
+
+                        [ single ] ->
+                            [ CG.val <| Util.safeName single ]
+
+                        many ->
+                            List.map (\name -> CG.access (CG.val "placeholders_") name) many
             in
             CG.funDecl Nothing
-                (Just <| CG.funAnn i18nTypeAnn (templateTypeAnn template))
+                (Just <| CG.funAnn i18nTypeAnn (templateTypeAnnRecord template))
                 key
-                (CG.varPattern i18nVar :: List.map (Util.safeName >> CG.varPattern) placeholders)
+                (CG.varPattern i18nVar :: placeholderPatterns)
                 (CG.caseExpr (CG.val i18nVar)
                     [ ( CG.namedPattern "Loaded" [ CG.varPattern instanceVar ]
                       , CG.apply <|
                             CG.access (CG.val instanceVar) (Util.safeName key)
-                                :: List.map (Util.safeName >> CG.val) placeholders
+                                :: placeholderFunctionArguments
                       )
                     , ( CG.namedPattern "NotLoaded" []
                       , CG.val "fallbackValue_"
@@ -234,6 +256,21 @@ templateTypeAnn : Template -> CG.TypeAnnotation
 templateTypeAnn =
     Placeholder.getAlphabeticalPlaceholderNames
         >> List.foldl (always <| CG.funAnn CG.stringAnn) CG.stringAnn
+
+
+templateTypeAnnRecord : Template -> CG.TypeAnnotation
+templateTypeAnnRecord template =
+    case Placeholder.getAlphabeticalPlaceholderNames template of
+        [] ->
+            CG.stringAnn
+
+        [ single ] ->
+            CG.funAnn CG.stringAnn CG.stringAnn
+
+        many ->
+            many
+                |> List.map (\name -> ( name, CG.stringAnn ))
+                |> (\fields -> CG.funAnn (CG.extRecordAnn "a" fields) CG.stringAnn)
 
 
 basicImport : CG.ModuleName -> CG.Import

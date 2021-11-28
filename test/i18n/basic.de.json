@@ -1,7 +1,0 @@
-{
-  "person": {
-    "name": "Name",
-    "address": "Adresse"
-  },
-  "greeting": "Hallo {{name}}"
-}

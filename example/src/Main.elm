@@ -66,6 +66,7 @@ view model =
                     (\language -> option [ selected <| language == model.language ] [ text language ])
                     (List.map I18n.languageToString I18n.languages)
             , p [] [ text <| I18n.greeting model.i18n model.name ]
+            , p [] [ text <| I18n.order model.i18n { language = model.language, name = model.name }]
             ]
         ]
     }

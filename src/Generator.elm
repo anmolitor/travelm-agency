@@ -3,6 +3,7 @@ module Generator exposing (toFile)
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
 import CodeGen.Imports
+import Dict.NonEmpty exposing (NonEmpty)
 import Elm.CodeGen as CG
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
@@ -12,15 +13,20 @@ import Util
 
 
 type alias Context =
-    { languages : List String
-    , identifier : String
+    { identifier : String
     , moduleName : CG.ModuleName
     }
 
 
-toFile : Context -> I18nPairs -> CG.File
-toFile { moduleName, identifier, languages } pairs =
+toFile : Context -> NonEmpty String I18nPairs -> CG.File
+toFile { moduleName, identifier } state =
     let
+        ( _, pairs ) =
+            Dict.NonEmpty.getSomeEntry state
+
+        languages =
+            Dict.NonEmpty.keys state
+
         i18nName =
             "I18n"
 
@@ -264,7 +270,7 @@ templateTypeAnnRecord template =
         [] ->
             CG.stringAnn
 
-        [ single ] ->
+        [ _ ] ->
             CG.funAnn CG.stringAnn CG.stringAnn
 
         many ->

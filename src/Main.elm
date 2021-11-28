@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Array
 import Dict exposing (Dict)
+import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
 import Generator
 import Json.Decode as D
@@ -24,9 +25,7 @@ type alias Model =
 
 
 type alias State =
-    { translations : I18nPairs
-    , optimizedJson : List ( String, E.Value )
-    }
+    NonEmpty String I18nPairs
 
 
 init : String -> Model
@@ -49,7 +48,7 @@ update msg model =
                 Just state ->
                     ( { model
                         | state =
-                            Dict.insert req.identifier (addOptimizedJson req state) model.state
+                            Dict.insert req.identifier (Dict.NonEmpty.insert req.language req.content state) model.state
                       }
                     , Cmd.none
                     )
@@ -58,11 +57,7 @@ update msg model =
                     ( { model
                         | state =
                             Dict.insert req.identifier
-                                ({ translations = req.content
-                                 , optimizedJson = []
-                                 }
-                                    |> addOptimizedJson req
-                                )
+                                (Dict.NonEmpty.singleton req.language req.content)
                                 model.state
                       }
                     , Cmd.none
@@ -71,18 +66,17 @@ update msg model =
         GotRequest (Ports.FinishModule { elmModuleName, identifier }) ->
             ( model
             , case Dict.get identifier model.state of
-                Just { translations, optimizedJson } ->
+                Just state ->
                     Ports.respond <|
                         Ok
                             { elmFile =
                                 Generator.toFile
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier
-                                    , languages = List.map Tuple.first optimizedJson |> List.sort
                                     }
-                                    translations
+                                    state
                                     |> Pretty.pretty 120
-                            , optimizedJson = List.map (Tuple.mapSecond <| E.encode 0) optimizedJson
+                            , optimizedJson = optimizeJsonAllLanguages state
                             }
 
                 Nothing ->
@@ -99,11 +93,10 @@ update msg model =
             ( model, Ports.respond <| Err <| D.errorToString err )
 
 
-addOptimizedJson : Ports.TranslationRequest -> State -> State
-addOptimizedJson req state =
-    { state
-        | optimizedJson = ( req.language, optimizeJson req.content ) :: state.optimizedJson
-    }
+optimizeJsonAllLanguages : State -> List ( String, String )
+optimizeJsonAllLanguages =
+    (Dict.NonEmpty.map <| always (optimizeJson >> E.encode 0))
+        >> Dict.NonEmpty.toList
 
 
 optimizeJson : I18nPairs -> E.Value

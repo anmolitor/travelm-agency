@@ -2,5 +2,7 @@ node_modules
 elm-stuff
 
 /dist
-/generated/**
-/generated/.gitkeep
+/generated
+
+/example/dist/**
+!/example/dist/index.html

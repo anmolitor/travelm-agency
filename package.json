@@ -1,0 +1,24 @@
+{
+  "name": "elm-i18n",
+  "version": "1.0.0",
+  "description": "Generate type-safe accessors and decoders for your i18n file",
+  "main": "index.js",
+  "scripts": {
+    "test": "elm-test"
+  },
+  "keywords": [
+    "Elm",
+    "I18n",
+    "JSON",
+    "Codegen"
+  ],
+  "author": "Andreas Molitor",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16.11.10",
+    "argparse": "^2.0.1",
+    "elm-test": "^0.19.1-revision7",
+    "typescript": "^4.5.2",
+    "uglify-js": "^3.14.3"
+  }
+}

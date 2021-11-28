@@ -111,7 +111,10 @@ optimizeJson =
     Array.fromList
         >> E.array
             (\( _, template ) ->
-                Placeholder.templateToString template |> E.string
+                template
+                    |> Placeholder.mapPlaceholders (\i _ -> String.fromInt i)
+                    |> Placeholder.templateToString
+                    |> E.string
             )
 
 

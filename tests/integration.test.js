@@ -10,34 +10,31 @@ const serveStatic = require("serve-static");
     let server;
     let cleanDom;
 
-    before((done) => {
-      (async () => {
-        if (scenario === "dynamic") {
-          server = require("http-shutdown")(
-            http.createServer(function onRequest(req, res) {
-              serveStatic("./example/dist")(req, res, finalhandler(req, res));
-            })
-          );
-          await new Promise((res) => server.listen(9000, res));
-        }
-        cleanDom = require("jsdom-global")("", {
-          url: "http://localhost:9000",
-        });
-        process.chdir(path.join(__dirname, "..", "example", scenario));
-        const elmPath = `../dist/${scenario}.js`;
-        ElmCompiler.compileSync("src/Main.elm", {
-          output: elmPath,
-          optimize: true,
-        });
-        const { Elm } = require(path.join(process.cwd(), elmPath));
-        process.chdir(path.join(__dirname, ".."));
-        Elm.Main.init({ flags: "en" });
-        await waitMs(100);
-      })().then(done);
+    before(async () => {
+      if (scenario === "dynamic") {
+        server = require("http-shutdown")(
+          http.createServer(function onRequest(req, res) {
+            serveStatic("./example/dist")(req, res, finalhandler(req, res));
+          })
+        );
+        await new Promise((res) => server.listen(9000, res));
+      }
+      cleanDom = require("jsdom-global")("", {
+        url: "http://localhost:9000",
+      });
+      process.chdir(path.join(__dirname, "..", "example", scenario));
+      const elmPath = `../dist/${scenario}.js`;
+      ElmCompiler.compileSync("src/Main.elm", {
+        output: elmPath,
+        optimize: true,
+      });
+      const { Elm } = require(path.join(process.cwd(), elmPath));
+      process.chdir(path.join(__dirname, ".."));
+      Elm.Main.init({ flags: "en" });
+      await waitMs(100);
     });
 
     after((done) => {
-      console.log(scenario, "After step");
       document.body.innerHTML = "";
       cleanDom();
       if (server) {

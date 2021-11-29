@@ -6,7 +6,7 @@
   "bin": "index.js",
   "scripts": {
     "build": "tsc && node build.js",
-    "test": "mocha tests"
+    "test": "mocha tests --timeout 10000"
   },
   "keywords": [
     "Elm",

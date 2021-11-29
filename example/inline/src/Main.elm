@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Html exposing (div, input, option, p, select, text)
-import Html.Attributes exposing (selected, value)
+import Html.Attributes exposing (selected, value, class)
 import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onChange)
 import I18n exposing (I18n)
@@ -54,14 +54,14 @@ view model =
     , body =
         [ div
             []
-            [ input [ value model.name, onInput ChangedName ] []
-            , p [] [ text <| I18n.languageSwitchInfo model.i18n model.language ]
-            , select [ onChange ChangeLanguage ] <|
+            [ input [ value model.name, onInput ChangedName, class "name_input" ] []
+            , p [class "info_text"] [ text <| I18n.languageSwitchInfo model.i18n model.language ]
+            , select [ onChange ChangeLanguage, class "language_select" ] <|
                 List.map
-                    (\language -> option [ selected <| language == model.language ] [ text language ])
+                    (\language -> option [ selected <| language == model.language, class language ] [ text language ])
                     [ "de", "en" ]
-            , p [] [ text <| I18n.greeting model.i18n model.name ]
-            , p [] [ text <| I18n.order model.i18n { language = model.language, name = model.name } ]
+            , p [class "greeting"] [ text <| I18n.greeting model.i18n model.name ]
+            , p [class "order_text"] [ text <| I18n.order model.i18n { language = model.language, name = model.name } ]
             ]
         ]
     }

@@ -3,7 +3,6 @@ module JsonTest exposing (suite)
 import ContentTypes.Json as Json
 import Expect
 import Json.Decode as D
-import Placeholder.DoubleCurly exposing (parsePlaceholder1)
 import Placeholder.Internal exposing (Template, getPlaceholderNames)
 import Test exposing (Test, describe, test)
 import Types exposing (I18nPairs)

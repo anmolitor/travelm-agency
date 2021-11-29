@@ -7,10 +7,13 @@ declare module "*elm.min.js" {
     fileContent: string;
   }
 
+  export type GeneratorMode = "dynamic" | "inline";
+
   export interface FinishRequest {
     type: "finish";
     elmModuleName: string;
     identifier: string;
+    generatorMode: GeneratorMode | null;
   }
 
   export interface Response {

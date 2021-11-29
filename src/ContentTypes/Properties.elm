@@ -2,7 +2,7 @@ module ContentTypes.Properties exposing (parse)
 
 import Json.Decode as D
 import Parser exposing ((|.), (|=), Parser)
-import Placeholder.Internal as Placeholder exposing (Template)
+import Placeholder.Internal as Placeholder
 import Result.Extra
 import Types exposing (I18nPairs)
 import Util

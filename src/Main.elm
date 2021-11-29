@@ -10,7 +10,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Placeholder.Internal as Placeholder
 import Platform
-import Ports
+import Ports exposing (GeneratorMode(..))
 import Types exposing (I18nPairs)
 import Util
 
@@ -64,20 +64,32 @@ update msg model =
                     , Cmd.none
                     )
 
-        GotRequest (Ports.FinishModule { elmModuleName, identifier }) ->
+        GotRequest (Ports.FinishModule { elmModuleName, identifier, generatorMode }) ->
             ( model
             , case Dict.get identifier model.state of
                 Just state ->
                     Ports.respond <|
                         Ok
                             { elmFile =
-                                Inline.toFile
+                                (case generatorMode of
+                                    Inline ->
+                                        Inline.toFile
+
+                                    Dynamic ->
+                                        Generator.toFile
+                                )
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier
                                     }
                                     state
                                     |> Pretty.pretty 120
-                            , optimizedJson = optimizeJsonAllLanguages state
+                            , optimizedJson =
+                                case generatorMode of
+                                    Inline ->
+                                        []
+
+                                    Dynamic ->
+                                        optimizeJsonAllLanguages state
                             }
 
                 Nothing ->

@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
-import { Elm, Ports, ResponseContent, ResponseHandler } from "./elm.min.js";
+import {
+  Elm,
+  GeneratorMode,
+  Ports,
+  ResponseContent,
+  ResponseHandler,
+} from "./elm.min.js";
 
 const readFile = (filePath: string) =>
   promisify(fs.readFile)(filePath, { encoding: "utf-8" });
@@ -40,6 +46,7 @@ interface Options {
   elmPath: string;
   elmJson: string;
   translationDir: string;
+  generatorMode?: GeneratorMode;
 }
 
 const sendTranslations = (translationDir: string): Promise<string[]> =>
@@ -61,9 +68,11 @@ const sendTranslations = (translationDir: string): Promise<string[]> =>
 const finishModule = ({
   elmModuleName,
   identifier,
+  generatorMode = null,
 }: {
   elmModuleName: string;
   identifier: string;
+  generatorMode?: GeneratorMode | null;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
@@ -84,6 +93,7 @@ const finishModule = ({
           type: "finish",
           elmModuleName,
           identifier,
+          generatorMode,
         });
       })
   );
@@ -93,6 +103,7 @@ export const run = async ({
   elmJson,
   translationDir,
   jsonPath,
+  generatorMode,
 }: Options) => {
   const elmModuleName = elmPathToModuleName({ elmPath, elmJson });
   const [firstTranslationFileName] = await sendTranslations(translationDir);
@@ -103,6 +114,7 @@ export const run = async ({
   const { elmFile, optimizedJson } = await finishModule({
     elmModuleName,
     identifier,
+    generatorMode,
   });
   const elmPromise = writeFile(elmPath, elmFile);
   const jsonPromises = optimizedJson.map(([language, content]) =>

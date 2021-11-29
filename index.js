@@ -22,6 +22,10 @@ parser.add_argument("--elm_json", {
   help: "Path to your elm.json file",
   default: "./elm.json",
 });
+parser.add_argument("--inline", {
+  help: "Generate inline declarations instead of loading translations at runtime. This may be preferable if you do not support many languages.",
+  action: "store_true",
+});
 parser.add_argument("translation_directory", {
   help: "Where to find the translation files (.json/.properties)",
 });
@@ -33,6 +37,7 @@ run({
   elmPath: args.elm_path,
   jsonPath: args.json_path,
   elmJson: args.elm_json,
+  generatorMode: args.inline ? "inline" : undefined,
 });
 
 process.on("unhandledRejection", (err) => {

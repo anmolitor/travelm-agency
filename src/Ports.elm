@@ -1,4 +1,4 @@
-port module Ports exposing (Request(..), ResponseContent, TranslationRequest, respond, subToRequests)
+port module Ports exposing (GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, respond, subToRequests, finishRequestDecoder)
 
 import ContentTypes.Json
 import ContentTypes.Properties
@@ -44,8 +44,30 @@ type alias TranslationRequest =
     }
 
 
+type GeneratorMode
+    = Inline
+    | Dynamic
+
+
+generatorModeDecoder : D.Decoder GeneratorMode
+generatorModeDecoder =
+    D.string
+        |> D.andThen
+            (\str ->
+                case String.toLower str of
+                    "inline" ->
+                        D.succeed Inline
+
+                    "dynamic" ->
+                        D.succeed Dynamic
+
+                    _ ->
+                        D.fail <| "Unsupported generator mode: " ++ str
+            )
+
+
 type alias FinishRequest =
-    { elmModuleName : String, identifier : String }
+    { elmModuleName : String, identifier : String, generatorMode : GeneratorMode }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -112,6 +134,7 @@ finishRequestDecoder =
     D.succeed FinishRequest
         |> D.required "elmModuleName" D.string
         |> D.required "identifier" D.string
+        |> D.optional "generatorMode" generatorModeDecoder Dynamic
 
 
 type alias InternalRequest =

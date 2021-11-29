@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run build && npm run live",
-    "live": "elm-live --dir=../dist -- src/Main.elm --output=../dist/mainIn.js",
+    "live": "elm-live --dir=../dist -- src/Main.elm --output=../dist/main.js",
     "build": "node ../../index.js --inline --elm_path=src/I18n.elm --json_path=../dist/i18n ../translations"
   },
   "author": "Andreas Molitor",

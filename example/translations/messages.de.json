@@ -3,25 +3,5 @@
   "languageSwitch": {
     "info": "Du kannst hier deine Sprache von {{currentLanguage}} zu einer anderen ändern."
   },
-  "order": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order1": "Bla ein langer Text loremipsum agawgavawawgawgwagawvawaawgawg Name: {{name}}, Sprache: {{language}}",
-  "order2": "lawv f<uwaf<awf<wafawfawf<awf awfawfwafbf<f<lg<bwgl<wbgl<kbg<lwkgb<lkwgb<lkwgb<w Name: {{name}}, Sprache: {{language}}",
-  "order3": "yaggvawfaw fpawfapwfpawlfp<lpfwlapflpwlfp<lwpflypflyplpylfpylfpflpyelfpyelfpylepflyepflypl Name: {{name}}, Sprache: {{language}}",
-  "order4": "yslfvnwnwf <wof<wof<wof<wfo<kwfo<kwfo<kwof<kwofk<owkfo<kfwo<kwfo<kfo<kwf Name: {{name}}, Sprache: {{language}}",
-  "order5": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order6": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order7": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order8": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order9": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order10": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order11": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order12": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order13": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order14": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order15": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order16": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order17": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order18": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order19": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}",
-  "order20": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}"
+  "order": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}"
 }

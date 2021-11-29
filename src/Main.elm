@@ -94,6 +94,7 @@ update msg model =
                                     Dynamic ->
                                         Generators.DynamicArray.toFile
                                 )
+                                    model.version
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier
                                     }

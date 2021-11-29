@@ -11,14 +11,14 @@ const serveStatic = require("serve-static");
     let cleanDom;
 
     before(async () => {
-      if (scenario === "dynamic") {
-        server = require("http-shutdown")(
-          http.createServer(function onRequest(req, res) {
-            serveStatic("./example/dist")(req, res, finalhandler(req, res));
-          })
-        );
-        await new Promise((res) => server.listen(9000, res));
-      }
+      // if (scenario === "dynamic") {
+      //   server = require("http-shutdown")(
+      //     http.createServer(function onRequest(req, res) {
+      //       serveStatic("./example/dist")(req, res, finalhandler(req, res));
+      //     })
+      //   );
+      //   await new Promise((res) => server.listen(9000, res));
+      // }
 
       cleanDom = require("jsdom-global")("", {
         url: "http://localhost:9000",

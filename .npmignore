@@ -1,0 +1,12 @@
+elm-stuff/
+node_modules/
+/tests/
+/example/
+/.github/
+/src
+
+*.sh
+
+/emitDts.js
+tsconfig.json
+elm.json

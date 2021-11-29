@@ -1,10 +1,11 @@
 {
-  "name": "elm-i18n",
+  "name": "travelm-agency",
   "version": "1.0.0",
-  "description": "Generate type-safe accessors and decoders for your i18n file",
-  "main": "index.js",
+  "description": "Generate type-safe accessors and decoders for your i18n files",
+  "main": "./dist/index.js",
+  "bin": "index.js",
   "scripts": {
-    "build": "build.sh && tsc",
+    "build": "build.sh && tsc && node emitDts.js",
     "test": "mocha tests"
   },
   "keywords": [
@@ -15,9 +16,12 @@
   ],
   "author": "Andreas Molitor",
   "license": "ISC",
+  "types": "./dist/main.d.ts",
+  "dependencies": {
+    "argparse": "^2.0.1"
+  },
   "devDependencies": {
     "@types/node": "^16.11.10",
-    "argparse": "^2.0.1",
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.1.2",
     "http-shutdown": "^1.2.2",

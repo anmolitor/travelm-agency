@@ -1,5 +1,6 @@
 :toc:
 = 🌎 Travelm Agency 
+
 This package is a library and an executable to generate Elm Modules from different common I18n formats.
 
 
@@ -9,7 +10,7 @@ This package is a library and an executable to generate Elm Modules from differe
 * ✔️ Supports .json and .properties files as input
 * 🕵️‍♂️ Errors out if i18n keys are inconsistent across languages
 * 🚀 Key length and placeholder length do not impact resource size 
-* ✨ Decodes values with placeholders into Elm functions
+* ✨ Generates Elm functions for values with placeholders
 * 🔑 Generated Elm module exposes functions based on keys
 * 🎌 Simple runtime switching of languages
 * 🎚️ Choose between inline code generation and dynamic loading based code generation
@@ -30,12 +31,12 @@ This package is a library and an executable to generate Elm Modules from differe
 
 Run 
 -----
-npx elm-i18n --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
+npx travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
 -----
 
 Alternatively, add a script to your `package.json` with the content
 -----
-elm-i18n --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
+travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
 -----
 
 and then run that script with `npm run [scriptname]`.
@@ -58,7 +59,9 @@ View the /example directory for working code.
 == ▶️ Inline vs Dynamic
 
 The two example applications clock in at
-~34KB (inline) and ~47KB (dynamic) respectively. The comparison might not be entirely fair, since code from `Http` or `Parser` might end up in your application regardless, but this basically means that inline is going to be the better choice most of the time. The .json files are less than a KB in this case. Will benchmark a larger application later.
+~34KB (inline) and ~35KB (dynamic) respectively. The comparison might not be entirely fair, since code from `Http` might end up in your application regardless, also the .json files are less than a KB in this case.
+
+I introduced this package in one of my webapps and with 15 key/value pairs and 2 languages, the dynamic variant started winning slightly.
 
 == 🙄 Why another i18n solution
 
@@ -66,7 +69,7 @@ Here are some other i18n solutions with their differences:
 [cols="1,3"]
 |===
 | https://github.com/yonigibbs/elm-i18next-gen[elm-i18next-gen]
-| Allows you to access your translations object in unsafe ways via the Translation API. I do like the approach of using Dict internally and not storing functions inside of the model, so Elm-i18Next will be another frontend for this package. Also generates a lot of modules instead of one module with all translations.
+| Allows you to access your translations object in unsafe ways via the Translation API, but also more freedom. I like the approach of using Dict internally and not storing functions inside of the model. It made me switch my internal dynamic representation from a custom record into an Array. Also generates a lot of modules instead of one module with all translations.
 
 | https://github.com/iosphere/elm-i18n[elm-i18n]
 | Generates a whole extra js bundle for each language. This makes initial load time optimal, but language switching during runtime more difficult. I like the approach because the user usually does not switch languages very often. I might write a frontend using this technique as well. The main issue here is that I have no idea how to use this together with a bundler like webpack.

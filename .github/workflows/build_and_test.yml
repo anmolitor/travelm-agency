@@ -1,0 +1,40 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+          cache: "npm"
+          registry-url: https://registry.npmjs.org
+      - uses: justgook/setup-elm@1.2.0
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+      - name: install
+        run: npm ci
+      - name: build
+        run: |
+          npm run build
+          (cd example/inline && npm run build)
+          (cd example/dynamic && npm run build)
+      - name: test
+        run: npm test
+      - name: npm publish
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm publish --access public || true
+        env:
+          CI: true
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

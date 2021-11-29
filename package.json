@@ -4,6 +4,7 @@
   "description": "Generate type-safe accessors and decoders for your i18n file",
   "main": "index.js",
   "scripts": {
+    "build": "build.sh && tsc",
     "test": "mocha tests"
   },
   "keywords": [

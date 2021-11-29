@@ -1,5 +1,6 @@
 {
   "greeting": "Hallo {{name}}",
+  "static": "Statischer Text",
   "languageSwitch": {
     "info": "Du kannst hier deine Sprache von {{currentLanguage}} zu einer anderen ändern."
   },

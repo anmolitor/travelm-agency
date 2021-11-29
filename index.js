@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const { run } = require("./dist/main.js");
+const { run } = require("./lib/main.js");
 const { ArgumentParser } = require("argparse");
 const { version } = require("./package.json");
 

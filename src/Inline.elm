@@ -58,7 +58,13 @@ toFile { moduleName } pairsForLanguages =
                     )
                     (List.NonEmpty.tail <| Placeholder.getSegments template)
                 |> List.foldl (\e1 e2 -> CG.applyBinOp e2 CG.append e1) (CG.string <| List.NonEmpty.head <| Placeholder.getSegments template)
-                |> CG.lambda (Placeholder.getAlphabeticalPlaceholderNames template |> List.map (Util.safeName >> CG.varPattern))
+                |> (case Placeholder.getAlphabeticalPlaceholderNames template of
+                        [] ->
+                            identity
+
+                        nonEmpty ->
+                            CG.lambda (nonEmpty |> List.map (Util.safeName >> CG.varPattern))
+                   )
 
         i18nDecls : List CG.Declaration
         i18nDecls =

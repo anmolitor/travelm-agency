@@ -11,37 +11,32 @@ const serveStatic = require("serve-static");
     let cleanDom;
 
     before(async () => {
-      // if (scenario === "dynamic") {
-      //   server = require("http-shutdown")(
-      //     http.createServer(function onRequest(req, res) {
-      //       serveStatic("./example/dist")(req, res, finalhandler(req, res));
-      //     })
-      //   );
-      //   await new Promise((res) => server.listen(9000, res));
-      // }
-      console.log(scenario, "starting before");
+      if (scenario === "dynamic") {
+        server = require("http-shutdown")(
+          http.createServer(function onRequest(req, res) {
+            serveStatic("./example/dist")(req, res, finalhandler(req, res));
+          })
+        );
+        await new Promise((res) => server.listen(9000, res));
+      }
       cleanDom = require("jsdom-global")("", {
         url: "http://localhost:9000",
       });
-      console.log(scenario, "after setup dom");
       process.chdir(path.join(__dirname, "..", "example", scenario));
-      console.log(scenario, "after changedir");
       const elmPath = `../dist/${scenario}.js`;
       ElmCompiler.compileSync("src/Main.elm", {
         output: elmPath,
         optimize: true,
       });
-      console.log(scenario, "after elm compile");
       const { Elm } = require(path.join(process.cwd(), elmPath));
-      console.log(scenario, "after elm import");
       process.chdir(path.join(__dirname, ".."));
       Elm.Main.init({ flags: "en" });
-      console.log(scenario, "after elm init");
       await waitMs(100);
       console.log(scenario, "after wait");
     });
 
     after((done) => {
+      console.log(scenario, "After step");
       document.body.innerHTML = "";
       cleanDom();
       if (server) {
@@ -52,6 +47,7 @@ const serveStatic = require("serve-static");
     });
 
     it("displays the expected info text", () => {
+      console.log(scenario, "FIRST TEST");
       assert.equal(
         getInfoText(),
         "You may switch languages from en to another one here."

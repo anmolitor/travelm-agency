@@ -81,4 +81,5 @@ Here are some other i18n solutions with their differences:
 | Also an inline approach, this time using a language union type.
 |===
 
+Interestingly enough, none of these seem to have explored the possibility of optimizing the i18n .json files.
 Also, I really enjoy metaprogramming Elm using Elm itself, so that is probably why I built this although the other solutions are perfectly fine.

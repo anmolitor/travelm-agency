@@ -1,4 +1,4 @@
-module Generators.DynamicElmPH exposing (toFile)
+module Generators.DynamicArray exposing (toFile)
 
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
@@ -37,9 +37,6 @@ toFile { moduleName, identifier } state =
         initName =
             "init"
 
-        i18nInstanceName =
-            "I18nInstance"
-
         loadName =
             "load"
 
@@ -62,21 +59,13 @@ toFile { moduleName, identifier } state =
             CG.customTypeDecl Nothing
                 i18nName
                 []
-                [ ( "Loaded", [ CG.typed i18nInstanceName [] ] )
-                , ( "NotLoaded", [] )
-                ]
-
-        i18nInstanceTypeDecl =
-            CG.aliasDecl Nothing
-                i18nInstanceName
-                []
-                (CG.recordAnn <| List.map (Tuple.mapBoth Util.safeName templateTypeAnn) pairs)
+                [ ( i18nName, [ CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] ] ) ]
 
         initDecl =
             CG.valDecl Nothing
                 (Just <| i18nTypeAnn)
                 initName
-                (CG.fun "NotLoaded")
+                (CG.apply [ CG.fun i18nName, CG.fqFun [ "Array" ] "empty" ])
 
         fallbackValDecl =
             CG.valDecl Nothing (Just CG.stringAnn) "fallbackValue_" (CG.string "...")
@@ -107,14 +96,11 @@ toFile { moduleName, identifier } state =
                         ++ [ ( CG.allPattern, CG.val "Nothing" ) ]
                 )
 
-        accessorDeclaration : ( String, Template ) -> CG.Declaration
-        accessorDeclaration ( key, template ) =
+        accessorDeclaration : Int -> ( String, Template ) -> CG.Declaration
+        accessorDeclaration index ( key, template ) =
             let
                 i18nVar =
                     Util.safeName "i18n"
-
-                instanceVar =
-                    Util.safeName "instance"
 
                 placeholders =
                     Placeholder.getAlphabeticalPlaceholderNames template
@@ -144,14 +130,16 @@ toFile { moduleName, identifier } state =
             CG.funDecl Nothing
                 (Just <| CG.funAnn i18nTypeAnn (templateTypeAnnRecord template))
                 key
-                (CG.varPattern i18nVar :: placeholderPatterns)
-                (CG.caseExpr (CG.val i18nVar)
-                    [ ( CG.namedPattern "Loaded" [ CG.varPattern instanceVar ]
-                      , CG.apply <|
-                            CG.access (CG.val instanceVar) (Util.safeName key)
-                                :: placeholderFunctionArguments
+                (CG.namedPattern i18nName [ CG.varPattern i18nVar ] :: placeholderPatterns)
+                (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val i18nVar ])
+                    [ ( CG.namedPattern "Just" [ CG.varPattern "translation_" ]
+                      , if List.isEmpty placeholderFunctionArguments then
+                            CG.val "translation_"
+
+                        else
+                            CG.apply [ CG.fun "replacePlaceholders", CG.list placeholderFunctionArguments, CG.val "translation_" ]
                       )
-                    , ( CG.namedPattern "NotLoaded" []
+                    , ( CG.namedPattern "Nothing" []
                       , CG.val "fallbackValue_"
                       )
                     ]
@@ -164,22 +152,9 @@ toFile { moduleName, identifier } state =
                 "decoder"
                 []
                 (CG.applyBinOp
-                    (List.foldl
-                        (\( key, template ) pipeline ->
-                            CG.applyBinOp pipeline
-                                CG.piper
-                                (CG.apply
-                                    [ DecodeM.required
-                                    , CG.string key
-                                    , chooseDecoder template
-                                    ]
-                                )
-                        )
-                        (CG.apply [ DecodeM.succeed, CG.fun i18nInstanceName ])
-                        (List.indexedMap (\index -> Tuple.mapFirst (always <| String.fromInt index)) pairs)
-                    )
+                    (CG.apply [ DecodeM.array, DecodeM.string ])
                     CG.piper
-                    (CG.apply [ DecodeM.map, CG.fun "Loaded" ])
+                    (CG.apply [ DecodeM.map, CG.fun i18nName ])
                 )
 
         loadDecl : CG.Declaration
@@ -224,8 +199,7 @@ toFile { moduleName, identifier } state =
                 (CG.list <| List.map (String.Extra.classify >> CG.val) languages)
 
         declarations =
-            [ i18nInstanceTypeDecl
-            , i18nTypeDecl
+            [ i18nTypeDecl
             , initDecl
             , languageTypeDecl
             , languagesDecl
@@ -234,9 +208,9 @@ toFile { moduleName, identifier } state =
             , fallbackValDecl
             , decoderDecl
             , loadDecl
-            , stringParserToDecoder
+            , replacePlaceholdersDecl
             ]
-                ++ List.map accessorDeclaration pairs
+                ++ List.indexedMap accessorDeclaration pairs
 
         exposed =
             [ CG.closedTypeExpose i18nName
@@ -259,66 +233,41 @@ toFile { moduleName, identifier } state =
         (Just fileComment)
 
 
-chooseDecoder : Template -> CG.Expression
-chooseDecoder template =
-    let
-        numberOfPlaceholders =
-            Placeholder.getAlphabeticalPlaceholderNames template |> List.length
-    in
-    if numberOfPlaceholders == 0 then
-        DecodeM.string
+{-| Generates the following definition
 
-    else
-        CG.parens <|
-            CG.apply
-                [ CG.fun "stringParserToDecoder"
-                , CG.fqFun [ "Placeholder", "DoubleCurly" ] ("parsePlaceholderAlph" ++ String.fromInt numberOfPlaceholders)
-                ]
-
-
-{-|
-
-    Generates the following function:
-
-    stringParserToDecoder : (String -> Result String a) -> D.Decoder a
-    stringParserToDecoder f =
-        D.string
-            |> D.andThen
-                (\str ->
-                    case f str of
-                        Ok ok ->
-                            D.succeed ok
-
-                        Err err ->
-                            D.fail err
-                )
+    replacePlaceholders : List String -> String -> String
+    replacePlaceholders list str =
+        List.foldl (\\val ( index, acc ) -> ( index + 1, String.replace ("{{" ++ String.fromInt index ++ "}}") val acc )) ( 0, str ) list
+            |> Tuple.second
 
 -}
-stringParserToDecoder : CG.Declaration
-stringParserToDecoder =
+replacePlaceholdersDecl : CG.Declaration
+replacePlaceholdersDecl =
     CG.funDecl Nothing
-        (Just <|
-            CG.funAnn
-                (CG.funAnn CG.stringAnn
-                    (CG.typed "Result" [ CG.stringAnn, CG.typeVar "a" ])
-                )
-                (DecodeM.decoder <| CG.typeVar "a")
-        )
-        "stringParserToDecoder"
-        [ CG.varPattern "f" ]
-        (CG.applyBinOp DecodeM.string
-            CG.piper
+        (Just <| CG.funAnn (CG.listAnn CG.stringAnn) (CG.funAnn CG.stringAnn CG.stringAnn))
+        "replacePlaceholders"
+        [ CG.varPattern "list_", CG.varPattern "str_" ]
+    <|
+        CG.applyBinOp
             (CG.apply
-                [ DecodeM.andThen
-                , CG.parens <|
-                    CG.lambda [ CG.varPattern "str" ] <|
-                        CG.caseExpr (CG.apply [ CG.val "f", CG.val "str" ])
-                            [ ( CG.namedPattern "Ok" [ CG.varPattern "ok" ], CG.apply [ DecodeM.succeed, CG.val "ok" ] )
-                            , ( CG.namedPattern "Err" [ CG.varPattern "err" ], CG.apply [ DecodeM.fail, CG.val "err" ] )
+                [ CG.fqFun [ "List" ] "foldl"
+                , CG.lambda [ CG.varPattern "val_", CG.tuplePattern [ CG.varPattern "i_", CG.varPattern "acc_" ] ]
+                    (CG.tuple
+                        [ CG.applyBinOp (CG.val "i_") CG.plus (CG.int 1)
+                        , CG.apply
+                            [ CG.fqFun [ "String" ] "replace"
+                            , CG.parens <| appendAll (CG.string "{{") [ CG.apply [ CG.fqFun [ "String" ] "fromInt", CG.val "i_" ], CG.string "}}" ]
+                            , CG.val "val_"
+                            , CG.val "acc_"
                             ]
+                        ]
+                    )
+                , CG.tuple [ CG.int 0, CG.val "str_" ]
+                , CG.val "list_"
                 ]
             )
-        )
+            CG.piper
+            (CG.fqFun [ "Tuple" ] "second")
 
 
 appendAll : CG.Expression -> List CG.Expression -> CG.Expression

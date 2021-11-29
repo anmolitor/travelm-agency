@@ -1,4 +1,4 @@
-port module Ports exposing (GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, respond, subToRequests, finishRequestDecoder)
+port module Ports exposing (GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, finishRequestDecoder, respond, subToRequests)
 
 import ContentTypes.Json
 import ContentTypes.Properties
@@ -95,15 +95,16 @@ requestDecoder =
 
 contentDecoder : String -> String -> D.Decoder I18nPairs
 contentDecoder extension =
-    case extension of
-        "json" ->
-            ContentTypes.Json.parse
+    D.map (List.sortBy Tuple.first) <<
+        case extension of
+            "json" ->
+                ContentTypes.Json.parse
 
-        "properties" ->
-            ContentTypes.Properties.parse
+            "properties" ->
+                ContentTypes.Properties.parse
 
-        _ ->
-            always <| D.fail <| "Unsupported content type '" ++ extension ++ "'"
+            _ ->
+                always <| D.fail <| "Unsupported content type '" ++ extension ++ "'"
 
 
 translationRequestDecoder : D.Decoder TranslationRequest

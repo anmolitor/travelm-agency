@@ -4,6 +4,7 @@ import Array
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
+import Generators.DynamicArray
 import Generators.DynamicElmPH
 import Generators.Inline
 import Json.Decode as D
@@ -91,7 +92,7 @@ update msg model =
                                         Generators.Inline.toFile
 
                                     Dynamic ->
-                                        Generators.DynamicElmPH.toFile
+                                        Generators.DynamicArray.toFile
                                 )
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier

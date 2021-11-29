@@ -4,13 +4,14 @@ import Array
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
-import Generator
-import Inline
+import Generators.DynamicElmPH
+import Generators.Inline
 import Json.Decode as D
 import Json.Encode as E
 import Placeholder.Internal as Placeholder
 import Platform
 import Ports exposing (GeneratorMode(..))
+import Set
 import Types exposing (I18nPairs)
 import Util
 
@@ -47,12 +48,26 @@ update msg model =
         GotRequest (Ports.AddTranslation req) ->
             case Dict.get req.identifier model.state of
                 Just state ->
-                    ( { model
-                        | state =
-                            Dict.insert req.identifier (Dict.NonEmpty.insert req.language req.content state) model.state
-                      }
-                    , Cmd.none
-                    )
+                    case hasSameSignatureAsState req.content state of
+                        Nothing ->
+                            ( { model
+                                | state =
+                                    Dict.insert req.identifier (Dict.NonEmpty.insert req.language req.content state) model.state
+                              }
+                            , Cmd.none
+                            )
+
+                        Just errMessage ->
+                            ( model
+                            , Ports.respond <|
+                                Err <|
+                                    "Inconsistent keys in translations of identifier '"
+                                        ++ req.identifier
+                                        ++ "' at language '"
+                                        ++ req.language
+                                        ++ ". "
+                                        ++ errMessage
+                            )
 
                 Nothing ->
                     ( { model
@@ -73,10 +88,10 @@ update msg model =
                             { elmFile =
                                 (case generatorMode of
                                     Inline ->
-                                        Inline.toFile
+                                        Generators.Inline.toFile
 
                                     Dynamic ->
-                                        Generator.toFile
+                                        Generators.DynamicElmPH.toFile
                                 )
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier
@@ -110,6 +125,35 @@ optimizeJsonAllLanguages : State -> List ( String, String )
 optimizeJsonAllLanguages =
     (Dict.NonEmpty.map <| always (optimizeJson >> E.encode 0))
         >> Dict.NonEmpty.toList
+
+
+hasSameSignatureAsState : I18nPairs -> State -> Maybe String
+hasSameSignatureAsState pairs state =
+    let
+        ( _, v ) =
+            Dict.NonEmpty.getSomeEntry state
+
+        existingKeys =
+            List.map Tuple.first v |> Set.fromList
+
+        keysOfNewLanguage =
+            List.map Tuple.first pairs |> Set.fromList
+
+        missingKeysInNewLanguage =
+            Set.diff existingKeys keysOfNewLanguage
+
+        extraKeysInNewLanguage =
+            Set.diff keysOfNewLanguage existingKeys
+    in
+    if Set.isEmpty missingKeysInNewLanguage then
+        if Set.isEmpty extraKeysInNewLanguage then
+            Nothing
+
+        else
+            Just <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInNewLanguage) ++ "."
+
+    else
+        Just <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInNewLanguage) ++ "."
 
 
 optimizeJson : I18nPairs -> E.Value

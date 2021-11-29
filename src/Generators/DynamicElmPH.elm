@@ -1,4 +1,4 @@
-module Generator exposing (toFile)
+module Generators.DynamicElmPH exposing (toFile)
 
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM

@@ -1,4 +1,4 @@
-module Inline exposing (..)
+module Generators.Inline exposing (..)
 
 import CodeGen.Imports
 import CodeGen.Shared exposing (templateTypeAnn, templateTypeAnnRecord)

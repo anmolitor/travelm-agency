@@ -1,6 +1,6 @@
-module CodeGen.Imports exposing (extractImports)
+module CodeGen.Imports exposing (extractImports, basicImport)
 
-import Elm.CodeGen as C
+import Elm.CodeGen as CG
 import Elm.Syntax.Declaration as Decl
 import Elm.Syntax.Expression as Expr
 import Elm.Syntax.Node as Node
@@ -11,16 +11,19 @@ import Elm.Syntax.TypeAnnotation as Ann
 import Set exposing (Set)
 
 
+basicImport : CG.ModuleName -> CG.Import
+basicImport moduleName =
+    CG.importStmt moduleName Nothing Nothing
 
-extractImports : List C.Declaration -> Set C.ModuleName
+extractImports : List CG.Declaration -> Set CG.ModuleName
 extractImports =
     List.map extractImportsDecl >> concatSets >> Set.filter ((/=) [])
 
 
-extractImportsDecl : C.Declaration -> Set C.ModuleName
+extractImportsDecl : CG.Declaration -> Set CG.ModuleName
 extractImportsDecl decl =
     let
-        extractImportsDeclInternal : Decl.Declaration -> Set C.ModuleName
+        extractImportsDeclInternal : Decl.Declaration -> Set CG.ModuleName
         extractImportsDeclInternal d =
             case d of
                 Decl.AliasDeclaration { typeAnnotation } ->
@@ -44,14 +47,14 @@ extractImportsDecl decl =
                         (extractImportsExpr <| Node.value expr)
     in
     case decl of
-        C.DeclWithComment _ f ->
+        CG.DeclWithComment _ f ->
             extractImportsDeclInternal (f "")
 
-        C.DeclNoComment d ->
+        CG.DeclNoComment d ->
             extractImportsDeclInternal d
 
 
-extractImportsTypeAnn : C.TypeAnnotation -> Set C.ModuleName
+extractImportsTypeAnn : CG.TypeAnnotation -> Set CG.ModuleName
 extractImportsTypeAnn typeAnn =
     let
         extractImportsRecord =
@@ -86,19 +89,19 @@ extractImportsTypeAnn typeAnn =
             Set.empty
 
 
-extractImportsFun : Expr.Function -> Set C.ModuleName
+extractImportsFun : Expr.Function -> Set CG.ModuleName
 extractImportsFun { signature, declaration } =
     Maybe.map (Node.value >> extractImportsSig) signature
         |> Maybe.withDefault Set.empty
         |> Set.union (Node.value declaration |> .expression |> Node.value |> extractImportsExpr)
 
 
-extractImportsSig : Sig.Signature -> Set C.ModuleName
+extractImportsSig : Sig.Signature -> Set CG.ModuleName
 extractImportsSig { typeAnnotation } =
     extractImportsTypeAnn <| Node.value typeAnnotation
 
 
-extractImportsType : Type.Type -> Set C.ModuleName
+extractImportsType : Type.Type -> Set CG.ModuleName
 extractImportsType { constructors } =
     concatSets <|
         List.concatMap
@@ -109,10 +112,10 @@ extractImportsType { constructors } =
             constructors
 
 
-extractImportsExpr : C.Expression -> Set C.ModuleName
+extractImportsExpr : CG.Expression -> Set CG.ModuleName
 extractImportsExpr expr =
     let
-        extractImportsLetDecl : Expr.LetDeclaration -> Set C.ModuleName
+        extractImportsLetDecl : Expr.LetDeclaration -> Set CG.ModuleName
         extractImportsLetDecl letDecl =
             case letDecl of
                 Expr.LetFunction fun ->
@@ -123,7 +126,7 @@ extractImportsExpr expr =
                         (extractImportsPat <| Node.value pat)
                         (extractImportsExpr <| Node.value e)
 
-        extractImportsRecordSetter : List (Node.Node Expr.RecordSetter) -> Set C.ModuleName
+        extractImportsRecordSetter : List (Node.Node Expr.RecordSetter) -> Set CG.ModuleName
         extractImportsRecordSetter recordSetter =
             concatSets <|
                 List.map
@@ -194,7 +197,7 @@ extractImportsExpr expr =
             Set.empty
 
 
-extractImportsPat : C.Pattern -> Set C.ModuleName
+extractImportsPat : CG.Pattern -> Set CG.ModuleName
 extractImportsPat pat =
     case pat of
         Pat.TuplePattern pats ->

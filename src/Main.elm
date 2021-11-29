@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
 import Generator
+import Inline
 import Json.Decode as D
 import Json.Encode as E
 import Placeholder.Internal as Placeholder
@@ -70,7 +71,7 @@ update msg model =
                     Ports.respond <|
                         Ok
                             { elmFile =
-                                Generator.toFile
+                                Inline.toFile
                                     { moduleName = Util.moduleName elmModuleName
                                     , identifier = identifier
                                     }

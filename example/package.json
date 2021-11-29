@@ -1,13 +1,8 @@
 {
   "name": "example",
   "version": "1.0.0",
-  "description": "Example for elm-i18n usage",
+  "description": "Examples for elm-i18n usage",
   "main": "index.js",
-  "scripts": {
-    "start": "npm run build && npm run live",
-    "live": "elm-live --dir=dist -- src/Main.elm --output=dist/main.js",
-    "build": "node ../index.js --elm_path=src/I18n.elm --json_path=dist/i18n ./translations"
-  },
   "author": "Andreas Molitor",
   "license": "ISC",
   "devDependencies": {

@@ -38,6 +38,7 @@ const withElmApp = <T>(consumer: (ports: Ports) => T): T => {
 interface Options {
   jsonPath: string;
   elmPath: string;
+  elmJson: string;
   translationDir: string;
 }
 
@@ -87,8 +88,13 @@ const finishModule = ({
       })
   );
 
-export const run = async ({ elmPath, translationDir, jsonPath }: Options) => {
-  const elmModuleName = await elmPathToModuleName(elmPath);
+export const run = async ({
+  elmPath,
+  elmJson,
+  translationDir,
+  jsonPath,
+}: Options) => {
+  const elmModuleName = elmPathToModuleName({ elmPath, elmJson });
   const [firstTranslationFileName] = await sendTranslations(translationDir);
   if (!firstTranslationFileName) {
     throw new Error("Given translation directory does not contain any files");
@@ -107,12 +113,23 @@ export const run = async ({ elmPath, translationDir, jsonPath }: Options) => {
 
 let elmConfig: { "source-directories": string[] } | undefined;
 
-const elmPathToModuleName = async (elmPath: string): Promise<string> => {
+const elmPathToModuleName = ({
+  elmPath,
+  elmJson,
+}: {
+  elmPath: string;
+  elmJson: string;
+}): string => {
+  const elmJsonPath = path.join(process.cwd(), elmJson);
+  const elmJsonDir = path.parse(elmJsonPath).dir;
   if (!elmConfig) {
-    elmConfig = await lookForElmJson();
+    elmConfig = require(elmJsonPath);
   }
   const possibleSourceDirs = elmConfig!["source-directories"].filter(
-    (sourceDir) => elmPath.startsWith(sourceDir)
+    (sourceDir) =>
+      path
+        .join(process.cwd(), elmPath)
+        .startsWith(path.join(elmJsonDir, sourceDir))
   );
   if (possibleSourceDirs.length == 0) {
     throw new Error("Could not determine elm module name");
@@ -129,6 +146,3 @@ const elmPathToModuleName = async (elmPath: string): Promise<string> => {
     .filter((s) => s)
     .join(".");
 };
-
-const lookForElmJson = () =>
-  readFile(path.join(process.cwd(), "elm.json")).then(JSON.parse);

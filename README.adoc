@@ -30,14 +30,15 @@ This package is a library and an executable to generate Elm Modules from differe
 === ⌨️ Script usage
 
 Run 
------
+
+====
 npx travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
------
+====
 
 Alternatively, add a script to your `package.json` with the content
------
+====
 travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
------
+====
 
 and then run that script with `npm run [scriptname]`.
 

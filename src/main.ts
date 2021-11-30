@@ -27,7 +27,7 @@ const getPluginVersion = (): string => {
 
 let ports: Ports | undefined;
 
-const withElmApp = <T>(consumer: (ports: Ports) => T): T => {
+export const withElmApp = <T>(consumer: (ports: Ports) => T): T => {
   if (!ports) {
     const version = getPluginVersion();
     ({ ports } = Elm.Main.init({ flags: { version } }));
@@ -49,7 +49,7 @@ interface Options {
   generatorMode?: GeneratorMode;
 }
 
-const sendTranslations = (translationDir: string): Promise<string[]> =>
+export const sendTranslations = (translationDir: string): Promise<string[]> =>
   withElmApp(async (ports) => {
     const translationFileNames = await readDir(translationDir);
     await Promise.all(
@@ -65,7 +65,7 @@ const sendTranslations = (translationDir: string): Promise<string[]> =>
     return translationFileNames;
   });
 
-const finishModule = ({
+export const finishModule = ({
   elmModuleName,
   identifier,
   generatorMode = null,

@@ -5,14 +5,15 @@ import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
 import Generators.DynamicArray
-import Generators.DynamicElmPH
 import Generators.Inline
+import Generators.Names exposing (defaultNames)
 import Json.Decode as D
 import Json.Encode as E
 import Placeholder.Internal as Placeholder
 import Platform
 import Ports exposing (GeneratorMode(..))
 import Set
+import State exposing (State, TranslationSet)
 import Types exposing (I18nPairs)
 import Util
 
@@ -23,12 +24,8 @@ type alias Flags =
 
 type alias Model =
     { version : String
-    , state : Dict String State
+    , state : State
     }
-
-
-type alias State =
-    NonEmpty String I18nPairs
 
 
 init : String -> Model
@@ -49,7 +46,7 @@ update msg model =
         GotRequest (Ports.AddTranslation req) ->
             case Dict.get req.identifier model.state of
                 Just state ->
-                    case hasSameSignatureAsState req.content state of
+                    case hasSameSignatureAsExistingTranslations req.content state of
                         Nothing ->
                             ( { model
                                 | state =
@@ -80,60 +77,26 @@ update msg model =
                     , Cmd.none
                     )
 
-        GotRequest (Ports.FinishModule { elmModuleName, identifier, generatorMode }) ->
+        GotRequest (Ports.FinishModule req) ->
             ( model
-            , case Dict.get identifier model.state of
-                Just state ->
-                    Ports.respond <|
-                        Ok
-                            { elmFile =
-                                (case generatorMode of
-                                    Inline ->
-                                        Generators.Inline.toFile
-
-                                    Dynamic ->
-                                        Generators.DynamicArray.toFile
-                                )
-                                    model.version
-                                    { moduleName = Util.moduleName elmModuleName
-                                    , identifier = identifier
-                                    }
-                                    state
-                                    |> Pretty.pretty 120
-                            , optimizedJson =
-                                case generatorMode of
-                                    Inline ->
-                                        []
-
-                                    Dynamic ->
-                                        optimizeJsonAllLanguages state
-                            }
-
-                Nothing ->
-                    Ports.respond <|
-                        Err <|
-                            "Cannot finish module '"
-                                ++ elmModuleName
-                                ++ "' because the given identifier '"
-                                ++ identifier
-                                ++ "' has not been associated with any translation files yet."
+            , onFinishModule model req
             )
 
         UnexpectedRequest err ->
             ( model, Ports.respond <| Err <| D.errorToString err )
 
 
-optimizeJsonAllLanguages : State -> List ( String, String )
+optimizeJsonAllLanguages : State.TranslationSet -> List ( String, String )
 optimizeJsonAllLanguages =
     (Dict.NonEmpty.map <| always (optimizeJson >> E.encode 0))
         >> Dict.NonEmpty.toList
 
 
-hasSameSignatureAsState : I18nPairs -> State -> Maybe String
-hasSameSignatureAsState pairs state =
+hasSameSignatureAsExistingTranslations : I18nPairs -> TranslationSet -> Maybe String
+hasSameSignatureAsExistingTranslations pairs translationSet =
     let
         ( _, v ) =
-            Dict.NonEmpty.getSomeEntry state
+            Dict.NonEmpty.getSomeEntry translationSet
 
         existingKeys =
             List.map Tuple.first v |> Set.fromList
@@ -168,6 +131,45 @@ optimizeJson =
                     |> Placeholder.templateToString
                     |> E.string
             )
+
+
+onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
+onFinishModule model { generatorMode, elmModuleName } =
+    case Dict.NonEmpty.toNonEmpty model.state of
+        Nothing ->
+            Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
+
+        Just nonEmptyState ->
+            Ports.respond <|
+                Ok
+                    { elmFile =
+                        (case generatorMode of
+                            Inline ->
+                                Generators.Inline.toFile
+
+                            Dynamic ->
+                                Generators.DynamicArray.toFile
+                        )
+                            { moduleName = Util.moduleName elmModuleName
+                            , version = model.version
+                            , languages = State.getLanguages nonEmptyState
+                            , names = defaultNames
+                            }
+                            nonEmptyState
+                            |> Pretty.pretty 120
+                    , optimizedJson =
+                        case generatorMode of
+                            Inline ->
+                                []
+
+                            Dynamic ->
+                                Dict.toList model.state
+                                    |> List.concatMap
+                                        (\( identifier, translations ) ->
+                                            optimizeJsonAllLanguages translations
+                                                |> List.map (Tuple.mapFirst <| \language -> String.join "." [ identifier, language, "json" ])
+                                        )
+                    }
 
 
 subscriptions : Model -> Sub Msg

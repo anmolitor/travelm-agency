@@ -1,4 +1,4 @@
-port module Ports exposing (GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, finishRequestDecoder, respond, subToRequests)
+port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, finishRequestDecoder, respond, subToRequests)
 
 import ContentTypes.Json
 import ContentTypes.Properties
@@ -67,7 +67,7 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, identifier : String, generatorMode : GeneratorMode }
+    { elmModuleName : String, generatorMode : GeneratorMode }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -95,16 +95,17 @@ requestDecoder =
 
 contentDecoder : String -> String -> D.Decoder I18nPairs
 contentDecoder extension =
-    D.map (List.sortBy Tuple.first) <<
-        case extension of
-            "json" ->
-                ContentTypes.Json.parse
+    D.map (List.sortBy Tuple.first)
+        << (case extension of
+                "json" ->
+                    ContentTypes.Json.parse
 
-            "properties" ->
-                ContentTypes.Properties.parse
+                "properties" ->
+                    ContentTypes.Properties.parse
 
-            _ ->
-                always <| D.fail <| "Unsupported content type '" ++ extension ++ "'"
+                _ ->
+                    always <| D.fail <| "Unsupported content type '" ++ extension ++ "'"
+           )
 
 
 translationRequestDecoder : D.Decoder TranslationRequest
@@ -134,7 +135,6 @@ finishRequestDecoder : D.Decoder FinishRequest
 finishRequestDecoder =
     D.succeed FinishRequest
         |> D.required "elmModuleName" D.string
-        |> D.required "identifier" D.string
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
 
 

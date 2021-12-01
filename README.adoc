@@ -35,12 +35,18 @@ Run
 npx travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
 ====
 
+[NOTE]
+====
+`--json_path` is not necessary when you use `--inline` mode.
+====
+
 Alternatively, add a script to your `package.json` with the content
 ====
 travelm-agency --elm_path=src/I18n.elm --json_path=dist/i18n [folder with translation files]
 ====
 
 and then run that script with `npm run [scriptname]`.
+
 
 === 📦 Usage as a node module
 

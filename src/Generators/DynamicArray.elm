@@ -3,83 +3,54 @@ module Generators.DynamicArray exposing (toFile)
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
 import CodeGen.Imports
-import CodeGen.Shared exposing (templateTypeAnn, templateTypeAnnRecord)
+import CodeGen.References as Refs
+import CodeGen.Shared exposing (Context, templateTypeAnn, templateTypeAnnRecord)
+import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.CodeGen as CG
+import Generators.Names exposing (IdentifierScopedNames, Names)
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
+import State exposing (Identifier, NonEmptyState, State, TranslationSet)
 import String.Extra
 import Types exposing (I18nPairs)
 import Util
 
 
-type alias Context =
-    { identifier : String
-    , moduleName : CG.ModuleName
-    }
-
-
-toFile : String -> Context -> NonEmpty String I18nPairs -> CG.File
-toFile version { moduleName, identifier } state =
+toFile : Context -> NonEmptyState -> CG.File
+toFile { moduleName, version, names, languages } state =
     let
-        ( someLanguage, pairs ) =
-            Dict.NonEmpty.getSomeEntry state
-
-        languages =
-            Dict.NonEmpty.keys state
-
-        i18nName =
-            "I18n"
-
-        decoderName =
-            "decoder"
-
-        initName =
-            "init"
-
-        loadName =
-            "load"
-
-        languageName =
-            "Language"
-
         languagesName =
             "languages"
 
-        languageToStringName =
-            "languageToString"
-
-        languageFromStringName =
-            "languageFromString"
-
-        i18nTypeAnn =
-            CG.typed i18nName []
+        identifiers =
+            Dict.NonEmpty.keys state
 
         i18nTypeDecl =
             CG.customTypeDecl Nothing
-                i18nName
+                names.i18nTypeName
                 []
-                [ ( i18nName, [ CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] ] ) ]
+                [ ( names.i18nTypeName, [ CG.recordAnn <| List.map (\id -> ( id, CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] )) identifiers ] ) ]
 
         initDecl =
             CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an (empty) `I18n` instance. This is useful on startup when no JSON was `load`ed yet."))
-                (Just <| i18nTypeAnn)
-                initName
-                (CG.apply [ CG.fun i18nName, CG.fqFun [ "Array" ] "empty" ])
+                (Just <| CG.typed names.i18nTypeName [])
+                names.initFunName
+                (CG.apply [ CG.fun names.i18nTypeName, CG.record (List.map (\id -> ( id, CG.fqFun [ "Array" ] "empty" )) identifiers) ])
 
         fallbackValDecl =
             CG.valDecl Nothing (Just CG.stringAnn) "fallbackValue_" (CG.string "...")
 
         languageTypeDecl : CG.Declaration
         languageTypeDecl =
-            CG.customTypeDecl (Just (CG.emptyDocComment |> CG.markdown "Enumeration of the supported languages")) languageName [] <|
+            CG.customTypeDecl (Just (CG.emptyDocComment |> CG.markdown "Enumeration of the supported languages")) names.languageTypeName [] <|
                 List.map (String.Extra.classify >> (\lang -> ( lang, [] ))) languages
 
         languageToStringDecl : CG.Declaration
         languageToStringDecl =
             CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Convert a `Language` to its `String` representation."))
-                (Just <| CG.funAnn (CG.typed languageName []) CG.stringAnn)
-                languageToStringName
+                (Just <| CG.funAnn (CG.typed names.languageTypeName []) CG.stringAnn)
+                names.languageToStringFunName
                 [ CG.varPattern "lang_" ]
                 (CG.caseExpr (CG.val "lang_") <|
                     List.map (\lang -> ( CG.namedPattern (String.Extra.classify lang) [], CG.string lang )) languages
@@ -90,20 +61,17 @@ toFile version { moduleName, identifier } state =
             CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Maybe parse a `Language` from a `String`. 
 This only considers the keys given during compile time, if you need something like 'en-US' to map to the correct `Language`,
 you should write your own parsing function."""))
-                (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed languageName []))
-                languageFromStringName
+                (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed names.languageTypeName []))
+                names.languageFromStringFunName
                 [ CG.varPattern "lang_" ]
                 (CG.caseExpr (CG.val "lang_") <|
                     List.map (\lang -> ( CG.stringPattern lang, CG.apply [ CG.fun "Just", CG.val <| String.Extra.classify lang ] )) languages
                         ++ [ ( CG.allPattern, CG.val "Nothing" ) ]
                 )
 
-        accessorDeclaration : Int -> ( String, Template ) -> CG.Declaration
-        accessorDeclaration index ( key, template ) =
+        accessorDeclaration : Identifier -> Int -> ( String, Template ) -> CG.Declaration
+        accessorDeclaration identifier index ( key, template ) =
             let
-                i18nVar =
-                    Util.safeName "i18n"
-
                 placeholders =
                     Placeholder.getAlphabeticalPlaceholderNames template
 
@@ -130,10 +98,10 @@ you should write your own parsing function."""))
                             List.map (\name -> CG.access (CG.val "placeholders_") name) many
             in
             CG.funDecl Nothing
-                (Just <| CG.funAnn i18nTypeAnn (templateTypeAnnRecord template))
+                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) (templateTypeAnnRecord template))
                 key
-                (CG.namedPattern i18nName [ CG.varPattern i18nVar ] :: placeholderPatterns)
-                (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val i18nVar ])
+                (CG.namedPattern names.i18nTypeName [ CG.recordPattern [ identifier ] ] :: placeholderPatterns)
+                (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                     [ ( CG.namedPattern "Just" [ CG.varPattern "translation_" ]
                       , if List.isEmpty placeholderFunctionArguments then
                             CG.val "translation_"
@@ -147,64 +115,28 @@ you should write your own parsing function."""))
                     ]
                 )
 
-        decoderDecl : CG.Declaration
-        decoderDecl =
-            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Decode an `I18n` from Json. Make sure this is *only* used on the files generated by this package."))
-                (Just <| DecodeM.decoder i18nTypeAnn)
-                "decoder"
-                []
-                (CG.applyBinOp
-                    (CG.apply [ DecodeM.array, DecodeM.string ])
-                    CG.piper
-                    (CG.apply [ DecodeM.map, CG.fun i18nName ])
-                )
-
-        loadDecl : CG.Declaration
-        loadDecl =
-            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown ("""
-Load translations for a `Language` from the server. This is a simple `Http.get`, if you need more customization,
-you can use the `decoder` instead. Pass the path and a callback to your `update` function, for example
-
-    load { language = """ ++ String.Extra.classify someLanguage ++ """, path = "/i18n", onLoad = GotTranslations }
-
-will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ """.json and will call GotTranslations with the decoded response.""")))
-                (Just <|
-                    CG.funAnn
-                        (CG.recordAnn
-                            [ ( "language", CG.typed languageName [] )
-                            , ( "path", CG.stringAnn )
-                            , ( "onLoad", CG.funAnn (BasicM.result (CG.fqTyped [ "Http" ] "Error" []) i18nTypeAnn) (CG.typeVar "msg") )
-                            ]
-                        )
-                        (CG.typed "Cmd" [ CG.typeVar "msg" ])
-                )
-                loadName
-                [ CG.varPattern "opts_" ]
-                (let
-                    opts =
-                        CG.val "opts_"
-                 in
-                 CG.apply
-                    [ CG.fqFun [ "Http" ] "get"
-                    , CG.record
-                        [ ( "expect", CG.apply [ CG.fqFun [ "Http" ] "expectJson", CG.access opts "onLoad", CG.fun decoderName ] )
-                        , ( "url"
-                          , appendAll (CG.access opts "path")
-                                [ CG.string <| "/" ++ identifier ++ "."
-                                , CG.apply [ CG.fun languageToStringName, CG.access opts "language" ]
-                                , CG.string ".json"
-                                ]
-                          )
-                        ]
-                    ]
-                )
+        accessorDecls : List CG.Declaration
+        accessorDecls =
+            Dict.NonEmpty.toList state
+                |> List.concatMap
+                    (\( identifier, pairs ) ->
+                        List.indexedMap (accessorDeclaration identifier)
+                            (Tuple.second <| Dict.NonEmpty.getSomeEntry pairs)
+                    )
 
         languagesDecl : CG.Declaration
         languagesDecl =
             CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "A list containing all `Language`s"))
-                (Just <| CG.listAnn <| CG.typed languageName [])
+                (Just <| CG.listAnn <| CG.typed names.languageTypeName [])
                 languagesName
                 (CG.list <| List.map (String.Extra.classify >> CG.val) languages)
+
+        decodeAndLoadDecls : List CG.Declaration
+        decodeAndLoadDecls =
+            state
+                |> Dict.NonEmpty.map (generateDeclarationsForIdentifier names)
+                |> Dict.NonEmpty.values
+                |> List.concat
 
         declarations =
             [ i18nTypeDecl
@@ -214,23 +146,22 @@ will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ "
             , languageToStringDecl
             , languageFromStringDecl
             , fallbackValDecl
-            , decoderDecl
-            , loadDecl
             , replacePlaceholdersDecl
             ]
-                ++ List.indexedMap accessorDeclaration pairs
+                ++ accessorDecls
+                ++ decodeAndLoadDecls
 
         exposed =
-            [ CG.closedTypeExpose i18nName
-            , CG.openTypeExpose languageName
-            , CG.funExpose decoderName
-            , CG.funExpose initName
-            , CG.funExpose loadName
-            , CG.funExpose languagesName
-            , CG.funExpose languageToStringName
-            , CG.funExpose languageFromStringName
-            ]
-                ++ List.map (Tuple.first >> CG.funExpose) pairs
+            CG.closedTypeExpose names.i18nTypeName
+                :: CG.openTypeExpose names.languageTypeName
+                :: List.map CG.funExpose
+                    [ names.initFunName
+                    , languagesName
+                    , names.languageToStringFunName
+                    , names.languageFromStringFunName
+                    ]
+                ++ List.filterMap (Refs.declName >> Maybe.map CG.funExpose) accessorDecls
+                ++ List.filterMap (Refs.declName >> Maybe.map CG.funExpose) decodeAndLoadDecls
 
         fileComment =
             CG.emptyFileComment |> CG.markdown ("This file was generated by elm-i18n version " ++ version ++ ".")
@@ -239,6 +170,83 @@ will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ "
         (CodeGen.Imports.extractImports declarations |> Set.toList |> List.map CodeGen.Imports.basicImport)
         declarations
         (Just fileComment)
+
+
+generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet -> List CG.Declaration
+generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName, languageToStringFunName } identifier translations =
+    let
+        ( someLanguage, pairs ) =
+            Dict.NonEmpty.getSomeEntry translations
+
+        endoAnn : CG.TypeAnnotation -> CG.TypeAnnotation
+        endoAnn t =
+            CG.funAnn t t
+
+        decoderDecl : CG.Declaration
+        decoderDecl =
+            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Decode an `I18n` from Json. Make sure this is *only* used on the files generated by this package."))
+                (Just <| DecodeM.decoder <| endoAnn <| CG.typed i18nTypeName [])
+                (decoderName identifier)
+                []
+                (CG.applyBinOp
+                    (CG.apply [ DecodeM.array, DecodeM.string ])
+                    CG.piper
+                    (CG.apply
+                        [ DecodeM.map
+                        , CG.lambda
+                            [ CG.varPattern "arr_", CG.namedPattern i18nTypeName [ CG.varPattern "i18n_" ] ]
+                            (CG.apply [ CG.fun i18nTypeName, CG.update "i18n_" [ ( identifier, CG.val "arr_" ) ] ])
+                        ]
+                    )
+                )
+
+        loadDecl : CG.Declaration
+        loadDecl =
+            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown ("""
+Load translations for identifier '""" ++ identifier ++ """' and a `Language` from the server. This is a simple `Http.get`, if you need more customization,
+you can use the `decoder` instead. Pass the path and a callback to your `update` function, for example
+
+    load { language = """ ++ String.Extra.classify someLanguage ++ """, path = "/i18n", onLoad = GotTranslations }
+
+will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ """.json and will call GotTranslations with the decoded response.""")))
+                (Just <|
+                    CG.funAnn
+                        (CG.recordAnn
+                            [ ( "language", CG.typed languageTypeName [] )
+                            , ( "path", CG.stringAnn )
+                            , ( "onLoad"
+                              , CG.funAnn
+                                    (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
+                                        (endoAnn <| CG.typed i18nTypeName [])
+                                    )
+                                    (CG.typeVar "msg")
+                              )
+                            ]
+                        )
+                        (CG.typed "Cmd" [ CG.typeVar "msg" ])
+                )
+                (loadName identifier)
+                [ CG.varPattern "opts_" ]
+                (let
+                    opts =
+                        CG.val "opts_"
+                 in
+                 CG.apply
+                    [ CG.fqFun [ "Http" ] "get"
+                    , CG.record
+                        [ ( "expect", CG.apply [ CG.fqFun [ "Http" ] "expectJson", CG.access opts "onLoad", CG.fun (decoderName identifier) ] )
+                        , ( "url"
+                          , appendAll (CG.access opts "path")
+                                [ CG.string <| "/" ++ identifier ++ "."
+                                , CG.apply [ CG.fun languageToStringFunName, CG.access opts "language" ]
+                                , CG.string ".json"
+                                ]
+                          )
+                        ]
+                    ]
+                )
+    in
+    [ decoderDecl, loadDecl ]
 
 
 {-| Generates the following definition

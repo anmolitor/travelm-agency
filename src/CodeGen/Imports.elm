@@ -1,5 +1,6 @@
-module CodeGen.Imports exposing (extractImports, basicImport)
+module CodeGen.Imports exposing (basicImport, extractImports)
 
+import CodeGen.Shared exposing (unwrapDecl)
 import Elm.CodeGen as CG
 import Elm.Syntax.Declaration as Decl
 import Elm.Syntax.Expression as Expr
@@ -15,13 +16,14 @@ basicImport : CG.ModuleName -> CG.Import
 basicImport moduleName =
     CG.importStmt moduleName Nothing Nothing
 
+
 extractImports : List CG.Declaration -> Set CG.ModuleName
 extractImports =
     List.map extractImportsDecl >> concatSets >> Set.filter ((/=) [])
 
 
 extractImportsDecl : CG.Declaration -> Set CG.ModuleName
-extractImportsDecl decl =
+extractImportsDecl =
     let
         extractImportsDeclInternal : Decl.Declaration -> Set CG.ModuleName
         extractImportsDeclInternal d =
@@ -46,12 +48,7 @@ extractImportsDecl decl =
                         (extractImportsPat <| Node.value pat)
                         (extractImportsExpr <| Node.value expr)
     in
-    case decl of
-        CG.DeclWithComment _ f ->
-            extractImportsDeclInternal (f "")
-
-        CG.DeclNoComment d ->
-            extractImportsDeclInternal d
+    unwrapDecl >> extractImportsDeclInternal
 
 
 extractImportsTypeAnn : CG.TypeAnnotation -> Set CG.ModuleName

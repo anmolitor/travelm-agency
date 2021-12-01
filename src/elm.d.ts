@@ -12,7 +12,6 @@ declare module "*elm.min.js" {
   export interface FinishRequest {
     type: "finish";
     elmModuleName: string;
-    identifier: string;
     generatorMode: GeneratorMode | null;
   }
 

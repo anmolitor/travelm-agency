@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Html exposing (div, input, option, p, select, text)
-import Html.Attributes exposing (selected, value, class)
+import Html.Attributes exposing (class, selected, value)
 import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onChange)
 import Http
@@ -10,7 +10,7 @@ import I18n exposing (I18n)
 
 
 type Msg
-    = GotTranslations (Result Http.Error I18n)
+    = GotTranslations (Result Http.Error (I18n -> I18n))
     | ChangedName String
     | ChangeLanguage String
 
@@ -31,7 +31,7 @@ loadTranslations : String -> Cmd Msg
 loadTranslations input =
     case I18n.languageFromString input of
         Just language ->
-            I18n.load { language = language, path = "/i18n", onLoad = GotTranslations }
+            I18n.loadMessages { language = language, path = "/i18n", onLoad = GotTranslations }
 
         Nothing ->
             Cmd.none
@@ -40,8 +40,8 @@ loadTranslations input =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotTranslations (Ok i18n) ->
-            ( { model | i18n = i18n }, Cmd.none )
+        GotTranslations (Ok addTranslations) ->
+            ( { model | i18n = addTranslations model.i18n }, Cmd.none )
 
         GotTranslations (Err _) ->
             ( model, Cmd.none )
@@ -60,13 +60,13 @@ view model =
         [ div
             []
             [ input [ value model.name, onInput ChangedName, class "name_input" ] []
-            , p [class "info_text"] [ text <| I18n.languageSwitchInfo model.i18n model.language ]
+            , p [ class "info_text" ] [ text <| I18n.languageSwitchInfo model.i18n model.language ]
             , select [ onChange ChangeLanguage, class "language_select" ] <|
                 List.map
                     (\language -> option [ selected <| language == model.language ] [ text language ])
                     (List.map I18n.languageToString I18n.languages)
-            , p [class "greeting"] [ text <| I18n.greeting model.i18n model.name ]
-            , p [class "order_text"] [ text <| I18n.order model.i18n { language = model.language, name = model.name }]
+            , p [ class "greeting" ] [ text <| I18n.greeting model.i18n model.name ]
+            , p [ class "order_text" ] [ text <| I18n.order model.i18n { language = model.language, name = model.name } ]
             ]
         ]
     }

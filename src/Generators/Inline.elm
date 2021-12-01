@@ -1,40 +1,33 @@
 module Generators.Inline exposing (..)
 
 import CodeGen.Imports
-import CodeGen.Shared exposing (templateTypeAnn, templateTypeAnnRecord)
+import CodeGen.Shared exposing (Context, templateTypeAnn, templateTypeAnnRecord)
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.CodeGen as CG
 import List.NonEmpty
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
+import State exposing (NonEmptyState, State)
 import String.Extra
 import Types exposing (I18nPairs)
 import Util
 
 
-type alias Context =
-    { identifier : String
-    , moduleName : CG.ModuleName
-    }
-
-
-toFile : String -> Context -> NonEmpty String I18nPairs -> CG.File
-toFile version { moduleName } pairsForLanguages =
+toFile : Context -> NonEmptyState -> CG.File
+toFile { moduleName, names, version, languages } state =
     let
-        i18nName =
-            "I18n"
+        pairs : I18nPairs
+        pairs =
+            translationSet |> Dict.NonEmpty.getSomeEntry |> Tuple.second
 
-        ( _, pairs ) =
-            Dict.NonEmpty.getSomeEntry pairsForLanguages
-
-        languages =
-            Dict.NonEmpty.keys pairsForLanguages
+        translationSet =
+            State.collectiveTranslationSet state
 
         i18nTypeDecl : CG.Declaration
         i18nTypeDecl =
             CG.aliasDecl Nothing
-                i18nName
+                names.i18nTypeName
                 []
                 (CG.recordAnn <| List.map (Tuple.mapBoth Util.safeName templateTypeAnn) pairs)
 
@@ -69,7 +62,7 @@ toFile version { moduleName } pairsForLanguages =
 
         i18nDecls : List CG.Declaration
         i18nDecls =
-            Dict.NonEmpty.map i18nDeclForLang pairsForLanguages
+            Dict.NonEmpty.map i18nDeclForLang translationSet
                 |> Dict.NonEmpty.toList
                 |> List.map Tuple.second
 
@@ -102,7 +95,7 @@ toFile version { moduleName } pairsForLanguages =
                             List.map (\name -> CG.access (CG.val "placeholders_") name) many
             in
             CG.funDecl Nothing
-                (Just <| CG.funAnn (CG.typed i18nName []) (templateTypeAnnRecord template))
+                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) (templateTypeAnnRecord template))
                 key
                 (CG.varPattern "i18n_" :: placeholderPatterns)
                 (CG.apply <| CG.access (CG.val "i18n_") (Util.safeName key) :: placeholderFunctionArguments)
@@ -111,7 +104,7 @@ toFile version { moduleName } pairsForLanguages =
             [ i18nTypeDecl ] ++ List.map accessorDecl pairs ++ i18nDecls
 
         exposed =
-            [ CG.typeOrAliasExpose i18nName ]
+            [ CG.typeOrAliasExpose names.i18nTypeName ]
                 ++ List.map (Tuple.first >> CG.funExpose) pairs
                 ++ List.map CG.funExpose languages
 

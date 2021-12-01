@@ -41,12 +41,17 @@ export const withElmApp = <T>(consumer: (ports: Ports) => T): T => {
   return consumer(ports);
 };
 
-interface Options {
-  jsonPath: string;
+export type Options =
+  | ({ generatorMode: "inline" } & InlineOptions)
+  | ({ generatorMode: "dynamic" } & DynamicOptions);
+
+interface InlineOptions {
   elmPath: string;
-  elmJson: string;
   translationDir: string;
-  generatorMode?: GeneratorMode;
+}
+
+interface DynamicOptions extends InlineOptions {
+  jsonPath: string;
 }
 
 export const sendTranslations = (translationDir: string): Promise<string[]> =>
@@ -66,17 +71,16 @@ export const sendTranslations = (translationDir: string): Promise<string[]> =>
   });
 
 export const finishModule = ({
-  elmModuleName,
-  identifier,
+  elmPath,
   generatorMode = null,
 }: {
-  elmModuleName: string;
-  identifier: string;
+  elmPath: string;
   generatorMode?: GeneratorMode | null;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
       new Promise<ResponseContent>((resolve, reject) => {
+        const elmModuleName = elmPathToModuleName(elmPath);
         const responseHandler: ResponseHandler = async (res) => {
           ports.sendResponse.unsubscribe(responseHandler);
           if (res.error) {
@@ -92,56 +96,44 @@ export const finishModule = ({
         ports.receiveRequest.send({
           type: "finish",
           elmModuleName,
-          identifier,
           generatorMode,
         });
       })
   );
 
-export const run = async ({
-  elmPath,
-  elmJson,
-  translationDir,
-  jsonPath,
-  generatorMode,
-}: Options) => {
-  const elmModuleName = elmPathToModuleName({ elmPath, elmJson });
+export const run = async (options: Options) => {
+  const { elmPath, translationDir, generatorMode } = options;
   const [firstTranslationFileName] = await sendTranslations(translationDir);
   if (!firstTranslationFileName) {
     throw new Error("Given translation directory does not contain any files");
   }
-  const [identifier] = firstTranslationFileName.split(".");
   const { elmFile, optimizedJson } = await finishModule({
-    elmModuleName,
-    identifier,
+    elmPath,
     generatorMode,
   });
+
   const elmPromise = writeFile(elmPath, elmFile);
-  const jsonPromises = optimizedJson.map(([language, content]) =>
-    writeFile(path.join(jsonPath, `${identifier}.${language}.json`), content)
-  );
+  let jsonPromises: Promise<void>[] = [];
+  if (options.generatorMode === "dynamic") {
+    jsonPromises = optimizedJson.map(([jsonFileName, content]) =>
+      writeFile(path.join(options.jsonPath, jsonFileName), content)
+    );
+  }
   await Promise.all([elmPromise, ...jsonPromises]);
 };
 
 let elmConfig: { "source-directories": string[] } | undefined;
 
-const elmPathToModuleName = ({
-  elmPath,
-  elmJson,
-}: {
-  elmPath: string;
-  elmJson: string;
-}): string => {
-  const elmJsonPath = path.join(process.cwd(), elmJson);
-  const elmJsonDir = path.parse(elmJsonPath).dir;
+const elmPathToModuleName = (elmPath: string): string => {
+  const absoluteElmPath = path.resolve(elmPath);
+  const elmJsonPath = lookForElmJsonRecursively(path.dirname(absoluteElmPath));
+  const elmJsonDir = path.dirname(elmJsonPath);
   if (!elmConfig) {
     elmConfig = require(elmJsonPath);
   }
-  const possibleSourceDirs = elmConfig!["source-directories"].filter(
-    (sourceDir) =>
-      path
-        .join(process.cwd(), elmPath)
-        .startsWith(path.join(elmJsonDir, sourceDir))
+  const elmPathRelativeToElmJson = path.relative(elmJsonDir, absoluteElmPath);
+  const possibleSourceDirs = elmConfig!["source-directories"].filter((srcDir) =>
+    elmPathRelativeToElmJson.startsWith(srcDir)
   );
   if (possibleSourceDirs.length == 0) {
     throw new Error("Could not determine elm module name");
@@ -151,10 +143,27 @@ const elmPathToModuleName = ({
       "Multiple matching source directories: " + possibleSourceDirs.join(",")
     );
   }
-  return elmPath
+  return elmPathRelativeToElmJson
     .replace(".elm", "")
     .replace(possibleSourceDirs[0], "")
     .split("/")
     .filter((s) => s)
     .join(".");
+};
+
+const lookForElmJsonRecursively = (
+  directory: string,
+  level: number = 0
+): string => {
+  const attempt = path.join(directory, "elm.json");
+  if (fs.existsSync(attempt)) {
+    return attempt;
+  }
+  // avoid recursing infinitely because of symlinks or something
+  if (level > 10) {
+    throw new Error(
+      "Tried to find elm.json recursively but could not find it."
+    );
+  }
+  return lookForElmJsonRecursively(path.dirname(directory), level + 1);
 };

@@ -23,6 +23,23 @@ keys ( ( k, _ ), rest ) =
     k :: Dict.keys rest
 
 
+values : NonEmpty k v -> List v
+values ( ( _, v ), rest ) =
+    v :: Dict.values rest
+
+
+toNonEmpty : Dict comparable v -> Maybe (NonEmpty comparable v)
+toNonEmpty =
+    Dict.toList
+        >> List.fromList
+        >> Maybe.map fromList
+
+
+fromList : List.NonEmpty ( comparable, v ) -> NonEmpty comparable v
+fromList ( head, tail ) =
+    ( head, Dict.fromList tail )
+
+
 insert : comparable -> v -> NonEmpty comparable v -> NonEmpty comparable v
 insert k v ( ( firstKey, firstValue ), rest ) =
     if k == firstKey then
@@ -30,6 +47,15 @@ insert k v ( ( firstKey, firstValue ), rest ) =
 
     else
         ( ( firstKey, firstValue ), Dict.insert k v rest )
+
+
+update : comparable -> (Maybe v -> v) -> NonEmpty comparable v -> NonEmpty comparable v
+update k alter ( ( firstKey, firstValue ), rest ) =
+    if k == firstKey then
+        ( ( firstKey, alter <| Just firstValue ), rest )
+
+    else
+        ( ( firstKey, firstValue ), Dict.update k (alter >> Just) rest )
 
 
 toNonEmptyList : NonEmpty k v -> List.NonEmpty ( k, v )

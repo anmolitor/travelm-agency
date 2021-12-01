@@ -45,7 +45,6 @@ const serveStatic = require("serve-static");
     });
 
     it("displays the expected info text", () => {
-      console.log(scenario, "FIRST TEST");
       assert.equal(
         getInfoText(),
         "You may switch languages from en to another one here."

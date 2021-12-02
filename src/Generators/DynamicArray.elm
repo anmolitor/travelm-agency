@@ -121,7 +121,7 @@ you should write your own parsing function."""))
                 |> List.concatMap
                     (\( identifier, translationSet ) ->
                         List.indexedMap (accessorDeclaration identifier)
-                            (Dict.NonEmpty.getSomeEntry translationSet |> Tuple.second).pairs
+                            (Dict.NonEmpty.getFirstEntry translationSet |> Tuple.second).pairs
                     )
 
         languagesDecl : CG.Declaration
@@ -176,7 +176,7 @@ generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet Optimi
 generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName, languageToStringFunName } identifier translations =
     let
         ( someLanguage, someTranslation ) =
-            Dict.NonEmpty.getSomeEntry translations
+            Dict.NonEmpty.getFirstEntry translations
 
         endoAnn : CG.TypeAnnotation -> CG.TypeAnnotation
         endoAnn t =
@@ -217,7 +217,7 @@ generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, de
                             )
                         )
                     <|
-                        Dict.NonEmpty.toList translations
+                        (List.sortBy Tuple.first << Dict.NonEmpty.toList) translations
                 )
 
         loadDecl : CG.Declaration

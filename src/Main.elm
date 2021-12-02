@@ -91,7 +91,7 @@ hasSameSignatureAsExistingTranslations : I18nPairs -> TranslationSet () -> Maybe
 hasSameSignatureAsExistingTranslations pairs translationSet =
     let
         ( _, v ) =
-            Dict.NonEmpty.getSomeEntry translationSet
+            Dict.NonEmpty.getFirstEntry translationSet
 
         existingKeys =
             List.map Tuple.first v.pairs |> Set.fromList

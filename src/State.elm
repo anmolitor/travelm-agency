@@ -44,9 +44,10 @@ type alias NonEmptyState resources =
 
 getLanguages : NonEmptyState resources -> List Language
 getLanguages =
-    Dict.NonEmpty.getSomeEntry
+    Dict.NonEmpty.getFirstEntry
         >> Tuple.second
         >> Dict.NonEmpty.keys
+        >> List.sort
 
 
 collectiveTranslationSet : NonEmptyState () -> TranslationSet ()

@@ -20,7 +20,7 @@ toFile { moduleName, names, version, languages } state =
         pairs : I18nPairs
         pairs =
             translationSet
-                |> Dict.NonEmpty.getSomeEntry
+                |> Dict.NonEmpty.getFirstEntry
                 |> Tuple.second
                 |> .pairs
 

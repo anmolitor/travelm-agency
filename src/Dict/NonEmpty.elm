@@ -1,7 +1,7 @@
 module Dict.NonEmpty exposing (..)
 
 import Dict exposing (Dict)
-import List.NonEmpty as List
+import List.NonEmpty
 
 
 type alias NonEmpty k v =
@@ -13,9 +13,9 @@ singleton k v =
     ( ( k, v ), Dict.empty )
 
 
-getSomeEntry : NonEmpty k v -> ( k, v )
-getSomeEntry =
-    Tuple.first
+getFirstEntry : NonEmpty comparable v -> ( comparable, v )
+getFirstEntry =
+    toNonEmptyList >> List.NonEmpty.sortBy Tuple.first >> List.NonEmpty.head
 
 
 keys : NonEmpty k v -> List k
@@ -31,7 +31,7 @@ values ( ( _, v ), rest ) =
 toNonEmpty : Dict comparable v -> Maybe (NonEmpty comparable v)
 toNonEmpty =
     Dict.toList
-        >> List.fromList
+        >> List.NonEmpty.fromList
         >> Maybe.map fromList
 
 
@@ -40,7 +40,7 @@ toDict ( ( k, v ), rest ) =
     Dict.insert k v rest
 
 
-fromList : List.NonEmpty ( comparable, v ) -> NonEmpty comparable v
+fromList : List.NonEmpty.NonEmpty ( comparable, v ) -> NonEmpty comparable v
 fromList ( head, tail ) =
     ( head, Dict.fromList tail )
 
@@ -63,14 +63,14 @@ update k alter ( ( firstKey, firstValue ), rest ) =
         ( ( firstKey, firstValue ), Dict.update k (alter >> Just) rest )
 
 
-toNonEmptyList : NonEmpty k v -> List.NonEmpty ( k, v )
+toNonEmptyList : NonEmpty k v -> List.NonEmpty.NonEmpty ( k, v )
 toNonEmptyList ( firstPair, rest ) =
     ( firstPair, Dict.toList rest )
 
 
 toList : NonEmpty k v -> List ( k, v )
 toList =
-    toNonEmptyList >> List.toList
+    toNonEmptyList >> List.NonEmpty.toList
 
 
 map : (k -> u -> v) -> NonEmpty k u -> NonEmpty k v

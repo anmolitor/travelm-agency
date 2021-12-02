@@ -35,6 +35,11 @@ toNonEmpty =
         >> Maybe.map fromList
 
 
+toDict : NonEmpty comparable v -> Dict comparable v
+toDict ( ( k, v ), rest ) =
+    Dict.insert k v rest
+
+
 fromList : List.NonEmpty ( comparable, v ) -> NonEmpty comparable v
 fromList ( head, tail ) =
     ( head, Dict.fromList tail )

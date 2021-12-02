@@ -115,8 +115,8 @@ export const run = async (options: Options) => {
   const elmPromise = writeFile(elmPath, elmFile);
   let jsonPromises: Promise<void>[] = [];
   if (options.generatorMode === "dynamic") {
-    jsonPromises = optimizedJson.map(([jsonFileName, content]) =>
-      writeFile(path.join(options.jsonPath, jsonFileName), content)
+    jsonPromises = optimizedJson.map(({ filename, content }) =>
+      writeFile(path.join(options.jsonPath, filename), content)
     );
   }
   await Promise.all([elmPromise, ...jsonPromises]);

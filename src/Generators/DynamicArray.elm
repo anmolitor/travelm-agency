@@ -11,13 +11,13 @@ import Elm.CodeGen as CG
 import Generators.Names exposing (IdentifierScopedNames, Names)
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
-import State exposing (Identifier, NonEmptyState, State, TranslationSet)
+import State exposing (Identifier, NonEmptyState, OptimizedJson, State, TranslationSet)
 import String.Extra
 import Types exposing (I18nPairs)
 import Util
 
 
-toFile : Context -> NonEmptyState -> CG.File
+toFile : Context -> NonEmptyState OptimizedJson -> CG.File
 toFile { moduleName, version, names, languages } state =
     let
         languagesName =
@@ -119,9 +119,9 @@ you should write your own parsing function."""))
         accessorDecls =
             Dict.NonEmpty.toList state
                 |> List.concatMap
-                    (\( identifier, pairs ) ->
+                    (\( identifier, translationSet ) ->
                         List.indexedMap (accessorDeclaration identifier)
-                            (Tuple.second <| Dict.NonEmpty.getSomeEntry pairs)
+                            (Dict.NonEmpty.getSomeEntry translationSet |> Tuple.second).pairs
                     )
 
         languagesDecl : CG.Declaration
@@ -172,10 +172,10 @@ you should write your own parsing function."""))
         (Just fileComment)
 
 
-generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet -> List CG.Declaration
+generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet OptimizedJson -> List CG.Declaration
 generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName, languageToStringFunName } identifier translations =
     let
-        ( someLanguage, pairs ) =
+        ( someLanguage, someTranslation ) =
             Dict.NonEmpty.getSomeEntry translations
 
         endoAnn : CG.TypeAnnotation -> CG.TypeAnnotation
@@ -200,6 +200,26 @@ generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, de
                     )
                 )
 
+        languageToFileNameName =
+            "languageToFileName_" ++ identifier
+
+        languageToFileNameDecl : CG.Declaration
+        languageToFileNameDecl =
+            CG.funDecl Nothing
+                (Just <| CG.funAnn (CG.typed languageTypeName []) CG.stringAnn)
+                languageToFileNameName
+                [ CG.varPattern "lang_" ]
+                (CG.caseExpr (CG.val "lang_") <|
+                    List.map
+                        (\( language, { pairs, resources } ) ->
+                            ( CG.namedPattern (String.Extra.classify language) []
+                            , CG.string resources.filename
+                            )
+                        )
+                    <|
+                        Dict.NonEmpty.toList translations
+                )
+
         loadDecl : CG.Declaration
         loadDecl =
             CG.funDecl (Just (CG.emptyDocComment |> CG.markdown ("""
@@ -208,7 +228,7 @@ you can use the `decoder` instead. Pass the path and a callback to your `update`
 
     load { language = """ ++ String.Extra.classify someLanguage ++ """, path = "/i18n", onLoad = GotTranslations }
 
-will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ """.json and will call GotTranslations with the decoded response.""")))
+will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ """ and will call GotTranslations with the decoded response.""")))
                 (Just <|
                     CG.funAnn
                         (CG.recordAnn
@@ -237,16 +257,15 @@ will make a `GET` request to /i18n/""" ++ identifier ++ "." ++ someLanguage ++ "
                         [ ( "expect", CG.apply [ CG.fqFun [ "Http" ] "expectJson", CG.access opts "onLoad", CG.fun (decoderName identifier) ] )
                         , ( "url"
                           , appendAll (CG.access opts "path")
-                                [ CG.string <| "/" ++ identifier ++ "."
-                                , CG.apply [ CG.fun languageToStringFunName, CG.access opts "language" ]
-                                , CG.string ".json"
+                                [ CG.string "/"
+                                , CG.apply [ CG.fun languageToFileNameName, CG.access opts "language" ]
                                 ]
                           )
                         ]
                     ]
                 )
     in
-    [ decoderDecl, loadDecl ]
+    [ decoderDecl, loadDecl, languageToFileNameDecl ]
 
 
 {-| Generates the following definition

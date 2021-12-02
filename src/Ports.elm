@@ -5,6 +5,7 @@ import ContentTypes.Properties
 import Json.Decode as D
 import Json.Decode.Pipeline as D
 import Types exposing (I18nPairs)
+import State exposing (OptimizedJson)
 
 
 port sendResponse : Response -> Cmd msg
@@ -15,7 +16,7 @@ type alias Response =
 
 
 type alias ResponseContent =
-    { elmFile : String, optimizedJson : List ( String, String ) }
+    { elmFile : String, optimizedJson : List OptimizedJson }
 
 
 respond : Result String ResponseContent -> Cmd msg

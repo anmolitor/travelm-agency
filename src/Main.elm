@@ -4,6 +4,7 @@ import Array
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.Pretty as Pretty
+import FNV1a
 import Generators.DynamicArray
 import Generators.Inline
 import Generators.Names exposing (defaultNames)
@@ -24,7 +25,7 @@ type alias Flags =
 
 type alias Model =
     { version : String
-    , state : State
+    , state : State ()
     }
 
 
@@ -50,7 +51,7 @@ update msg model =
                         Nothing ->
                             ( { model
                                 | state =
-                                    Dict.insert req.identifier (Dict.NonEmpty.insert req.language req.content state) model.state
+                                    Dict.insert req.identifier (Dict.NonEmpty.insert req.language { pairs = req.content, resources = () } state) model.state
                               }
                             , Cmd.none
                             )
@@ -71,7 +72,7 @@ update msg model =
                     ( { model
                         | state =
                             Dict.insert req.identifier
-                                (Dict.NonEmpty.singleton req.language req.content)
+                                (Dict.NonEmpty.singleton req.language { pairs = req.content, resources = () })
                                 model.state
                       }
                     , Cmd.none
@@ -86,20 +87,14 @@ update msg model =
             ( model, Ports.respond <| Err <| D.errorToString err )
 
 
-optimizeJsonAllLanguages : State.TranslationSet -> List ( String, String )
-optimizeJsonAllLanguages =
-    (Dict.NonEmpty.map <| always (optimizeJson >> E.encode 0))
-        >> Dict.NonEmpty.toList
-
-
-hasSameSignatureAsExistingTranslations : I18nPairs -> TranslationSet -> Maybe String
+hasSameSignatureAsExistingTranslations : I18nPairs -> TranslationSet () -> Maybe String
 hasSameSignatureAsExistingTranslations pairs translationSet =
     let
         ( _, v ) =
             Dict.NonEmpty.getSomeEntry translationSet
 
         existingKeys =
-            List.map Tuple.first v |> Set.fromList
+            List.map Tuple.first v.pairs |> Set.fromList
 
         keysOfNewLanguage =
             List.map Tuple.first pairs |> Set.fromList
@@ -121,18 +116,6 @@ hasSameSignatureAsExistingTranslations pairs translationSet =
         Just <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInNewLanguage) ++ "."
 
 
-optimizeJson : I18nPairs -> E.Value
-optimizeJson =
-    Array.fromList
-        >> E.array
-            (\( _, template ) ->
-                template
-                    |> Placeholder.mapPlaceholders (\i _ -> String.fromInt i)
-                    |> Placeholder.templateToString
-                    |> E.string
-            )
-
-
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
 onFinishModule model { generatorMode, elmModuleName } =
     case Dict.NonEmpty.toNonEmpty model.state of
@@ -140,36 +123,29 @@ onFinishModule model { generatorMode, elmModuleName } =
             Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
 
         Just nonEmptyState ->
-            Ports.respond <|
-                Ok
-                    { elmFile =
-                        (case generatorMode of
-                            Inline ->
-                                Generators.Inline.toFile
+            (Ports.respond << Ok) <|
+                let
+                    context =
+                        { moduleName = Util.moduleName elmModuleName
+                        , version = model.version
+                        , languages = State.getLanguages nonEmptyState
+                        , names = defaultNames
+                        }
+                in
+                case generatorMode of
+                    Inline ->
+                        { elmFile = Generators.Inline.toFile context nonEmptyState |> Pretty.pretty 120
+                        , optimizedJson = []
+                        }
 
-                            Dynamic ->
-                                Generators.DynamicArray.toFile
-                        )
-                            { moduleName = Util.moduleName elmModuleName
-                            , version = model.version
-                            , languages = State.getLanguages nonEmptyState
-                            , names = defaultNames
-                            }
-                            nonEmptyState
-                            |> Pretty.pretty 120
-                    , optimizedJson =
-                        case generatorMode of
-                            Inline ->
-                                []
-
-                            Dynamic ->
-                                Dict.toList model.state
-                                    |> List.concatMap
-                                        (\( identifier, translations ) ->
-                                            optimizeJsonAllLanguages translations
-                                                |> List.map (Tuple.mapFirst <| \language -> String.join "." [ identifier, language, "json" ])
-                                        )
-                    }
+                    Dynamic ->
+                        let
+                            stateWithResources =
+                                Dict.NonEmpty.map State.optimizeJsonAllLanguages nonEmptyState
+                        in
+                        { elmFile = Generators.DynamicArray.toFile context stateWithResources |> Pretty.pretty 120
+                        , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
+                        }
 
 
 subscriptions : Model -> Sub Msg

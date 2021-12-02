@@ -22,7 +22,7 @@ declare module "*elm.min.js" {
 
   export interface ResponseContent {
     elmFile: string;
-    optimizedJson: [string, string][];
+    optimizedJson: { filename: string; content: string }[];
   }
 
   export type ResponseHandler = (res: Response) => void;

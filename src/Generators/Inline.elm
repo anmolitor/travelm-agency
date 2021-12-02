@@ -8,18 +8,21 @@ import Elm.CodeGen as CG
 import List.NonEmpty
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
-import State exposing (NonEmptyState, State)
+import State exposing (NonEmptyState, State, Translation)
 import String.Extra
 import Types exposing (I18nPairs)
 import Util
 
 
-toFile : Context -> NonEmptyState -> CG.File
+toFile : Context -> NonEmptyState () -> CG.File
 toFile { moduleName, names, version, languages } state =
     let
         pairs : I18nPairs
         pairs =
-            translationSet |> Dict.NonEmpty.getSomeEntry |> Tuple.second
+            translationSet
+                |> Dict.NonEmpty.getSomeEntry
+                |> Tuple.second
+                |> .pairs
 
         translationSet =
             State.collectiveTranslationSet state
@@ -31,10 +34,10 @@ toFile { moduleName, names, version, languages } state =
                 []
                 (CG.recordAnn <| List.map (Tuple.mapBoth Util.safeName templateTypeAnn) pairs)
 
-        i18nDeclForLang : String -> I18nPairs -> CG.Declaration
-        i18nDeclForLang lang pairsForLanguage =
+        i18nDeclForLang : String -> Translation () -> CG.Declaration
+        i18nDeclForLang lang translation =
             CG.valDecl (Just (CG.emptyDocComment |> CG.markdown ("`I18n` instance containing all values for the language " ++ String.Extra.classify lang))) (Just <| CG.typed "I18n" []) lang <|
-                CG.record (List.map (Tuple.mapBoth Util.safeName inlineTemplate) pairsForLanguage)
+                CG.record (List.map (Tuple.mapBoth Util.safeName inlineTemplate) translation.pairs)
 
         inlineTemplate : Template -> CG.Expression
         inlineTemplate template =

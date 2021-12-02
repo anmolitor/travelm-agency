@@ -75,13 +75,8 @@ combineTranslationSets t =
             t
 
 
-optimizeJsonAllIdentifiers : State resources -> State OptimizedJson
-optimizeJsonAllIdentifiers =
-    Dict.map optimizeJsonAllLanguages
-
-
-optimizeJsonAllLanguages : Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
-optimizeJsonAllLanguages identifier =
+optimizeJsonAllLanguages : Bool -> Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
+optimizeJsonAllLanguages addContentHash identifier =
     Dict.NonEmpty.map <|
         \language { pairs } ->
             { pairs = pairs
@@ -92,12 +87,17 @@ optimizeJsonAllLanguages identifier =
                 in
                 { content = content
                 , filename =
-                    String.join "."
-                        [ identifier
-                        , language
-                        , FNV1a.hash content |> String.fromInt
-                        , "json"
-                        ]
+                    String.join "." <|
+                        List.filter (not << String.isEmpty)
+                            [ identifier
+                            , language
+                            , if addContentHash then
+                                FNV1a.hash content |> String.fromInt
+
+                              else
+                                ""
+                            , "json"
+                            ]
                 }
             }
 
@@ -116,4 +116,4 @@ optimizeJson =
 
 getAllResources : State resources -> List resources
 getAllResources =
-  Dict.values >> List.concatMap (Dict.NonEmpty.values >> List.map .resources)
+    Dict.values >> List.concatMap (Dict.NonEmpty.values >> List.map .resources)

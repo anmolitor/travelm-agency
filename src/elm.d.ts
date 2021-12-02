@@ -13,6 +13,7 @@ declare module "*elm.min.js" {
     type: "finish";
     elmModuleName: string;
     generatorMode: GeneratorMode | null;
+    addContentHash: boolean | null;
   }
 
   export interface Response {

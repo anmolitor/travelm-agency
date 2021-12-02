@@ -29,6 +29,12 @@ const { hideBin } = require("yargs/helpers");
               "Generate an Elm module that contains all of the translations inline (no resource loading necessary at runtime).",
             type: "boolean",
           })
+          .option("hash", {
+            description:
+              "Add content hashes to generated json files. This helps with caching.",
+            type: "boolean",
+            default: false,
+          })
           .positional("translation_directory", {
             description:
               "The directory containing translation files (.json/.properties).",
@@ -44,6 +50,7 @@ const { hideBin } = require("yargs/helpers");
     jsonPath: args.json_path,
     elmJson: args.elm_json,
     generatorMode: args.inline ? "inline" : "dynamic",
+    addContentHash: args.hash,
   });
 })();
 

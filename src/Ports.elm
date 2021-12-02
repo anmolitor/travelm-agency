@@ -68,7 +68,7 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, generatorMode : GeneratorMode }
+    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash: Bool }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -137,6 +137,7 @@ finishRequestDecoder =
     D.succeed FinishRequest
         |> D.required "elmModuleName" D.string
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
+        |> D.optional "addContentHash" D.bool False
 
 
 type alias InternalRequest =

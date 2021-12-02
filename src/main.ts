@@ -48,6 +48,7 @@ export type Options =
 interface InlineOptions {
   elmPath: string;
   translationDir: string;
+  addContentHash: boolean;
 }
 
 interface DynamicOptions extends InlineOptions {
@@ -73,9 +74,11 @@ export const sendTranslations = (translationDir: string): Promise<string[]> =>
 export const finishModule = ({
   elmPath,
   generatorMode = null,
+  addContentHash,
 }: {
   elmPath: string;
   generatorMode?: GeneratorMode | null;
+  addContentHash: boolean;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
@@ -97,12 +100,13 @@ export const finishModule = ({
           type: "finish",
           elmModuleName,
           generatorMode,
+          addContentHash
         });
       })
   );
 
 export const run = async (options: Options) => {
-  const { elmPath, translationDir, generatorMode } = options;
+  const { elmPath, translationDir, generatorMode, addContentHash } = options;
   const [firstTranslationFileName] = await sendTranslations(translationDir);
   if (!firstTranslationFileName) {
     throw new Error("Given translation directory does not contain any files");
@@ -110,6 +114,7 @@ export const run = async (options: Options) => {
   const { elmFile, optimizedJson } = await finishModule({
     elmPath,
     generatorMode,
+    addContentHash,
   });
 
   const elmPromise = writeFile(elmPath, elmFile);

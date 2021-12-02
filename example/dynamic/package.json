@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run build && npm run live",
     "live": "elm-live --open --dir=../dist -- src/Main.elm --output=../dist/main.js",
-    "build": "node ../../index.js --elm_path=src/I18n.elm --json_path=../dist/i18n ../translations"
+    "build": "node ../../index.js --elm_path=src/I18n.elm --json_path=../dist/i18n --hash ../translations"
   },
   "author": "Andreas Molitor",
   "license": "ISC"

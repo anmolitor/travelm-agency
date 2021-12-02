@@ -117,7 +117,7 @@ hasSameSignatureAsExistingTranslations pairs translationSet =
 
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
-onFinishModule model { generatorMode, elmModuleName } =
+onFinishModule model { generatorMode, elmModuleName, addContentHash } =
     case Dict.NonEmpty.toNonEmpty model.state of
         Nothing ->
             Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
@@ -141,7 +141,7 @@ onFinishModule model { generatorMode, elmModuleName } =
                     Dynamic ->
                         let
                             stateWithResources =
-                                Dict.NonEmpty.map State.optimizeJsonAllLanguages nonEmptyState
+                                Dict.NonEmpty.map (State.optimizeJsonAllLanguages addContentHash) nonEmptyState
                         in
                         { elmFile = Generators.DynamicArray.toFile context stateWithResources |> Pretty.pretty 120
                         , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources

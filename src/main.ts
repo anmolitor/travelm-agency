@@ -65,12 +65,12 @@ interface DynamicOptions extends InlineOptions {
   jsonPath: string;
 }
 
-export const sendTranslations = (translationDir: string): Promise<string[]> =>
+export const sendTranslations = (filePaths: string[]): Promise<void> =>
   withElmApp(async (ports) => {
-    const translationFileNames = await readDir(translationDir);
     await Promise.all(
-      translationFileNames.map(async (fileName) => {
-        const fileContent = await readFile(path.join(translationDir, fileName));
+      filePaths.map(async (filePath) => {
+        const fileName = path.parse(filePath).base;
+        const fileContent = await readFile(filePath);
         ports.receiveRequest.send({
           type: "translation",
           fileName,
@@ -78,7 +78,6 @@ export const sendTranslations = (translationDir: string): Promise<string[]> =>
         });
       })
     );
-    return translationFileNames;
   });
 
 export const finishModule = ({
@@ -117,10 +116,13 @@ export const finishModule = ({
 
 export const run = async (options: Options) => {
   const { elmPath, translationDir, generatorMode, addContentHash } = options;
-  const [firstTranslationFileName] = await sendTranslations(translationDir);
-  if (!firstTranslationFileName) {
-    throw new Error("Given translation directory does not contain any files");
+  const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
+    path.resolve(translationDir, fileName)
+  );
+  if (translationFilePaths.length === 0) {
+    throw new Error(`Given translation directory ${translationDir} does not contain any files`);
   }
+  await sendTranslations(translationFilePaths);
   const { elmFile, optimizedJson } = await finishModule({
     elmPath,
     generatorMode,

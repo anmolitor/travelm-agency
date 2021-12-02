@@ -27,18 +27,28 @@ const getPluginVersion = (): string => {
 
 let ports: Ports | undefined;
 
-export const withElmApp = <T>(consumer: (ports: Ports) => T): T => {
+export const withElmApp = async <T>(
+  consumer: (ports: Ports) => Promise<T>
+): Promise<T> => {
+  let error: string | undefined;
   if (!ports) {
     const version = getPluginVersion();
     ({ ports } = Elm.Main.init({ flags: { version } }));
     const throwOnError: ResponseHandler = (response) => {
       if (response.error) {
-        throw new Error(response.error);
+        error = response.error;
       }
     };
     ports.sendResponse.subscribe(throwOnError);
   }
-  return consumer(ports);
+  return consumer(ports).then((res) => {
+    const previousError = error;
+    if (previousError) {
+      error = undefined;
+      throw new Error(previousError);
+    }
+    return res;
+  });
 };
 
 export type Options =
@@ -100,7 +110,7 @@ export const finishModule = ({
           type: "finish",
           elmModuleName,
           generatorMode,
-          addContentHash
+          addContentHash,
         });
       })
   );

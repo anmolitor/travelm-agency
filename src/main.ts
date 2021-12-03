@@ -120,7 +120,9 @@ export const run = async (options: Options) => {
     path.resolve(translationDir, fileName)
   );
   if (translationFilePaths.length === 0) {
-    throw new Error(`Given translation directory ${translationDir} does not contain any files`);
+    throw new Error(
+      `Given translation directory ${translationDir} does not contain any files`
+    );
   }
   await sendTranslations(translationFilePaths);
   const { elmFile, optimizedJson } = await finishModule({

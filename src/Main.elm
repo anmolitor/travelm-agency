@@ -79,7 +79,7 @@ update msg model =
                     )
 
         GotRequest (Ports.FinishModule req) ->
-            ( model
+            ( init model.version
             , onFinishModule model req
             )
 

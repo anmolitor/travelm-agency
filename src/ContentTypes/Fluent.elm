@@ -1,7 +1,9 @@
-module ContentTypes.Fluent exposing (..)
+module ContentTypes.Fluent exposing (AST, Content(..), Identifier(..), Message, Placeable(..), Resource(..), ast, message)
 
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompUntilEndOr, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import List.NonEmpty exposing (NonEmpty)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import String.Extra
+import Types
 
 
 type alias AST =
@@ -9,19 +11,12 @@ type alias AST =
 
 
 type Resource
-    = EntryResource Entry
-    | BlankBlock
-    | Junk String
-
-
-type Entry
-    = MessageEntry Message
-    | TermEntry Message
+    = MessageResource Message
 
 
 type alias Message =
     { identifier : Identifier
-    , content : List Content
+    , content : NonEmpty Content
     }
 
 
@@ -30,23 +25,85 @@ type Content
     | PlaceableContent Placeable
 
 
+astToInternalRep : AST -> Types.Translations
+astToInternalRep ast_ =
+    let
+        identifierToKey : Identifier -> Types.TKey
+        identifierToKey id =
+            case id of
+                TermIdentifier t ->
+                    Types.HiddenKey t
+
+                MessageIdentifier m ->
+                    Types.ExposedKey m
+
+        contentsToValue : Content -> Types.TSegment
+        contentsToValue cnt =
+            case cnt of
+                TextContent str ->
+                    Types.Text str
+
+                PlaceableContent (VarRef var) ->
+                    Types.Interpolation var
+
+                PlaceableContent (TermRef term) ->
+                    Types.Reference term
+
+                PlaceableContent (StringLit lit) ->
+                    Types.Text lit
+
+        resourceToInternalRep : Resource -> ( Types.TKey, Types.TValue )
+        resourceToInternalRep res =
+            case res of
+                MessageResource msg ->
+                    ( identifierToKey msg.identifier, List.NonEmpty.map contentsToValue msg.content )
+    in
+    List.map resourceToInternalRep ast_
+
+
+ast : Parser AST
+ast =
+    loop []
+        (\st ->
+            chompWhile (\c -> c == ' ' || c == '\t' || c == '\n' || c == '\u{000D}')
+                |> andThen
+                    (\_ ->
+                        oneOf
+                            [ succeed (\msg -> Loop <| msg :: st) |= map MessageResource message
+                            , succeed (Done st) |. end
+                            ]
+                    )
+        )
+        |> map List.reverse
+
+
 message : Parser Message
 message =
-    succeed (\id firstLineCnt otherLines -> Message id (combineLines <| firstLineCnt :: removeCommonIndentCnt otherLines))
+    (succeed (\id firstLineCnt otherLines -> { identifier = id, content = combineLines <| firstLineCnt :: removeCommonIndentCnt otherLines })
         |= identifier
         |. spaces
         |= messageLine
         |= loop [] multilineHelper
+    )
+        |> andThen
+            (\msg ->
+                List.NonEmpty.fromList msg.content
+                    |> Result.fromMaybe "Content of message cannot be empty"
+                    |> resultToParser
+                    |> map (Message msg.identifier)
+            )
 
 
 multilineHelper : List (List Content) -> Parser (Step (List (List Content)) (List (List Content)))
 multilineHelper revLines =
-    oneOf
-        [ succeed (\cnts -> Loop <| cnts :: revLines)
-            |. Parser.chompIf ((==) '\n')
-            |= messageLine
-        , succeed (Done <| List.reverse revLines)
-        ]
+    succeed identity
+        |. oneOf [ end, Parser.token "\n" ]
+        |= oneOf
+            [ succeed (\cnts -> Loop <| cnts :: revLines)
+                |. Parser.chompIf isSpace
+                |= messageLine
+            , succeed (Done <| List.reverse revLines)
+            ]
 
 
 messageLine : Parser (List Content)
@@ -59,7 +116,7 @@ messageLineHelper revCnt =
     oneOf
         [ succeed (\cnt -> Loop (cnt :: revCnt))
             |= content
-        , succeed () |> map (\_ -> Done <| List.reverse revCnt)
+        , succeed (Done <| List.reverse revCnt)
         ]
 
 
@@ -205,11 +262,6 @@ placeable =
             ]
         |. spaces
         |. token "}"
-
-
-text : Parser String
-text =
-    chompUntilEndOr "{" |> getChompedString
 
 
 stringLit : Parser String

@@ -1,6 +1,7 @@
 module ContentTypes.Fluent exposing (..)
 
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntilEndOr, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompUntilEndOr, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import String.Extra
 
 
 type alias AST =
@@ -31,24 +32,47 @@ type Content
 
 message : Parser Message
 message =
-    succeed Message
+    succeed (\id firstLineCnt otherLines -> Message id (combineLines <| firstLineCnt :: removeCommonIndentCnt otherLines))
         |= identifier
         |. spaces
-        |= loop []
-            (\revCnt ->
-                oneOf
-                    [ succeed (\cnt -> Loop (cnt :: revCnt))
-                        |= content
-                    , succeed () |> map (\_ -> Done <| List.reverse revCnt)
-                    ]
-            )
+        |= messageLine
+        |= loop [] multilineHelper
+
+
+multilineHelper : List (List Content) -> Parser (Step (List (List Content)) (List (List Content)))
+multilineHelper revLines =
+    oneOf
+        [ succeed (\cnts -> Loop <| cnts :: revLines)
+            |. Parser.chompIf ((==) '\n')
+            |= messageLine
+        , succeed (Done <| List.reverse revLines)
+        ]
+
+
+messageLine : Parser (List Content)
+messageLine =
+    loop [] messageLineHelper
+
+
+messageLineHelper : List Content -> Parser (Step (List Content) (List Content))
+messageLineHelper revCnt =
+    oneOf
+        [ succeed (\cnt -> Loop (cnt :: revCnt))
+            |= content
+        , succeed () |> map (\_ -> Done <| List.reverse revCnt)
+        ]
+
+
+isSpace : Char -> Bool
+isSpace c =
+    c == ' ' || c == '\t'
 
 
 content : Parser Content
 content =
     oneOf
         [ succeed PlaceableContent |. token "{" |= placeable
-        , chompUntilEndOr "{"
+        , chompWhile (\c -> c /= '{' && c /= '\n')
             |> getChompedString
             |> andThen
                 (\cnt ->
@@ -59,6 +83,85 @@ content =
                         succeed (TextContent cnt)
                 )
         ]
+
+
+combineLines : List (List Content) -> List Content
+combineLines =
+    List.foldl
+        (\lineCnts acc ->
+            case ( acc, lineCnts ) of
+                ( (TextContent str) :: restAcc, (TextContent strNextLine) :: restLine ) ->
+                    List.reverse restLine ++ TextContent (str ++ "\n" ++ strNextLine) :: restAcc
+
+                ( (TextContent str) :: restAcc, _ ) ->
+                    List.reverse lineCnts ++ TextContent (str ++ "\n") :: restAcc
+
+                ( _ :: _, (TextContent strNextLine) :: restLine ) ->
+                    List.reverse restLine ++ TextContent ("\n" ++ strNextLine) :: acc
+
+                ( _ :: _, _ ) ->
+                    List.reverse lineCnts ++ TextContent "\n" :: acc
+
+                ( [], _ ) ->
+                    List.reverse lineCnts ++ acc
+        )
+        []
+        >> List.reverse
+
+
+removeCommonIndentCnt : List (List Content) -> List (List Content)
+removeCommonIndentCnt lines =
+    let
+        removeIndent =
+            String.dropLeft <| commonIndentCnt lines
+    in
+    List.map
+        (\cnts ->
+            case cnts of
+                (TextContent str) :: rest ->
+                    (TextContent <| removeIndent str) :: rest
+
+                _ ->
+                    cnts
+        )
+        lines
+
+
+commonIndentCnt : List (List Content) -> Int
+commonIndentCnt =
+    List.filterMap
+        (\list ->
+            case list of
+                (TextContent str) :: rest ->
+                    if List.isEmpty rest && String.Extra.isBlank str then
+                        Nothing
+
+                    else
+                        Just str
+
+                _ ->
+                    Nothing
+        )
+        >> commonIndent
+
+
+commonIndent : List String -> Int
+commonIndent =
+    List.filter (not << String.isEmpty)
+        >> List.map
+            (String.foldl
+                (\c ( ind, encounteredNonWhitespace ) ->
+                    if encounteredNonWhitespace || not (isSpace c) then
+                        ( ind, True )
+
+                    else
+                        ( ind + 1, False )
+                )
+                ( 0, False )
+            )
+        >> List.map Tuple.first
+        >> List.minimum
+        >> Maybe.withDefault 0
 
 
 type Identifier
@@ -137,6 +240,7 @@ stringHelp revChunks =
                 [ map (\_ -> "\n") (token "n")
                 , map (\_ -> "\t") (token "t")
                 , map (\_ -> "\"") (token "\"")
+                , map (\_ -> "\\") (token "\\")
                 , succeed String.fromChar
                     |. token "u"
                     |= unicode

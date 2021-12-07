@@ -44,4 +44,77 @@ suite =
                             , content = [ F.PlaceableContent (F.TermRef "back-to"), F.PlaceableContent (F.VarRef "back") ]
                             }
                         )
+        , test "single message with string literal" <|
+            \_ ->
+                Parser.run F.message """test = lit: { "st\\"\\\\ \\u1234 abc" }"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "test"
+                            , content = [ F.TextContent "lit: ", F.PlaceableContent (F.StringLit "st\"\\ ሴ abc") ]
+                            }
+                        )
+        , test "two line message" <|
+            \_ ->
+                Parser.run F.message """test = a message on
+                    multiple lines."""
+                    |> Expect.equal
+                        (Ok { identifier = F.MessageIdentifier "test", content = [ F.TextContent """a message on
+multiple lines.""" ] })
+        , test "multiline message" <|
+            \_ ->
+                Parser.run F.message """test = a message on
+                    multiple lines
+                with different
+                  indents"""
+                    |> Expect.equal
+                        (Ok { identifier = F.MessageIdentifier "test", content = [ F.TextContent """a message on
+    multiple lines
+with different
+  indents""" ] })
+        , test "multiline message with placeable" <|
+            \_ ->
+                Parser.run F.message """test = a message on
+                    multiple {-lines}
+                with different
+                  indents"""
+                    |> Expect.equal
+                        (Ok { identifier = F.MessageIdentifier "test", content = [ F.TextContent """a message on
+    multiple """, F.PlaceableContent (F.TermRef "lines"), F.TextContent """
+with different
+  indents""" ] })
+        , test "multiline message with multiple placeables at the edges of the lines" <|
+            \_ ->
+                Parser.run F.message """test = a message on
+                {-multiple} {-lines}
+                {-with} different
+                  indents"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "test"
+                            , content =
+                                [ F.TextContent "a message on\n"
+                                , F.PlaceableContent (F.TermRef "multiple")
+                                , F.TextContent " "
+                                , F.PlaceableContent (F.TermRef "lines")
+                                , F.TextContent "\n"
+                                , F.PlaceableContent (F.TermRef "with")
+                                , F.TextContent " different\n  indents"
+                                ]
+                            }
+                        )
+        , test "multiline message with empty lines" <|
+            \_ ->
+                Parser.run F.message """test = a message with
+   
+                blank lines"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "test"
+                            , content =
+                                [ F.TextContent """a message with
+
+blank lines"""
+                                ]
+                            }
+                        )
         ]

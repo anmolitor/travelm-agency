@@ -8,16 +8,16 @@ import Elm.CodeGen as CG
 import List.NonEmpty
 import Placeholder.Internal as Placeholder exposing (Template)
 import Set
-import State exposing (NonEmptyState, State, Translation)
+import State exposing (NonEmptyState, Translation)
 import String.Extra
-import Types exposing (I18nPairs)
+import Types
 import Util
 
 
 toFile : Context -> NonEmptyState () -> CG.File
 toFile { moduleName, names, version, languages } state =
     let
-        pairs : I18nPairs
+        pairs : Types.Translations
         pairs =
             translationSet
                 |> Dict.NonEmpty.getFirstEntry
@@ -27,40 +27,77 @@ toFile { moduleName, names, version, languages } state =
         translationSet =
             State.collectiveTranslationSet state
 
+        tValueToRecordTypeAnn : Types.TValue -> CG.TypeAnnotation
+        tValueToRecordTypeAnn value =
+            let
+                placeholders =
+                    Types.getInterpolationVarNames value |> Set.toList |> List.sort
+            in
+            case placeholders of
+                [] ->
+                    CG.stringAnn
+
+                [ _ ] ->
+                    CG.funAnn CG.stringAnn CG.stringAnn
+
+                many ->
+                    many
+                        |> List.map (\name -> ( name, CG.stringAnn ))
+                        |> (\fields -> CG.funAnn (CG.recordAnn fields) CG.stringAnn)
+
         i18nTypeDecl : CG.Declaration
         i18nTypeDecl =
             CG.aliasDecl Nothing
                 names.i18nTypeName
                 []
-                (CG.recordAnn <| List.map (Tuple.mapBoth Util.safeName templateTypeAnn) pairs)
+                (CG.recordAnn <|
+                    List.map (Tuple.mapSecond tValueToRecordTypeAnn) pairs
+                )
 
         i18nDeclForLang : String -> Translation () -> CG.Declaration
         i18nDeclForLang lang translation =
             CG.valDecl (Just (CG.emptyDocComment |> CG.markdown ("`I18n` instance containing all values for the language " ++ String.Extra.classify lang))) (Just <| CG.typed "I18n" []) lang <|
-                CG.record (List.map (Tuple.mapBoth Util.safeName inlineTemplate) translation.pairs)
+                CG.record (List.map (Tuple.mapSecond inlineTemplate) translation.pairs)
 
-        inlineTemplate : Template -> CG.Expression
-        inlineTemplate template =
-            Placeholder.getPlaceholderPositions template
-                |> List.concatMap (\( indices, name ) -> List.NonEmpty.map (Tuple.pair name) indices |> List.NonEmpty.toList)
-                |> List.sortBy Tuple.second
-                |> List.map (Tuple.first >> Util.safeName >> CG.val)
-                |> List.map2
-                    (\segm var ->
-                        if segm == "" then
-                            var
+        inlineTemplate : Types.TValue -> CG.Expression
+        inlineTemplate value =
+            let
+                placeholders =
+                    Types.getInterpolationVarNames value
 
-                        else
-                            CG.applyBinOp var CG.append (CG.string segm)
-                    )
-                    (List.NonEmpty.tail <| Placeholder.getSegments template)
-                |> List.foldl (\e1 e2 -> CG.applyBinOp e2 CG.append e1) (CG.string <| List.NonEmpty.head <| Placeholder.getSegments template)
-                |> (case Placeholder.getAlphabeticalPlaceholderNames template of
+                accessParam =
+                    if Set.size placeholders == 1 then
+                        CG.val << Util.safeName
+
+                    else
+                        CG.access (CG.val "data_")
+
+                segmentToExpression : Types.TSegment -> CG.Expression
+                segmentToExpression segm =
+                    case segm of
+                        Types.Interpolation var ->
+                            accessParam var
+
+                        Types.InterpolationCase var _ ->
+                            accessParam var
+
+                        Types.Text text ->
+                            CG.string text
+
+                concatenateExpressions e1 e2 =
+                    CG.applyBinOp e2 CG.append e1
+            in
+            List.NonEmpty.map segmentToExpression value
+                |> List.NonEmpty.foldl1 concatenateExpressions
+                |> (case Set.toList placeholders of
                         [] ->
                             identity
 
-                        nonEmpty ->
-                            CG.lambda (nonEmpty |> List.map (Util.safeName >> CG.varPattern))
+                        [ single ] ->
+                            CG.lambda [ CG.varPattern <| Util.safeName single ]
+
+                        _ ->
+                            CG.lambda [ CG.varPattern "data_" ]
                    )
 
         i18nDecls : List CG.Declaration
@@ -69,47 +106,12 @@ toFile { moduleName, names, version, languages } state =
                 |> Dict.NonEmpty.toList
                 |> List.map Tuple.second
 
-        accessorDecl : ( String, Template ) -> CG.Declaration
-        accessorDecl ( key, template ) =
-            let
-                placeholders =
-                    Placeholder.getAlphabeticalPlaceholderNames template
-
-                placeholderPatterns =
-                    case placeholders of
-                        [] ->
-                            []
-
-                        [ single ] ->
-                            [ CG.varPattern <| Util.safeName single ]
-
-                        _ ->
-                            [ CG.varPattern "placeholders_" ]
-
-                placeholderFunctionArguments =
-                    case placeholders of
-                        [] ->
-                            []
-
-                        [ single ] ->
-                            [ CG.val <| Util.safeName single ]
-
-                        many ->
-                            List.map (\name -> CG.access (CG.val "placeholders_") name) many
-            in
-            CG.funDecl Nothing
-                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) (templateTypeAnnRecord template))
-                key
-                (CG.varPattern "i18n_" :: placeholderPatterns)
-                (CG.apply <| CG.access (CG.val "i18n_") (Util.safeName key) :: placeholderFunctionArguments)
-
         declarations =
-            [ i18nTypeDecl ] ++ List.map accessorDecl pairs ++ i18nDecls
+            i18nTypeDecl :: i18nDecls
 
         exposed =
-            [ CG.typeOrAliasExpose names.i18nTypeName ]
-                ++ List.map (Tuple.first >> CG.funExpose) pairs
-                ++ List.map CG.funExpose languages
+            CG.typeOrAliasExpose names.i18nTypeName
+                :: List.map CG.funExpose languages
 
         fileComment =
             CG.emptyFileComment |> CG.markdown ("This file was generated by elm-i18n version " ++ version ++ ".")

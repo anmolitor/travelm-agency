@@ -1,42 +1,70 @@
 module PropertiesTest exposing (..)
 
-import ContentTypes.Properties as Props
+import ContentTypes.Properties as Properties
 import Expect
-import Json.Decode as D
-import Placeholder.Internal exposing (Template, getPlaceholderNames, getSegments)
 import Test exposing (Test, describe, test)
-import Types exposing (I18nPairs)
+import Types exposing (TSegment(..))
 
 
-runParser : String -> Result D.Error I18nPairs
-runParser str =
-    D.decodeString (D.string |> D.andThen Props.parse |> D.field "wrapper") <|
-        """{"wrapper": \""""
-            ++ String.replace "\n" "\\n" str
-            ++ "\"}"
-
-
-mapTemplate : (Template -> b) -> Result x (List ( a, Template )) -> Result x (List ( a, b ))
-mapTemplate =
-    Result.map << List.map << Tuple.mapSecond
-
-
-suite : Test
-suite =
+parserTests : Test
+parserTests =
     describe "Properties parser"
         [ test "single row" <|
             \_ ->
-                runParser "test.property=Some value"
-                    |> mapTemplate getSegments
-                    |> Expect.equal (Ok [ ( "testProperty", ( "Some value", [] ) ) ])
-        , test "single row with placeholder" <|
-            \_ ->
-                runParser "test.property=Some {{val}}"
-                    |> mapTemplate getPlaceholderNames
-                    |> Expect.equal (Ok [ ( "testProperty", [ "val" ] ) ])
+                Properties.parseProperties "test.property=Some value"
+                    |> Expect.equal (Ok [ ( [ "test", "property" ], "Some value" ) ])
         , test "multiple rows" <|
             \_ ->
-                runParser "test.property1=val1\ntest.property2=val2"
-                    |> mapTemplate getSegments
-                    |> Expect.equal (Ok [ ( "testProperty1", ( "val1", [] ) ), ( "testProperty2", ( "val2", [] ) ) ])
+                Properties.parseProperties "test.property1=val1\ntest.property2=val2"
+                    |> Expect.equal
+                        (Ok
+                            [ ( [ "test", "property1" ], "val1" )
+                            , ( [ "test", "property2" ], "val2" )
+                            ]
+                        )
+        , test "empty rows" <|
+            \_ ->
+                Properties.parseProperties """
+prop1=A
+
+prop2=B
+                """ |> Expect.equal (Ok [ ( [ "prop1" ], "A" ), ( [ "prop2" ], "B" ) ])
+        , test "single multi-line" <|
+            \_ ->
+                Properties.parseProperties """
+prop1=A \\
+    test
+
+prop2=B
+                """ |> Expect.equal (Ok [ ( [ "prop1" ], "A test" ), ( [ "prop2" ], "B" ) ])
+        , test "more multi-lines with vanishing indent" <|
+            \_ ->
+                Properties.parseProperties """
+prop=A \\
+    test\\
+  for\\
+this
+                """ |> Expect.equal (Ok [ ( [ "prop" ], "A testforthis" ) ])
+        ]
+
+
+converterTests : Test
+converterTests =
+    describe "Properties to Internal Representation Converter"
+        [ test "single key value pair" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop", "name" ], "value" ) ]
+                    |> Expect.equal (Ok [ ( "propName", ( Text "value", [] ) ) ])
+        , test "single placeholder" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop" ], "hi {name}" ) ]
+                    |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
+        , test "multiple placeholders" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop" ], "hi {name} {abc}." ) ]
+                    |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name", Text " ", Interpolation "abc", Text "." ] ) ) ])
+        , test "multiple pairs" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop1" ], "val1" ), ( [ "prop2" ], "val2" ) ]
+                    |> Expect.equal (Ok [ ( "prop1", ( Text "val1", [] ) ), ( "prop2", ( Text "val2", [] ) ) ])
         ]

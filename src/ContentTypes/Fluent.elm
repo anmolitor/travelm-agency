@@ -1,7 +1,10 @@
-module ContentTypes.Fluent exposing (AST, Content(..), Identifier(..), Message, Placeable(..), Resource(..), ast, message)
+module ContentTypes.Fluent exposing (AST, Content(..), Identifier(..), Message, Placeable(..), Resource(..), ast, fluentToInternalRep, message, runFluentParser)
 
+import Dict exposing (Dict)
 import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser.DeadEnds
+import Result.Extra
 import String.Extra
 import Types
 
@@ -25,40 +28,77 @@ type Content
     | PlaceableContent Placeable
 
 
-astToInternalRep : AST -> Types.Translations
-astToInternalRep ast_ =
+fluentToInternalRep : AST -> Result String Types.Translations
+fluentToInternalRep ast_ =
     let
         identifierToKey : Identifier -> Types.TKey
         identifierToKey id =
             case id of
                 TermIdentifier t ->
-                    Types.HiddenKey t
+                    t
 
                 MessageIdentifier m ->
-                    Types.ExposedKey m
+                    m
 
-        contentsToValue : Content -> Types.TSegment
+        contentsToValue : Content -> Result String (NonEmpty Types.TSegment)
         contentsToValue cnt =
             case cnt of
                 TextContent str ->
-                    Types.Text str
+                    Ok <| List.NonEmpty.singleton <| Types.Text str
 
                 PlaceableContent (VarRef var) ->
-                    Types.Interpolation var
+                    Ok <| List.NonEmpty.singleton <| Types.Interpolation var
 
                 PlaceableContent (TermRef term) ->
-                    Types.Reference term
+                    case Dict.get term termDict of
+                        Just contents ->
+                            List.NonEmpty.map contentsToValue contents
+                                |> combineMapResultNonEmpty
+                                |> Result.map List.NonEmpty.concat
+
+                        Nothing ->
+                            Err <| "Could not resolve term reference: '" ++ term ++ "'"
 
                 PlaceableContent (StringLit lit) ->
-                    Types.Text lit
+                    Ok <| List.NonEmpty.singleton <| Types.Text lit
 
-        resourceToInternalRep : Resource -> ( Types.TKey, Types.TValue )
+        termDict : Dict String (NonEmpty Content)
+        termDict =
+            List.filterMap
+                (\(MessageResource msg) ->
+                    case msg.identifier of
+                        TermIdentifier str ->
+                            Just ( str, msg.content )
+
+                        MessageIdentifier _ ->
+                            Nothing
+                )
+                ast_
+                |> Dict.fromList
+
+        resourceToInternalRep : Resource -> Result String ( Types.TKey, Types.TValue )
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
-                    ( identifierToKey msg.identifier, List.NonEmpty.map contentsToValue msg.content )
+                    Result.map (Tuple.pair <| identifierToKey msg.identifier)
+                        (List.NonEmpty.map contentsToValue msg.content
+                            |> combineMapResultNonEmpty
+                            |> Result.map List.NonEmpty.concat
+                        )
     in
-    List.map resourceToInternalRep ast_
+    Result.Extra.combineMap resourceToInternalRep ast_
+
+
+combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)
+combineMapResultNonEmpty =
+    List.NonEmpty.map (Result.map List.NonEmpty.singleton)
+        >> List.NonEmpty.foldl1 (Result.map2 List.NonEmpty.append)
+
+
+runFluentParser : String -> Result String AST
+runFluentParser =
+    Parser.run ast
+        >> Result.mapError Parser.DeadEnds.deadEndsToString
 
 
 ast : Parser AST

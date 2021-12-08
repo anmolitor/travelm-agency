@@ -4,7 +4,6 @@ import CodeGen.Shared exposing (unwrapDecl)
 import Elm.CodeGen as CG
 import Elm.Syntax.Declaration exposing (Declaration(..))
 import Elm.Syntax.Node as Node
-import Elm.Syntax.Pattern
 
 
 declName : CG.Declaration -> Maybe String

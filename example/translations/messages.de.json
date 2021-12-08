@@ -1,8 +1,8 @@
 {
-  "greeting": "Hallo {{name}}",
+  "greeting": "Hallo {name}",
   "static": "Statischer Text",
   "languageSwitch": {
-    "info": "Du kannst hier deine Sprache von {{currentLanguage}} zu einer anderen ändern."
+    "info": "Du kannst hier deine Sprache von {currentLanguage} zu einer anderen ändern."
   },
-  "order": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {{name}}, Sprache: {{language}}"
+  "order": "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: {name}, Sprache: {language}"
 }

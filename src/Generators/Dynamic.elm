@@ -1,19 +1,17 @@
-module Generators.DynamicArray exposing (toFile)
+module Generators.Dynamic exposing (toFile)
 
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
 import CodeGen.Imports
 import CodeGen.References as Refs
-import CodeGen.Shared exposing (Context, templateTypeAnn, templateTypeAnnRecord)
-import Dict exposing (Dict)
-import Dict.NonEmpty exposing (NonEmpty)
+import CodeGen.Shared exposing (Context)
+import Dict.NonEmpty
 import Elm.CodeGen as CG
-import Generators.Names exposing (IdentifierScopedNames, Names)
-import Placeholder.Internal as Placeholder exposing (Template)
+import Generators.Names exposing (Names)
 import Set
-import State exposing (Identifier, NonEmptyState, OptimizedJson, State, TranslationSet)
+import State exposing (Identifier, NonEmptyState, OptimizedJson, TranslationSet)
 import String.Extra
-import Types exposing (I18nPairs)
+import Types
 import Util
 
 
@@ -69,11 +67,11 @@ you should write your own parsing function."""))
                         ++ [ ( CG.allPattern, CG.val "Nothing" ) ]
                 )
 
-        accessorDeclaration : Identifier -> Int -> ( String, Template ) -> CG.Declaration
-        accessorDeclaration identifier index ( key, template ) =
+        accessorDeclaration : Identifier -> Int -> ( Types.TKey, Types.TValue ) -> CG.Declaration
+        accessorDeclaration identifier index ( key, value ) =
             let
                 placeholders =
-                    Placeholder.getAlphabeticalPlaceholderNames template
+                    Types.getInterpolationVarNames value |> Set.toList |> List.sort
 
                 placeholderPatterns =
                     case placeholders of
@@ -96,9 +94,22 @@ you should write your own parsing function."""))
 
                         many ->
                             List.map (\name -> CG.access (CG.val "placeholders_") name) many
+
+                typeAnn =
+                    case placeholders of
+                        [] ->
+                            CG.stringAnn
+
+                        [ _ ] ->
+                            CG.funAnn CG.stringAnn CG.stringAnn
+
+                        many ->
+                            many
+                                |> List.map (\name -> ( name, CG.stringAnn ))
+                                |> (\fields -> CG.funAnn (CG.extRecordAnn "a" fields) CG.stringAnn)
             in
             CG.funDecl Nothing
-                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) (templateTypeAnnRecord template))
+                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) typeAnn)
                 key
                 (CG.namedPattern names.i18nTypeName [ CG.recordPattern [ identifier ] ] :: placeholderPatterns)
                 (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
@@ -173,7 +184,7 @@ you should write your own parsing function."""))
 
 
 generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet OptimizedJson -> List CG.Declaration
-generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName, languageToStringFunName } identifier translations =
+generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName } identifier translations =
     let
         ( someLanguage, someTranslation ) =
             Dict.NonEmpty.getFirstEntry translations
@@ -211,7 +222,7 @@ generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, de
                 [ CG.varPattern "lang_" ]
                 (CG.caseExpr (CG.val "lang_") <|
                     List.map
-                        (\( language, { pairs, resources } ) ->
+                        (\( language, { resources } ) ->
                             ( CG.namedPattern (String.Extra.classify language) []
                             , CG.string resources.filename
                             )
@@ -272,7 +283,7 @@ will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ 
 
     replacePlaceholders : List String -> String -> String
     replacePlaceholders list str =
-        List.foldl (\\val ( index, acc ) -> ( index + 1, String.replace ("{{" ++ String.fromInt index ++ "}}") val acc )) ( 0, str ) list
+        List.foldl (\\val ( index, acc ) -> ( index + 1, String.replace ("{" ++ String.fromInt index ++ "}") val acc )) ( 0, str ) list
             |> Tuple.second
 
 -}
@@ -291,7 +302,7 @@ replacePlaceholdersDecl =
                         [ CG.applyBinOp (CG.val "i_") CG.plus (CG.int 1)
                         , CG.apply
                             [ CG.fqFun [ "String" ] "replace"
-                            , CG.parens <| appendAll (CG.string "{{") [ CG.apply [ CG.fqFun [ "String" ] "fromInt", CG.val "i_" ], CG.string "}}" ]
+                            , CG.parens <| appendAll (CG.string "{") [ CG.apply [ CG.fqFun [ "String" ] "fromInt", CG.val "i_" ], CG.string "}" ]
                             , CG.val "val_"
                             , CG.val "acc_"
                             ]

@@ -1,13 +1,11 @@
 module State exposing (..)
 
-import Array
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import FNV1a
 import Json.Encode as E
 import List.NonEmpty
-import Placeholder.Internal as Placeholder
-import Types exposing (I18nPairs)
+import Types exposing (Translations)
 
 
 type alias Identifier =
@@ -19,7 +17,7 @@ type alias Language =
 
 
 type alias Translation resources =
-    { pairs : I18nPairs
+    { pairs : Translations
     , resources : resources
     }
 
@@ -84,7 +82,7 @@ optimizeJsonAllLanguages addContentHash identifier =
             , resources =
                 let
                     content =
-                        optimizeJson pairs |> E.encode 0
+                        Types.optimizeJson pairs |> E.encode 0
                 in
                 { content = content
                 , filename =
@@ -101,18 +99,6 @@ optimizeJsonAllLanguages addContentHash identifier =
                             ]
                 }
             }
-
-
-optimizeJson : I18nPairs -> E.Value
-optimizeJson =
-    Array.fromList
-        >> E.array
-            (\( _, template ) ->
-                template
-                    |> Placeholder.mapPlaceholders (\i _ -> String.fromInt i)
-                    |> Placeholder.templateToString
-                    |> E.string
-            )
 
 
 getAllResources : State resources -> List resources

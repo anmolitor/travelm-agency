@@ -1,63 +1,128 @@
-module ContentTypes.Properties exposing (parse)
+module ContentTypes.Properties exposing (keyValueParser, parseProperties, propertiesToInternalRep, valueParser)
 
-import Json.Decode as D
-import Parser exposing ((|.), (|=), Parser)
-import Placeholder.Internal as Placeholder
+import List.NonEmpty
+import Parser as P exposing ((|.), (|=), Parser)
+import Parser.DeadEnds
 import Result.Extra
-import Types exposing (I18nPairs)
+import Types
 import Util
 
 
-parse : String -> D.Decoder I18nPairs
-parse =
-    parseProperties >> Util.resultToDecoder
+type alias Properties =
+    List ( List String, String )
+
+
+parseProperties : String -> Result String Properties
+parseProperties =
+    P.run propertiesParser >> Result.mapError Parser.DeadEnds.deadEndsToString
 
 
 keyParser : Parser (List String)
 keyParser =
-    Parser.loop []
+    P.loop []
         (\kSegments ->
-            Parser.succeed (\kSeg step -> step (kSeg :: kSegments))
-                |= (Parser.getChompedString <| Parser.chompWhile Char.isAlphaNum)
-                |= Parser.oneOf
-                    [ Parser.succeed (List.reverse >> Parser.Done) |. whitespace |. Parser.symbol "="
-                    , Parser.succeed Parser.Loop |. Parser.symbol "."
+            P.succeed (\kSeg step -> step (kSeg :: kSegments))
+                |= (P.getChompedString <| P.chompWhile Char.isAlphaNum)
+                |= P.oneOf
+                    [ P.succeed (List.reverse >> P.Done) |. P.spaces |. P.symbol "="
+                    , P.succeed P.Loop |. P.symbol "."
                     ]
         )
 
 
 valueParser : Parser String
 valueParser =
-    Parser.succeed identity
-        |. whitespace
-        |= (Parser.getChompedString <| Parser.chompUntilEndOr "\n")
+    P.loop ""
+        (\str ->
+            P.chompWhile (\c -> c /= '\n' && c /= '\\')
+                |> P.getChompedString
+                |> P.andThen
+                    (\line ->
+                        if String.isEmpty line then
+                            P.succeed <| P.Done str
+
+                        else
+                            P.oneOf
+                                [ P.succeed (P.Loop <| str ++ String.trimLeft line)
+                                    |. P.token "\\"
+                                    |. P.token "\n"
+                                , P.succeed (P.Done <| str ++ String.trimLeft line)
+                                    |. P.oneOf [ P.end, P.token "\n" ]
+                                ]
+                    )
+        )
 
 
-syntax : Placeholder.Syntax
-syntax =
-    { startSymbol = "{{", endSymbol = "}}" }
+parsePlaceholderString : Parser Types.TValue
+parsePlaceholderString =
+    let
+        untilEndOrNextPlaceholder =
+            P.chompUntilEndOr "{" |> P.getChompedString
+    in
+    P.loop []
+        (\revSegments ->
+            untilEndOrNextPlaceholder
+                |> P.andThen
+                    (\text ->
+                        P.oneOf
+                            [ P.succeed
+                                (P.Done <|
+                                    List.reverse <|
+                                        if String.isEmpty text then
+                                            revSegments
+
+                                        else
+                                            Types.Text text :: revSegments
+                                )
+                                |. P.end
+                            , P.succeed (\var -> P.Loop <| Types.Interpolation var :: Types.Text text :: revSegments)
+                                |. P.token "{"
+                                |= (P.chompUntil "}" |> P.getChompedString)
+                                |. P.token "}"
+                            ]
+                    )
+        )
+        |> P.andThen
+            (\segments ->
+                case List.NonEmpty.fromList segments of
+                    Just nonEmpty ->
+                        P.succeed nonEmpty
+
+                    Nothing ->
+                        P.problem "Encountered empty json string value. This should never happen."
+            )
 
 
 keyValueParser : Parser ( List String, String )
 keyValueParser =
-    Parser.succeed Tuple.pair
+    P.succeed Tuple.pair
         |= keyParser
         |= valueParser
 
 
-parseProperties : String -> Result String I18nPairs
-parseProperties =
-    String.split "\n"
-        >> List.filter (\str -> not <| String.isEmpty str || String.startsWith "#" str)
-        >> List.map
-            (Parser.run keyValueParser
-                >> Result.mapError Parser.deadEndsToString
-                >> Result.map (Tuple.mapFirst Util.keyToName)
-                >> Result.andThen (Result.Extra.combineMapSecond <| Placeholder.parseTemplate syntax)
-            )
+propertiesParser : Parser Properties
+propertiesParser =
+    P.loop []
+        (\st ->
+            P.succeed identity
+                |. P.spaces
+                |= P.oneOf
+                    [ P.succeed (P.Done <| List.reverse st) |. P.end
+                    , P.succeed (\kv -> P.Loop <| kv :: st)
+                        |= keyValueParser
+                    ]
+        )
+
+
+propertiesToInternalRep : Properties -> Result String Types.Translations
+propertiesToInternalRep =
+    List.map
+        (\( k, v ) ->
+            case P.run parsePlaceholderString v of
+                Err err ->
+                    Err <| Parser.DeadEnds.deadEndsToString err
+
+                Ok val ->
+                    Ok ( Util.keyToName k, val )
+        )
         >> Result.Extra.combine
-
-
-whitespace : Parser ()
-whitespace =
-    Parser.chompWhile (\c -> c == ' ')

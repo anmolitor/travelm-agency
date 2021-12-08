@@ -1,0 +1,29 @@
+The question here is: Assuming we know all translations at compile time, what is the most efficient way to load and parse them at runtime?
+
+We focus mostly on the loading part, since IO is usually the bottleneck.
+
+For static key/value translations, it's very simple. The value has to be stored somewhere (it is shown to the user afterall), so we just load the value. The key is not needed if we send the keys in a specific order, which is determined at compile time.
+
+We thus end up with an ordered list of strings. A json array is a fine choice of encoding here, we could potentially save some '"' and two brackets if we just send a delimiter seperated string, but then we would need to escape the delimiter in some cases so not worth the hassle.
+
+Now in many cases we want some kind of dynamic values:
+
+. interpolating runtime strings
+. interpolating a value of another key (for consistency)
+. using different interpolation targets based on the value (e.g. singular/plural)
+. interpolating values in some language dependant format (e.g. dates)
+
+The first two are relatively easy to solve.
+For (1.), we sort the placeholder keys alphabetically and replace them with short and simple numbers (0,1,...).
+
+For (2.) we have two options:
+
+* allow references to other elements in the array with some syntax * inline the references at compile time
+
+Inlining seems the best approach to me, since the JSON is probably sent zipped anyways, which will optimize away the duplicate strings. It certainly makes for the more efficient parser.
+
+For (3.), we probably generate all cases at compile time and generate code that chooses the correct target at runtime.
+
+(4.) is a challenge, since it is language-dependant. We can support a fixed set of value transformations that is calculated at compile time and generated into the Elm code. Not sure what the syntax should be, the optimized form probably boils down to some prefix + numbers again.
+
+

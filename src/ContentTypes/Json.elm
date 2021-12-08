@@ -1,10 +1,11 @@
-module ContentTypes.Json exposing (parse)
+module ContentTypes.Json exposing (Json(..), jsonToInternalRep, parseJson)
 
 import Json.Decode as D
-import Parser exposing ((|.), (|=))
-import Placeholder.Internal as Placeholder exposing (Template)
+import List.NonEmpty
+import Parser as P exposing ((|.), (|=), Parser)
+import Parser.DeadEnds
 import Result.Extra
-import Types exposing (I18nPairs)
+import Types
 import Util
 
 
@@ -17,43 +18,73 @@ type alias FlattenedJson =
     List ( List String, String )
 
 
-parse : String -> D.Decoder I18nPairs
-parse =
+jsonToInternalRep : Json -> Result String Types.Translations
+jsonToInternalRep =
+    flattenJson
+        >> Result.Extra.combineMap
+            (\( k, v ) ->
+                case P.run parsePlaceholderString v of
+                    Ok tValue ->
+                        Ok ( Util.keyToName k, tValue )
+
+                    Err err ->
+                        Err <| Parser.DeadEnds.deadEndsToString err
+            )
+
+
+parsePlaceholderString : Parser Types.TValue
+parsePlaceholderString =
     let
-        addContext : ( c, Result x a ) -> Result ( c, x ) ( c, a )
-        addContext ( c, rx ) =
-            Result.map (Tuple.pair c) rx
-                |> Result.mapError (Tuple.pair c)
-
-        resultsToDecoder : List ( List String, Result String Template ) -> D.Decoder I18nPairs
-        resultsToDecoder =
-            List.map addContext
-                >> Result.Extra.partition
-                >> (\( parsedJson, errors ) ->
-                        case errors of
-                            [] ->
-                                D.succeed <| List.map (Tuple.mapFirst <| Util.keyToName) parsedJson
-
-                            _ ->
-                                List.map (\( key, err ) -> String.join "." key ++ ": " ++ err) errors
-                                    |> String.join "\n"
-                                    |> D.fail
-                   )
+        untilEndOrNextPlaceholder =
+            P.chompUntilEndOr "{" |> P.getChompedString
     in
-    jsonDecoder
-        >> D.map flattenJson
-        >> D.andThen (resultsToDecoder << List.map (Tuple.mapSecond <| Placeholder.parseTemplate { startSymbol = "{{", endSymbol = "}}" }))
-        >> D.map (List.sortBy Tuple.first)
+    P.loop []
+        (\revSegments ->
+            untilEndOrNextPlaceholder
+                |> P.andThen
+                    (\text ->
+                        P.oneOf
+                            [ P.succeed
+                                (P.Done <|
+                                    List.reverse <|
+                                        if String.isEmpty text then
+                                            revSegments
+
+                                        else
+                                            Types.Text text :: revSegments
+                                )
+                                |. P.end
+                            , P.succeed
+                                (\var ->
+                                    P.Loop <|
+                                        Types.Interpolation var
+                                            :: (if String.isEmpty text then
+                                                    revSegments
+
+                                                else
+                                                    Types.Text text :: revSegments
+                                               )
+                                )
+                                |. P.token "{"
+                                |= (P.chompUntil "}" |> P.getChompedString)
+                                |. P.token "}"
+                            ]
+                    )
+        )
+        |> P.andThen
+            (\segments ->
+                case List.NonEmpty.fromList segments of
+                    Just nonEmpty ->
+                        P.succeed nonEmpty
+
+                    Nothing ->
+                        P.problem "Encountered empty json string value. This should never happen."
+            )
 
 
-jsonDecoder : String -> D.Decoder Json
-jsonDecoder str =
-    case D.decodeString decoder str of
-        Ok json ->
-            D.succeed json
-
-        Err err ->
-            D.fail <| D.errorToString err
+parseJson : String -> Result String Json
+parseJson =
+    D.decodeString decoder >> Result.mapError D.errorToString
 
 
 flattenJson : Json -> FlattenedJson

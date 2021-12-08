@@ -1,21 +1,17 @@
 module Main exposing (main)
 
-import Array
-import Dict exposing (Dict)
-import Dict.NonEmpty exposing (NonEmpty)
+import Dict
+import Dict.NonEmpty
 import Elm.Pretty as Pretty
-import FNV1a
-import Generators.DynamicArray
+import Generators.Dynamic
 import Generators.Inline
 import Generators.Names exposing (defaultNames)
 import Json.Decode as D
-import Json.Encode as E
-import Placeholder.Internal as Placeholder
 import Platform
 import Ports exposing (GeneratorMode(..))
 import Set
 import State exposing (State, TranslationSet)
-import Types exposing (I18nPairs)
+import Types
 import Util
 
 
@@ -87,7 +83,7 @@ update msg model =
             ( model, Ports.respond <| Err <| D.errorToString err )
 
 
-hasSameSignatureAsExistingTranslations : I18nPairs -> TranslationSet () -> Maybe String
+hasSameSignatureAsExistingTranslations : Types.Translations -> TranslationSet () -> Maybe String
 hasSameSignatureAsExistingTranslations pairs translationSet =
     let
         ( _, v ) =
@@ -143,7 +139,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
                             stateWithResources =
                                 Dict.NonEmpty.map (State.optimizeJsonAllLanguages addContentHash) nonEmptyState
                         in
-                        { elmFile = Generators.DynamicArray.toFile context stateWithResources |> Pretty.pretty 120
+                        { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty 120
                         , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                         }
 

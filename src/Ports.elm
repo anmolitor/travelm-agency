@@ -1,11 +1,13 @@
 port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, finishRequestDecoder, respond, subToRequests)
 
+import ContentTypes.Fluent
 import ContentTypes.Json
 import ContentTypes.Properties
 import Json.Decode as D
 import Json.Decode.Pipeline as D
-import Types exposing (I18nPairs)
 import State exposing (OptimizedJson)
+import Types
+import Util
 
 
 port sendResponse : Response -> Cmd msg
@@ -39,7 +41,7 @@ type Request
 
 
 type alias TranslationRequest =
-    { content : I18nPairs
+    { content : Types.Translations
     , identifier : String
     , language : String
     }
@@ -68,7 +70,7 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash: Bool }
+    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -94,19 +96,23 @@ requestDecoder =
             )
 
 
-contentDecoder : String -> String -> D.Decoder I18nPairs
+contentDecoder : String -> String -> D.Decoder Types.Translations
 contentDecoder extension =
-    D.map (List.sortBy Tuple.first)
-        << (case extension of
-                "json" ->
-                    ContentTypes.Json.parse
+    (case extension of
+        "json" ->
+            ContentTypes.Json.parseJson >> Result.andThen ContentTypes.Json.jsonToInternalRep
 
-                "properties" ->
-                    ContentTypes.Properties.parse
+        "properties" ->
+            ContentTypes.Properties.parseProperties >> Result.andThen ContentTypes.Properties.propertiesToInternalRep
 
-                _ ->
-                    always <| D.fail <| "Unsupported content type '" ++ extension ++ "'"
-           )
+        "ftl" ->
+            ContentTypes.Fluent.runFluentParser >> Result.andThen ContentTypes.Fluent.fluentToInternalRep
+
+        _ ->
+            always <| Err <| "Unsupported content type '" ++ extension ++ "'"
+    )
+        >> Result.map (List.sortBy Tuple.first)
+        >> Util.resultToDecoder
 
 
 translationRequestDecoder : D.Decoder TranslationRequest

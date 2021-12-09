@@ -1,12 +1,11 @@
 module Generators.Inline exposing (..)
 
 import CodeGen.Imports
-import CodeGen.Shared exposing (Context, templateTypeAnn, templateTypeAnnRecord)
+import CodeGen.Shared exposing (Context)
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import Elm.CodeGen as CG
 import List.NonEmpty
-import Placeholder.Internal as Placeholder exposing (Template)
 import Set
 import State exposing (NonEmptyState, Translation)
 import String.Extra
@@ -23,6 +22,7 @@ toFile { moduleName, names, version, languages } state =
                 |> Dict.NonEmpty.getFirstEntry
                 |> Tuple.second
                 |> .pairs
+                |> List.sortBy Tuple.first
 
         translationSet =
             State.collectiveTranslationSet state
@@ -57,7 +57,7 @@ toFile { moduleName, names, version, languages } state =
         i18nDeclForLang : String -> Translation () -> CG.Declaration
         i18nDeclForLang lang translation =
             CG.valDecl (Just (CG.emptyDocComment |> CG.markdown ("`I18n` instance containing all values for the language " ++ String.Extra.classify lang))) (Just <| CG.typed "I18n" []) lang <|
-                CG.record (List.map (Tuple.mapSecond inlineTemplate) translation.pairs)
+                CG.record (List.map (Tuple.mapSecond inlineTemplate) <| List.sortBy Tuple.first translation.pairs)
 
         inlineTemplate : Types.TValue -> CG.Expression
         inlineTemplate value =

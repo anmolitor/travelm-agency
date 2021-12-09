@@ -1,6 +1,5 @@
 module Types exposing
-    ( I18nPairs
-    , TKey
+    ( TKey
     , TSegment(..)
     , TValue
     , Translations
@@ -13,12 +12,7 @@ module Types exposing
 import Array
 import Json.Encode as E
 import List.NonEmpty exposing (NonEmpty)
-import Placeholder.Internal exposing (Template)
 import Set exposing (Set)
-
-
-type alias I18nPairs =
-    List ( String, Template )
 
 
 

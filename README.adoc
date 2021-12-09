@@ -7,7 +7,7 @@ This package is a library and an executable to generate Elm Modules from differe
 == 🔍 Feature Overview 
 
 [none]
-* ✔️ Supports .json and .properties files as input
+* ✔️ Supports .json, .ftl and .properties files as input
 * 🕵️‍♂️ Errors out if i18n keys are inconsistent across languages
 * 🚀 Key length and placeholder length do not impact resource size 
 * ✨ Generates Elm functions for values with placeholders
@@ -74,6 +74,51 @@ The two example applications clock in at
 ~34KB (inline) and ~35KB (dynamic) respectively. The comparison might not be entirely fair, since code from `Http` might end up in your application regardless, also the .json files are less than a KB in this case.
 
 I introduced this package in one of my webapps and with 15 key/value pairs and 2 languages, the dynamic variant started winning slightly.
+
+== Detail on supported formats
+
+[cols="1,3"]
+|===
+| JSON | Needs to be a top level object with strings as keys and strings or objects of the same format as values. Example:
+
+✔️ { "my": { "json": {"object": "value" } } }
+
+❌ "top level string"
+
+❌ { "no": ["arrays"], "or": { "numbers": 42 } }
+
+Comments are not allowed. Placeholders use {curly-bracket} syntax, 
+if you want a literal "{" use "\{" to escape it. No multiline support.
+
+| Properties a| Needs to be a newline seperated list of key value pairs (seperated by "="). Whitespace before and after the "=" is ignored. You may break your value into multiple lines by ending every line but the last with "\". Example:
+
+[source, properties]
+----
+✔️ my.property = test
+✔️ my.multiline = test \
+    extra \
+    lines
+
+❌ key.without.value
+❌ multiline = without 
+      backslash
+----
+
+Lines leading with "#" are treated as comments.
+Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use "{" or '{', similarily use "'" for the literal single quote and '"' for the literal double quote.
+
+| Fluent a| See https://projectfluent.org[Fluent Homepage] for documentation. At the moment, only a subset of the syntax is supported:
+
+- Straight up texts
+- Interpolation ({$var}) of runtime variables (also referred to as placeholders in this README)
+- References to terms ({-term-name})
+- Text placeables ({"{\""})
+- Multiline Texts
+
+The more advanced parts such as runtime matching on variables
+(numbers, gender) are not supported yet and require more thought.
+The JS Intl Api can potentially be accessed via a port, this package could generate one.
+|===
 
 == 🙄 Why another i18n solution
 

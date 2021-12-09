@@ -1,6 +1,6 @@
 module JsonTest exposing (..)
 
-import ContentTypes.Json as Json exposing (Json(..))
+import ContentTypes.Json as Json exposing (NestedJson(..))
 import Expect
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..))
@@ -12,21 +12,20 @@ parserTests =
         [ test "single key object" <|
             \_ ->
                 Json.parseJson """{ "key": "value" }"""
-                    |> Expect.equal (Ok <| Object [ ( "key", StringValue "value" ) ])
+                    |> Expect.equal (Ok [ ( "key", StringValue "value" ) ])
         , test "single nested key object" <|
             \_ ->
                 Json.parseJson """{ "level1": { "level2": "value" } }"""
-                    |> Expect.equal (Ok <| Object [ ( "level1", Object [ ( "level2", StringValue "value" ) ] ) ])
+                    |> Expect.equal (Ok [ ( "level1", Object [ ( "level2", StringValue "value" ) ] ) ])
         , test "multiple key object" <|
             \_ ->
                 Json.parseJson """{ "key1": "val1", "key2": "val2", "nested": { "key3": "val3", "key4": "val4" } }"""
                     |> Expect.equal
-                        (Ok <|
-                            Object
-                                [ ( "key1", StringValue "val1" )
-                                , ( "key2", StringValue "val2" )
-                                , ( "nested", Object [ ( "key3", StringValue "val3" ), ( "key4", StringValue "val4" ) ] )
-                                ]
+                        (Ok
+                            [ ( "key1", StringValue "val1" )
+                            , ( "key2", StringValue "val2" )
+                            , ( "nested", Object [ ( "key3", StringValue "val3" ), ( "key4", StringValue "val4" ) ] )
+                            ]
                         )
         ]
 
@@ -36,17 +35,42 @@ converterTests =
     describe "JSON to internal representation converter"
         [ test "single property" <|
             \_ ->
-                Object [ ( "name", StringValue "test" ) ]
+                [ ( "name", StringValue "test" ) ]
                     |> Json.jsonToInternalRep
                     |> Expect.equal (Ok [ ( "name", ( Text "test", [] ) ) ])
+        , test "single nested property" <|
+            \_ ->
+                [ ( "level1", Object [ ( "level2", StringValue "test" ) ] ) ]
+                    |> Json.jsonToInternalRep
+                    |> Expect.equal (Ok [ ( "level1Level2", ( Text "test", [] ) ) ])
         , test "single property with placeholder" <|
             \_ ->
-                Object [ ( "prop", StringValue "hi {name}" ) ]
+                [ ( "prop", StringValue "hi {name}" ) ]
                     |> Json.jsonToInternalRep
                     |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
         , test "multiple placeholders" <|
             \_ ->
-                Object [ ( "prop", StringValue "hi {name}{other}" ) ]
+                [ ( "prop", StringValue "hi {name}{other}" ) ]
                     |> Json.jsonToInternalRep
                     |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name", Interpolation "other" ] ) ) ])
+        , test "escaped {" <|
+            \_ ->
+                [ ( "prop", StringValue "escaped \\{ woop" ) ]
+                    |> Json.jsonToInternalRep
+                    |> Expect.equal (Ok [ ( "prop", ( Text "escaped { woop", [] ) ) ])
+        , test "escaped \\" <|
+            \_ ->
+                [ ( "prop", StringValue "escaped \\\\ woop" ) ]
+                    |> Json.jsonToInternalRep
+                    |> Expect.equal (Ok [ ( "prop", ( Text "escaped \\ woop", [] ) ) ])
+        , test "trying to escape character that should not be escaped" <|
+            \_ ->
+                [ ( "prop", StringValue "\\idk" ) ]
+                    |> Json.jsonToInternalRep
+                    |> Expect.equal (Err "Problem: Invalid escaped char at row:1 col:2; Expecting \\ at row:1 col:2; Expecting { at row:1 col:2")
+        , test "empty json string" <|
+            \_ ->
+                [ ( "prop", StringValue "" ) ]
+                    |> Json.jsonToInternalRep
+                    |> Expect.equal (Ok [ ( "prop", ( Text "", [] ) ) ])
         ]

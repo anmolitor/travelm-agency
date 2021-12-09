@@ -28,7 +28,7 @@ This package is a library and an executable to generate Elm Modules from differe
 . Run the script with one of the methods described below
 . Follow the output documentation to actually run the code
 
-image::usage-example.svg[]
+image::docs/usage-example.svg[]
 
 === ⌨️ Script usage
 

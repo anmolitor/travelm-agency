@@ -5,7 +5,6 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
-import Set exposing (Set)
 import String.Extra
 import Types
 

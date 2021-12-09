@@ -51,7 +51,7 @@ deadEndsToString =
                     "UnexpectedChar at " ++ position
 
                 Problem str ->
-                    "ProblemString " ++ str ++ " at " ++ position
+                    "Problem: " ++ str ++ " at " ++ position
 
                 BadRepeat ->
                     "BadRepeat at " ++ position

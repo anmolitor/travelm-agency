@@ -1,11 +1,13 @@
 elm-stuff/
 node_modules/
 /tests/
+/docs
 /example/
 /.github/
 /src
+/.coverage
 
-*.sh
+/build.js
 
 /emitDts.js
 tsconfig.json

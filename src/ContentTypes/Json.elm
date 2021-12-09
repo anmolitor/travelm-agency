@@ -1,4 +1,4 @@
-module ContentTypes.Json exposing (Json(..), jsonToInternalRep, parseJson)
+module ContentTypes.Json exposing (Json, NestedJson(..), jsonToInternalRep, parseJson)
 
 import Json.Decode as D
 import List.NonEmpty
@@ -9,8 +9,12 @@ import Types
 import Util
 
 
-type Json
-    = Object (List ( String, Json ))
+type alias Json =
+    List ( String, NestedJson )
+
+
+type NestedJson
+    = Object (List ( String, NestedJson ))
     | StringValue String
 
 
@@ -35,12 +39,18 @@ jsonToInternalRep =
 parsePlaceholderString : Parser Types.TValue
 parsePlaceholderString =
     let
-        untilEndOrNextPlaceholder =
-            P.chompUntilEndOr "{" |> P.getChompedString
+        escapeChars =
+            [ '\\', '{' ]
+
+        escapeStrings =
+            List.map String.fromChar escapeChars
+
+        untilNextSpecialChar =
+            P.chompWhile (\c -> not <| List.member c escapeChars) |> P.getChompedString
     in
     P.loop []
         (\revSegments ->
-            untilEndOrNextPlaceholder
+            untilNextSpecialChar
                 |> P.andThen
                     (\text ->
                         P.oneOf
@@ -68,6 +78,12 @@ parsePlaceholderString =
                                 |. P.token "{"
                                 |= (P.chompUntil "}" |> P.getChompedString)
                                 |. P.token "}"
+                            , P.succeed (\escapedChar -> P.Loop <| Types.Text (text ++ escapedChar) :: revSegments)
+                                |. P.token "\\"
+                                |= P.oneOf
+                                    (P.problem "Invalid escaped char"
+                                        :: List.map (\c -> P.token c |> P.map (\_ -> c)) escapeStrings
+                                    )
                             ]
                     )
         )
@@ -75,10 +91,10 @@ parsePlaceholderString =
             (\segments ->
                 case List.NonEmpty.fromList segments of
                     Just nonEmpty ->
-                        P.succeed nonEmpty
+                        P.succeed <| Types.concatenateTextSegments nonEmpty
 
                     Nothing ->
-                        P.problem "Encountered empty json string value. This should never happen."
+                        P.succeed <| List.NonEmpty.singleton (Types.Text "")
             )
 
 
@@ -88,17 +104,7 @@ parseJson =
 
 
 flattenJson : Json -> FlattenedJson
-flattenJson json =
-    case json of
-        StringValue _ ->
-            []
-
-        Object obj ->
-            flattenJsonHelper obj
-
-
-flattenJsonHelper : List ( String, Json ) -> FlattenedJson
-flattenJsonHelper =
+flattenJson =
     List.concatMap <|
         \( key, value ) ->
             case value of
@@ -107,20 +113,32 @@ flattenJsonHelper =
 
                 Object innerObj ->
                     List.map (Tuple.mapFirst <| (::) key) <|
-                        flattenJsonHelper innerObj
+                        flattenJson innerObj
 
 
 decoder : D.Decoder Json
 decoder =
-    let
-        objectDecoder =
-            D.keyValuePairs (D.lazy <| \_ -> decoder)
-                |> D.map Object
+    D.keyValuePairs
+        (D.oneOf
+            [ objectDecoder
+            , stringDecoder
+            ]
+        )
 
-        stringDecoder =
-            D.string |> D.map StringValue
-    in
+
+nestedDecoder : D.Decoder NestedJson
+nestedDecoder =
     D.oneOf
         [ objectDecoder
         , stringDecoder
         ]
+
+
+objectDecoder : D.Decoder NestedJson
+objectDecoder =
+    D.keyValuePairs (D.lazy <| \_ -> nestedDecoder)
+        |> D.map Object
+
+
+stringDecoder =
+    D.string |> D.map StringValue

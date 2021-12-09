@@ -6,7 +6,8 @@
   "bin": "index.js",
   "scripts": {
     "build": "tsc && node build.js",
-    "test": "elm-test && mocha tests --timeout 10000"
+    "test": "elm-test && mocha tests --timeout 10000",
+    "coverage": "elm-coverage"
   },
   "keywords": [
     "Elm",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^16.11.10",
+    "elm-coverage": "github:marc136/elm-coverage",
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.1.2",
     "http-shutdown": "^1.2.2",

@@ -114,7 +114,7 @@ hasSameSignatureAsExistingTranslations pairs translationSet =
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
 onFinishModule model { generatorMode, elmModuleName, addContentHash } =
-    case Dict.NonEmpty.toNonEmpty model.state of
+    case Dict.NonEmpty.fromDict model.state of
         Nothing ->
             Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
 

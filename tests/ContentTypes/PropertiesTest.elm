@@ -1,4 +1,4 @@
-module PropertiesTest exposing (..)
+module ContentTypes.PropertiesTest exposing (..)
 
 import ContentTypes.Properties as Properties
 import Expect
@@ -13,6 +13,10 @@ parserTests =
             \_ ->
                 Properties.parseProperties "test.property=Some value"
                     |> Expect.equal (Ok [ ( [ "test", "property" ], "Some value" ) ])
+        , test "empty value" <|
+            \_ ->
+                Properties.parseProperties "test.property="
+                    |> Expect.equal (Ok [ ( [ "test", "property" ], "" ) ])
         , test "multiple rows" <|
             \_ ->
                 Properties.parseProperties "test.property1=val1\ntest.property2=val2"
@@ -55,6 +59,10 @@ converterTests =
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop", "name" ], "value" ) ]
                     |> Expect.equal (Ok [ ( "propName", ( Text "value", [] ) ) ])
+        , test "empty value" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop", "name" ], "" ) ]
+                    |> Expect.equal (Ok [ ( "propName", ( Text "", [] ) ) ])
         , test "single placeholder" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop" ], "hi {name}" ) ]

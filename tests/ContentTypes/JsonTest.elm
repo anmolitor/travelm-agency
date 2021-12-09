@@ -1,4 +1,4 @@
-module JsonTest exposing (..)
+module ContentTypes.JsonTest exposing (..)
 
 import ContentTypes.Json as Json exposing (NestedJson(..))
 import Expect

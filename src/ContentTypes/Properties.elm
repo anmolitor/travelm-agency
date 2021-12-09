@@ -89,7 +89,7 @@ parsePlaceholderString =
                         P.succeed nonEmpty
 
                     Nothing ->
-                        P.problem "Encountered empty json string value. This should never happen."
+                        P.succeed ( Types.Text "", [] )
             )
 
 

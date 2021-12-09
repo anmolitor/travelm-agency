@@ -1,4 +1,4 @@
-module FluentTest exposing (..)
+module ContentTypes.FluentTest exposing (..)
 
 import ContentTypes.Fluent as F
 import Expect

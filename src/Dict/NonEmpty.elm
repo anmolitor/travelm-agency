@@ -1,16 +1,35 @@
-module Dict.NonEmpty exposing (..)
+module Dict.NonEmpty exposing
+    ( NonEmpty
+    , fromDict
+    , fromList
+    , getFirstEntry
+    , insert
+    , keys
+    , map
+    , singleton
+    , toDict
+    , toList
+    , toNonEmptyList
+    , update
+    , values
+    )
 
 import Dict exposing (Dict)
 import List.NonEmpty
 
 
-type alias NonEmpty k v =
-    ( ( k, v ), Dict k v )
+type NonEmpty k v
+    = NonEmpty ( ( k, v ), Dict k v )
 
 
 singleton : k -> v -> NonEmpty k v
 singleton k v =
-    ( ( k, v ), Dict.empty )
+    NonEmpty ( ( k, v ), Dict.empty )
+
+
+fromDict : Dict comparable v -> Maybe (NonEmpty comparable v)
+fromDict =
+    Dict.toList >> List.NonEmpty.fromList >> Maybe.map fromList
 
 
 getFirstEntry : NonEmpty comparable v -> ( comparable, v )
@@ -19,52 +38,45 @@ getFirstEntry =
 
 
 keys : NonEmpty k v -> List k
-keys ( ( k, _ ), rest ) =
+keys (NonEmpty ( ( k, _ ), rest )) =
     k :: Dict.keys rest
 
 
 values : NonEmpty k v -> List v
-values ( ( _, v ), rest ) =
+values (NonEmpty ( ( _, v ), rest )) =
     v :: Dict.values rest
 
 
-toNonEmpty : Dict comparable v -> Maybe (NonEmpty comparable v)
-toNonEmpty =
-    Dict.toList
-        >> List.NonEmpty.fromList
-        >> Maybe.map fromList
-
-
 toDict : NonEmpty comparable v -> Dict comparable v
-toDict ( ( k, v ), rest ) =
+toDict (NonEmpty ( ( k, v ), rest )) =
     Dict.insert k v rest
 
 
 fromList : List.NonEmpty.NonEmpty ( comparable, v ) -> NonEmpty comparable v
-fromList ( head, tail ) =
-    ( head, Dict.fromList tail )
+fromList ( (firstK, firstV), tail ) =
+    List.foldl (\(k, v) -> insert k v) (singleton firstK firstV) tail
 
 
 insert : comparable -> v -> NonEmpty comparable v -> NonEmpty comparable v
-insert k v ( ( firstKey, firstValue ), rest ) =
+insert k v (NonEmpty ( ( firstKey, firstValue ), rest )) =
     if k == firstKey then
-        ( ( firstKey, v ), rest )
+        NonEmpty ( ( firstKey, v ), rest )
 
     else
-        ( ( firstKey, firstValue ), Dict.insert k v rest )
+        NonEmpty ( ( firstKey, firstValue ), Dict.insert k v rest )
 
 
 update : comparable -> (Maybe v -> v) -> NonEmpty comparable v -> NonEmpty comparable v
-update k alter ( ( firstKey, firstValue ), rest ) =
+update k alter (NonEmpty ( ( firstKey, firstValue ), rest )) =
     if k == firstKey then
-        ( ( firstKey, alter <| Just firstValue ), rest )
+        NonEmpty ( ( firstKey, alter <| Just firstValue ), rest )
 
     else
-        ( ( firstKey, firstValue ), Dict.update k (alter >> Just) rest )
+        NonEmpty ( ( firstKey, firstValue ), Dict.update k (alter >> Just) rest )
 
 
 toNonEmptyList : NonEmpty k v -> List.NonEmpty.NonEmpty ( k, v )
-toNonEmptyList ( firstPair, rest ) =
+toNonEmptyList (NonEmpty ( firstPair, rest )) =
     ( firstPair, Dict.toList rest )
 
 
@@ -74,5 +86,5 @@ toList =
 
 
 map : (k -> u -> v) -> NonEmpty k u -> NonEmpty k v
-map f ( ( k, v ), rest ) =
-    ( ( k, f k v ), Dict.map f rest )
+map f (NonEmpty ( ( k, v ), rest )) =
+    NonEmpty ( ( k, f k v ), Dict.map f rest )

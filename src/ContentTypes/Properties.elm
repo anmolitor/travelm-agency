@@ -1,4 +1,4 @@
-module ContentTypes.Properties exposing (keyValueParser, parseProperties, propertiesToInternalRep, valueParser)
+module ContentTypes.Properties exposing (keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser)
 
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
@@ -56,12 +56,15 @@ valueParser =
 parsePlaceholderString : Parser Types.TValue
 parsePlaceholderString =
     let
-        untilEndOrNextPlaceholder =
-            P.chompUntilEndOr "{" |> P.getChompedString
+        specialChars =
+            [ '"', '\'', '{' ]
+
+        untilNextSpecialChar =
+            P.chompWhile (\c -> not <| List.member c specialChars) |> P.getChompedString
     in
     P.loop []
         (\revSegments ->
-            untilEndOrNextPlaceholder
+            untilNextSpecialChar
                 |> P.andThen
                     (\text ->
                         P.oneOf
@@ -79,6 +82,14 @@ parsePlaceholderString =
                                 |. P.token "{"
                                 |= (P.chompUntil "}" |> P.getChompedString)
                                 |. P.token "}"
+                            , P.succeed (\moreText -> P.Loop <| Types.Text (text ++ moreText) :: revSegments)
+                                |. P.token "\""
+                                |= (P.chompUntil "\"" |> P.getChompedString)
+                                |. P.token "\""
+                            , P.succeed (\moreText -> P.Loop <| Types.Text (text ++ moreText) :: revSegments)
+                                |. P.token "'"
+                                |= (P.chompUntil "'" |> P.getChompedString)
+                                |. P.token "'"
                             ]
                     )
         )
@@ -86,7 +97,7 @@ parsePlaceholderString =
             (\segments ->
                 case List.NonEmpty.fromList segments of
                     Just nonEmpty ->
-                        P.succeed nonEmpty
+                        P.succeed <| Types.concatenateTextSegments nonEmpty
 
                     Nothing ->
                         P.succeed ( Types.Text "", [] )

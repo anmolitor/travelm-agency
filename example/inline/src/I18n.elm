@@ -8,30 +8,11 @@ module I18n exposing (I18n, de, en, fr)
 
 type alias I18n =
     { demoKey : String
+    , escapedChars : String
     , greeting : String -> String
     , languageSwitchInfo : String -> String
     , order : { language : String, name : String } -> String
     , static : String
-    }
-
-
-{-| `I18n` instance containing all values for the language De
-
-
--}
-de : I18n
-de =
-    { demoKey = "demoWert"
-    , greeting = \name_ -> "Hallo " ++ name_
-    , languageSwitchInfo =
-        \currentLanguage_ -> "Du kannst hier deine Sprache von " ++ currentLanguage_ ++ " zu einer anderen ändern."
-    , order =
-        \data_ ->
-            "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: "
-                ++ data_.name
-                ++ ", Sprache: "
-                ++ data_.language
-    , static = "Statischer Text"
     }
 
 
@@ -42,6 +23,7 @@ de =
 en : I18n
 en =
     { demoKey = "demoValue"
+    , escapedChars = "Escaped characters \" ' { are displayed correctly"
     , greeting = \name_ -> "Hello " ++ name_
     , languageSwitchInfo =
         \currentLanguage_ -> "You may switch languages from " ++ currentLanguage_ ++ " to another one here."
@@ -56,6 +38,27 @@ en =
     }
 
 
+{-| `I18n` instance containing all values for the language De
+
+
+-}
+de : I18n
+de =
+    { demoKey = "demoWert"
+    , escapedChars = "Spezielle Chars \" ' { werden korrekt dargestellt"
+    , greeting = \name_ -> "Hallo " ++ name_
+    , languageSwitchInfo =
+        \currentLanguage_ -> "Du kannst hier deine Sprache von " ++ currentLanguage_ ++ " zu einer anderen ändern."
+    , order =
+        \data_ ->
+            "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: "
+                ++ data_.name
+                ++ ", Sprache: "
+                ++ data_.language
+    , static = "Statischer Text"
+    }
+
+
 {-| `I18n` instance containing all values for the language Fr
 
 
@@ -63,7 +66,8 @@ en =
 fr : I18n
 fr =
     { demoKey = "demoWert"
-    , greeting = \name_ -> "Bonjour" ++ " " ++ name_
+    , escapedChars = "Les caractères spéciaux \" ' { s'affichent correctement"
+    , greeting = \name_ -> "Bonjour " ++ name_
     , languageSwitchInfo =
         \currentLanguage_ -> "Vous pouvez changer votre langue de " ++ currentLanguage_ ++ " à une autre ici"
     , order =

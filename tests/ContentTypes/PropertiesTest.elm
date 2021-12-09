@@ -75,4 +75,8 @@ converterTests =
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop1" ], "val1" ), ( [ "prop2" ], "val2" ) ]
                     |> Expect.equal (Ok [ ( "prop1", ( Text "val1", [] ) ), ( "prop2", ( Text "val2", [] ) ) ])
+        , test "escaping { with double quote or single quote" <|
+            \_ ->
+                Properties.propertiesToInternalRep [ ( [ "prop1" ], "\"{\" '{'" ) ]
+                    |> Expect.equal (Ok [ ( "prop1", ( Text "{ {", [] ) ) ])
         ]

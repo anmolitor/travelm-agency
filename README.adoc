@@ -1,5 +1,5 @@
 :toc:
-= 🌎 Travelm Agency 
+= 🌎 Travelm Agency  image:https://github.com/andreasewering/protoc-gen-elm/actions/workflows/build_and_test.yml/badge.svg[link="https://github.com/andreasewering/elm-i18n/actions",title="build status"]
 
 This package is a library and an executable to generate Elm Modules from different common I18n formats.
 

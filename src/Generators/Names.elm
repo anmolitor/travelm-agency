@@ -1,4 +1,4 @@
-module Generators.Names exposing (..)
+module Generators.Names exposing (Names, defaultNames)
 
 import State exposing (Identifier)
 import String.Extra
@@ -25,12 +25,3 @@ defaultNames =
     , languageToStringFunName = "languageToString"
     , decoderName = \identifier -> "decode" ++ String.Extra.classify identifier
     }
-
-
-type alias IdentifierScopedNames =
-    { loadName : String, decoderName : String }
-
-
-applyIdentifier : Identifier -> Names -> IdentifierScopedNames
-applyIdentifier identifier { loadName, decoderName } =
-    { loadName = loadName identifier, decoderName = decoderName identifier }

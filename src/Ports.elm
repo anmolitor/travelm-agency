@@ -1,4 +1,4 @@
-port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, finishRequestDecoder, respond, subToRequests)
+port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, respond, subToRequests, requestDecoder)
 
 import ContentTypes.Fluent
 import ContentTypes.Json

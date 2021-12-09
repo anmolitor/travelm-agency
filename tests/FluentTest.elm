@@ -4,10 +4,11 @@ import ContentTypes.Fluent as F
 import Expect
 import Parser
 import Test exposing (Test, describe, test)
+import Types exposing (TSegment(..))
 
 
-suite : Test
-suite =
+parserTests : Test
+parserTests =
     describe "Fluent Parser"
         [ -- Message
           test "single message" <|
@@ -154,4 +155,36 @@ msg2 = Another
                             , F.MessageResource { identifier = F.MessageIdentifier "msg2", content = ( F.TextContent "Another\ntext", [] ) }
                             ]
                         )
+        ]
+
+
+toInternalRepConverterTests : Test
+toInternalRepConverterTests =
+    describe "Fluent to internal representation converter"
+        [ test "single message" <|
+            \_ ->
+                [ F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some text", [] ) } ]
+                    |> F.fluentToInternalRep
+                    |> Expect.equal (Ok [ ( "msg", ( Text "some text", [] ) ) ])
+        , test "single message with interpolation" <|
+            \_ ->
+                [ F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some ", [ F.PlaceableContent (F.VarRef "name") ] ) } ]
+                    |> F.fluentToInternalRep
+                    |> Expect.equal (Ok [ ( "msg", ( Text "some ", [ Interpolation "name" ] ) ) ])
+        , test "single message with term reference" <|
+            \_ ->
+                [ F.MessageResource { identifier = F.TermIdentifier "term", content = ( F.TextContent "World", [] ) }
+                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "Hello ", [ F.PlaceableContent (F.TermRef "term") ] ) }
+                ]
+                    |> F.fluentToInternalRep
+                    |> Expect.equal (Ok [ ( "msg", ( Text "Hello World", [] ) ) ])
+        , test "errors out on term recursion" <|
+            \_ ->
+                [ F.MessageResource { identifier = F.TermIdentifier "term1", content = ( F.PlaceableContent (F.TermRef "term2"), [] ) }
+                , F.MessageResource { identifier = F.TermIdentifier "term2", content = ( F.PlaceableContent (F.TermRef "term3"), [] ) }
+                , F.MessageResource { identifier = F.TermIdentifier "term3", content = ( F.PlaceableContent (F.TermRef "term1"), [] ) }
+                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.PlaceableContent (F.TermRef "term1"), [] ) }
+                ]
+                    |> F.fluentToInternalRep
+                    |> Expect.equal (Err "Recursive term reference term1 <- term3 <- term2 <- term1")
         ]

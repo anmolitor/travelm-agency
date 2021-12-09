@@ -65,7 +65,7 @@ const serveStatic = require("serve-static");
       );
     });
 
-    it("works after switching languages", async () => {
+    it("works after switching languages to de", async () => {
       switchLanguage("de");
       await waitMs(100);
       assert.equal(
@@ -77,6 +77,21 @@ const serveStatic = require("serve-static");
       assert.equal(
         getOrderText(),
         "Die Reihenfolge der benannten Platzhalter bleibt konsistent auch wenn die Sprachen sich ändern! Name: Welt, Sprache: de"
+      );
+    });
+
+    it("works after switching languages to fr", async () => {
+      switchLanguage("fr");
+      await waitMs(100);
+      assert.equal(
+        getInfoText(),
+        "Vous pouvez changer votre langue de fr à une autre ici"
+      );
+      changeName("Monde");
+      assert.equal(getGreeting(), "Bonjour Monde");
+      assert.equal(
+        getOrderText(),
+        "L'ordre des espaces réservés nommés reste cohérent même si les langues changent! Name: Monde, Langue: fr"
       );
     });
   });

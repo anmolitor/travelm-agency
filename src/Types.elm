@@ -4,6 +4,7 @@ module Types exposing
     , TSegment(..)
     , TValue
     , Translations
+    , concatenateTextSegments
     , getInterpolationVarNames
     , indicifyInterpolations
     , optimizeJson
@@ -146,3 +147,21 @@ getInterpolationVarNames =
     List.NonEmpty.toList
         >> List.filterMap interpolationVar
         >> Set.fromList
+
+
+{-| Concatenate multiple text segments that occur after each other
+-}
+concatenateTextSegments : NonEmpty TSegment -> NonEmpty TSegment
+concatenateTextSegments ( first, rest ) =
+    List.foldl
+        (\segment (( mostRecentSeg, otherSegs ) as segs) ->
+            case ( segment, mostRecentSeg ) of
+                ( Text t1, Text t2 ) ->
+                    ( Text (t2 ++ t1), otherSegs )
+
+                _ ->
+                    List.NonEmpty.cons segment segs
+        )
+        (List.NonEmpty.singleton first)
+        rest
+        |> List.NonEmpty.reverse

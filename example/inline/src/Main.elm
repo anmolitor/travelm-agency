@@ -34,6 +34,9 @@ i18nFromString input =
         "en" ->
             I18n.en
 
+        "fr" ->
+            I18n.fr
+
         _ ->
             I18n.en
 
@@ -59,7 +62,7 @@ view model =
             , select [ onChange ChangeLanguage, class "language_select" ] <|
                 List.map
                     (\language -> option [ selected <| language == model.language, class language ] [ text language ])
-                    [ "de", "en" ]
+                    [ "de", "en", "fr" ]
             , p [ class "greeting" ] [ text <| model.i18n.greeting model.name ]
             , p [ class "order_text" ] [ text <| model.i18n.order { language = model.language, name = model.name } ]
             ]

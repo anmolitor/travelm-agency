@@ -5,6 +5,7 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
+import Set exposing (Set)
 import String.Extra
 import Types
 
@@ -41,7 +42,12 @@ fluentToInternalRep ast_ =
                     m
 
         contentsToValue : Content -> Result String (NonEmpty Types.TSegment)
-        contentsToValue cnt =
+        contentsToValue =
+            contentsToValueHelper []
+
+        -- Limits recursion by keeping track of terms
+        contentsToValueHelper : List String -> Content -> Result String (NonEmpty Types.TSegment)
+        contentsToValueHelper previousTerms cnt =
             case cnt of
                 TextContent str ->
                     Ok <| List.NonEmpty.singleton <| Types.Text str
@@ -50,13 +56,16 @@ fluentToInternalRep ast_ =
                     Ok <| List.NonEmpty.singleton <| Types.Interpolation var
 
                 PlaceableContent (TermRef term) ->
-                    case Dict.get term termDict of
-                        Just contents ->
-                            List.NonEmpty.map contentsToValue contents
+                    case ( List.member term previousTerms, Dict.get term termDict ) of
+                        ( True, _ ) ->
+                            Err <| "Recursive term reference " ++ (String.join " <- " <| term :: previousTerms)
+
+                        ( False, Just contents ) ->
+                            List.NonEmpty.map (contentsToValueHelper <| term :: previousTerms) contents
                                 |> combineMapResultNonEmpty
                                 |> Result.map List.NonEmpty.concat
 
-                        Nothing ->
+                        ( False, Nothing ) ->
                             Err <| "Could not resolve term reference: '" ++ term ++ "'"
 
                 PlaceableContent (StringLit lit) ->
@@ -76,6 +85,15 @@ fluentToInternalRep ast_ =
                 ast_
                 |> Dict.fromList
 
+        termFilter : Resource -> Bool
+        termFilter (MessageResource msg) =
+            case msg.identifier of
+                TermIdentifier _ ->
+                    False
+
+                MessageIdentifier _ ->
+                    True
+
         resourceToInternalRep : Resource -> Result String ( Types.TKey, Types.TValue )
         resourceToInternalRep res =
             case res of
@@ -83,16 +101,16 @@ fluentToInternalRep ast_ =
                     Result.map (Tuple.pair <| identifierToKey msg.identifier)
                         (List.NonEmpty.map contentsToValue msg.content
                             |> combineMapResultNonEmpty
-                            |> Result.map List.NonEmpty.concat
+                            |> Result.map (List.NonEmpty.concat >> Types.concatenateTextSegments)
                         )
     in
-    Result.Extra.combineMap resourceToInternalRep ast_
+    List.filter termFilter ast_ |> Result.Extra.combineMap resourceToInternalRep
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)
 combineMapResultNonEmpty =
     List.NonEmpty.map (Result.map List.NonEmpty.singleton)
-        >> List.NonEmpty.foldl1 (Result.map2 List.NonEmpty.append)
+        >> List.NonEmpty.foldr1 (Result.map2 List.NonEmpty.append)
 
 
 runFluentParser : String -> Result String AST

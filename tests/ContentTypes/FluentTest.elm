@@ -129,14 +129,13 @@ blank lines"""
                         )
         , test "calling term with arguments" <|
             \_ ->
-                Parser.run F.message "msg = { -term(arg: \"hello\")}"
+                Parser.run F.message "msg = { -term(arg: \"hello\")}{-term( bla: 69)}"
                     |> Expect.equal
                         (Ok
                             { identifier = F.MessageIdentifier "msg"
                             , content =
-                                ( F.PlaceableContent
-                                    (F.TermRef "term" [ ( "arg", F.StringLiteral "hello" ) ])
-                                , []
+                                ( F.PlaceableContent (F.TermRef "term" [ ( "arg", F.StringLiteral "hello" ) ])
+                                , [ F.PlaceableContent (F.TermRef "term" [ ( "bla", F.NumberLiteral 69 ) ]) ]
                                 )
                             }
                         )
@@ -210,10 +209,22 @@ toInternalRepConverterTests =
                         )
                     }
                 , F.MessageResource
+                    { identifier = F.TermIdentifier "term2"
+                    , content =
+                        ( F.TextContent "Cost: "
+                        , [ F.PlaceableContent (F.VarRef "num") ]
+                        )
+                    }
+                , F.MessageResource
                     { identifier = F.MessageIdentifier "msg"
-                    , content = ( F.TextContent "text: ", [ F.PlaceableContent (F.TermRef "term" [ ( "arg", F.StringLiteral "world" ) ]) ] )
+                    , content =
+                        ( F.TextContent "text: "
+                        , [ F.PlaceableContent (F.TermRef "term" [ ( "arg", F.StringLiteral "world" ) ])
+                          , F.PlaceableContent (F.TermRef "term2" [ ( "num", F.NumberLiteral 420.69 ) ])
+                          ]
+                        )
                     }
                 ]
                     |> F.fluentToInternalRep
-                    |> Expect.equal (Ok [ ( "msg", ( Text "text: hi world", [] ) ) ])
+                    |> Expect.equal (Ok [ ( "msg", ( Text "text: hi worldCost: 420.69", [] ) ) ])
         ]

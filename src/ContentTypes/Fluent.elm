@@ -16,7 +16,7 @@ module ContentTypes.Fluent exposing
 import Dict exposing (Dict)
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import String.Extra
@@ -361,7 +361,7 @@ termRefParser =
                 |= (chompUntil ":" |> getChompedString)
                 |. token ":"
                 |. spaces
-                |= oneOf [ stringLit |> map StringLiteral ]
+                |= oneOf [ stringLit |> map StringLiteral, float |> map NumberLiteral ]
 
         argsParser : Parser (List ( String, Literal ))
         argsParser =

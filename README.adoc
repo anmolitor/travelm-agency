@@ -112,6 +112,7 @@ Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use 
 - Straight up texts
 - Interpolation ({$var}) of runtime variables (also referred to as placeholders in this README)
 - References to terms ({-term-name})
+- Term arguments ({ -term-name(name: "Andy") })
 - Text placeables ({"{\""})
 - Multiline Texts
 

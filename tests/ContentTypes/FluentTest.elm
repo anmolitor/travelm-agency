@@ -34,7 +34,7 @@ parserTests =
                     |> Expect.equal
                         (Ok
                             { identifier = F.MessageIdentifier "test"
-                            , content = ( F.TextContent "some ", [ F.PlaceableContent (F.TermRef "term"), F.TextContent " reference" ] )
+                            , content = ( F.TextContent "some ", [ F.PlaceableContent (F.TermRef "term" []), F.TextContent " reference" ] )
                             }
                         )
         , test "multiple placeables" <|
@@ -43,7 +43,7 @@ parserTests =
                     |> Expect.equal
                         (Ok
                             { identifier = F.MessageIdentifier "bla"
-                            , content = ( F.PlaceableContent (F.TermRef "back-to"), [ F.PlaceableContent (F.VarRef "back") ] )
+                            , content = ( F.PlaceableContent (F.TermRef "back-to" []), [ F.PlaceableContent (F.VarRef "back") ] )
                             }
                         )
         , test "single message with string literal" <|
@@ -87,7 +87,7 @@ with different
                   indents"""
                     |> Expect.equal
                         (Ok { identifier = F.MessageIdentifier "test", content = ( F.TextContent """a message on
-    multiple """, [ F.PlaceableContent (F.TermRef "lines"), F.TextContent """
+    multiple """, [ F.PlaceableContent (F.TermRef "lines" []), F.TextContent """
 with different
   indents""" ] ) })
         , test "multiline message with multiple placeables at the edges of the lines" <|
@@ -101,11 +101,11 @@ with different
                             { identifier = F.MessageIdentifier "test"
                             , content =
                                 ( F.TextContent "a message on\n"
-                                , [ F.PlaceableContent (F.TermRef "multiple")
+                                , [ F.PlaceableContent (F.TermRef "multiple" [])
                                   , F.TextContent " "
-                                  , F.PlaceableContent (F.TermRef "lines")
+                                  , F.PlaceableContent (F.TermRef "lines" [])
                                   , F.TextContent "\n"
-                                  , F.PlaceableContent (F.TermRef "with")
+                                  , F.PlaceableContent (F.TermRef "with" [])
                                   , F.TextContent " different\n  indents"
                                   ]
                                 )
@@ -123,6 +123,19 @@ with different
                                 ( F.TextContent """a message with
 
 blank lines"""
+                                , []
+                                )
+                            }
+                        )
+        , test "calling term with arguments" <|
+            \_ ->
+                Parser.run F.message "msg = { -term(arg: \"hello\")}"
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "msg"
+                            , content =
+                                ( F.PlaceableContent
+                                    (F.TermRef "term" [ ( "arg", F.StringLiteral "hello" ) ])
                                 , []
                                 )
                             }
@@ -174,17 +187,33 @@ toInternalRepConverterTests =
         , test "single message with term reference" <|
             \_ ->
                 [ F.MessageResource { identifier = F.TermIdentifier "term", content = ( F.TextContent "World", [] ) }
-                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "Hello ", [ F.PlaceableContent (F.TermRef "term") ] ) }
+                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "Hello ", [ F.PlaceableContent (F.TermRef "term" []) ] ) }
                 ]
                     |> F.fluentToInternalRep
                     |> Expect.equal (Ok [ ( "msg", ( Text "Hello World", [] ) ) ])
         , test "errors out on term recursion" <|
             \_ ->
-                [ F.MessageResource { identifier = F.TermIdentifier "term1", content = ( F.PlaceableContent (F.TermRef "term2"), [] ) }
-                , F.MessageResource { identifier = F.TermIdentifier "term2", content = ( F.PlaceableContent (F.TermRef "term3"), [] ) }
-                , F.MessageResource { identifier = F.TermIdentifier "term3", content = ( F.PlaceableContent (F.TermRef "term1"), [] ) }
-                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.PlaceableContent (F.TermRef "term1"), [] ) }
+                [ F.MessageResource { identifier = F.TermIdentifier "term1", content = ( F.PlaceableContent (F.TermRef "term2" []), [] ) }
+                , F.MessageResource { identifier = F.TermIdentifier "term2", content = ( F.PlaceableContent (F.TermRef "term3" []), [] ) }
+                , F.MessageResource { identifier = F.TermIdentifier "term3", content = ( F.PlaceableContent (F.TermRef "term1" []), [] ) }
+                , F.MessageResource { identifier = F.MessageIdentifier "msg", content = ( F.PlaceableContent (F.TermRef "term1" []), [] ) }
                 ]
                     |> F.fluentToInternalRep
                     |> Expect.equal (Err "Recursive term reference term1 <- term3 <- term2 <- term1")
+        , test "term ref with arguments gets inlined" <|
+            \_ ->
+                [ F.MessageResource
+                    { identifier = F.TermIdentifier "term"
+                    , content =
+                        ( F.TextContent "hi "
+                        , [ F.PlaceableContent (F.VarRef "arg") ]
+                        )
+                    }
+                , F.MessageResource
+                    { identifier = F.MessageIdentifier "msg"
+                    , content = ( F.TextContent "text: ", [ F.PlaceableContent (F.TermRef "term" [ ( "arg", F.StringLiteral "world" ) ]) ] )
+                    }
+                ]
+                    |> F.fluentToInternalRep
+                    |> Expect.equal (Ok [ ( "msg", ( Text "text: hi world", [] ) ) ])
         ]

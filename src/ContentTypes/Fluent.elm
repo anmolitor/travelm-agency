@@ -1,8 +1,22 @@
-module ContentTypes.Fluent exposing (AST, Content(..), Identifier(..), Message, Placeable(..), Resource(..), ast, fluentToInternalRep, message, runFluentParser)
+module ContentTypes.Fluent exposing
+    ( AST
+    , Content(..)
+    , Identifier(..)
+    , Literal(..)
+    , Message
+    , Placeable(..)
+    , Resource(..)
+    , ast
+    , fluentToInternalRep
+    , message
+    , runFluentParser
+    , stringLit
+    )
 
 import Dict exposing (Dict)
+import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompWhile, end, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import String.Extra
@@ -42,25 +56,36 @@ fluentToInternalRep ast_ =
 
         contentsToValue : Content -> Result String (NonEmpty Types.TSegment)
         contentsToValue =
-            contentsToValueHelper []
+            contentsToValueHelper [] []
 
         -- Limits recursion by keeping track of terms
-        contentsToValueHelper : List String -> Content -> Result String (NonEmpty Types.TSegment)
-        contentsToValueHelper previousTerms cnt =
+        -- Inlines arguments known at compile time
+        contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Result String (NonEmpty Types.TSegment)
+        contentsToValueHelper previousTerms accumulatedArgs cnt =
             case cnt of
                 TextContent str ->
                     Ok <| List.NonEmpty.singleton <| Types.Text str
 
                 PlaceableContent (VarRef var) ->
-                    Ok <| List.NonEmpty.singleton <| Types.Interpolation var
+                    Ok <|
+                        List.NonEmpty.singleton <|
+                            case List.find (Tuple.first >> (==) var) accumulatedArgs of
+                                Just ( _, StringLiteral str ) ->
+                                    Types.Text str
 
-                PlaceableContent (TermRef term) ->
+                                Just ( _, NumberLiteral n ) ->
+                                    Types.Text <| String.fromFloat n
+
+                                Nothing ->
+                                    Types.Interpolation var
+
+                PlaceableContent (TermRef term args) ->
                     case ( List.member term previousTerms, Dict.get term termDict ) of
                         ( True, _ ) ->
                             Err <| "Recursive term reference " ++ (String.join " <- " <| term :: previousTerms)
 
                         ( False, Just contents ) ->
-                            List.NonEmpty.map (contentsToValueHelper <| term :: previousTerms) contents
+                            List.NonEmpty.map (contentsToValueHelper (term :: previousTerms) (args ++ accumulatedArgs)) contents
                                 |> combineMapResultNonEmpty
                                 |> Result.map List.NonEmpty.concat
 
@@ -285,8 +310,13 @@ type Identifier
 
 type Placeable
     = VarRef String
-    | TermRef String
+    | TermRef String (List ( String, Literal ))
     | StringLit String
+
+
+type Literal
+    = StringLiteral String
+    | NumberLiteral Float
 
 
 identifier : Parser Identifier
@@ -304,21 +334,56 @@ identifier =
         |. token "="
 
 
+endsVar c =
+    c == ' ' || c == '\n' || c == '\u{000D}' || c == '}'
+
+
 placeable : Parser Placeable
 placeable =
-    let
-        endsVar c =
-            c == ' ' || c == '\n' || c == '\u{000D}' || c == '}'
-    in
     succeed identity
         |. spaces
         |= oneOf
             [ token "$" |> andThen (\_ -> chompWhile (not << endsVar) |> getChompedString |> map VarRef)
-            , token "-" |> andThen (\_ -> chompWhile (not << endsVar) |> getChompedString |> map TermRef)
+            , token "-" |> andThen (\_ -> termRefParser)
             , stringLit |> map StringLit
             ]
         |. spaces
         |. token "}"
+
+
+termRefParser : Parser Placeable
+termRefParser =
+    let
+        argParser : Parser ( String, Literal )
+        argParser =
+            succeed (\argName literal -> ( String.trim argName, literal ))
+                |. spaces
+                |= (chompUntil ":" |> getChompedString)
+                |. token ":"
+                |. spaces
+                |= oneOf [ stringLit |> map StringLiteral ]
+
+        argsParser : Parser (List ( String, Literal ))
+        argsParser =
+            loop [] <|
+                \args ->
+                    (argParser |. spaces)
+                        |> andThen
+                            (\arg ->
+                                oneOf
+                                    [ succeed (Loop <| arg :: args) |. token ","
+                                    , succeed (Done <| arg :: args) |. token ")"
+                                    ]
+                            )
+    in
+    succeed TermRef
+        |= (chompWhile (\c -> not (endsVar c) && c /= '(') |> getChompedString)
+        |= oneOf
+            [ succeed identity
+                |. token "("
+                |= argsParser
+            , succeed []
+            ]
 
 
 stringLit : Parser String

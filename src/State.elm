@@ -5,6 +5,7 @@ import Dict.NonEmpty exposing (NonEmpty)
 import FNV1a
 import Json.Encode as E
 import List.NonEmpty
+import Set exposing (Set)
 import Types exposing (Translations)
 
 
@@ -104,3 +105,18 @@ optimizeJsonAllLanguages addContentHash identifier =
 getAllResources : State resources -> List resources
 getAllResources =
     Dict.values >> List.concatMap (Dict.NonEmpty.values >> List.map .resources)
+
+
+interpolationMap : TranslationSet any -> Dict Types.TKey (Set String)
+interpolationMap =
+    Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Types.getInterpolationVarNames) ts.pairs |> Dict.fromList)
+        >> Dict.NonEmpty.foldl1
+            (\t1 t2 ->
+                Dict.merge
+                    Dict.insert
+                    (\key s1 s2 -> Dict.insert key <| Set.union s1 s2)
+                    Dict.insert
+                    t1
+                    t2
+                    Dict.empty
+            )

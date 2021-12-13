@@ -14,7 +14,7 @@ import Util
 
 
 toFile : Context -> NonEmptyState () -> CG.File
-toFile { moduleName, names, version, languages } state =
+toFile { moduleName, names, version } state =
     let
         pairs : Types.Translations
         pairs =
@@ -24,20 +24,11 @@ toFile { moduleName, names, version, languages } state =
                 |> .pairs
                 |> List.sortBy Tuple.first
 
-        interpolationMap : Dict Types.TKey (Set String)
+        languages =
+            State.getLanguages state
+
         interpolationMap =
-            translationSet
-                |> Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Types.getInterpolationVarNames) ts.pairs |> Dict.fromList)
-                |> Dict.NonEmpty.foldl1
-                    (\t1 t2 ->
-                        Dict.merge
-                            Dict.insert
-                            (\key s1 s2 -> Dict.insert key <| Set.union s1 s2)
-                            Dict.insert
-                            t1
-                            t2
-                            Dict.empty
-                    )
+            State.interpolationMap translationSet
 
         translationSet =
             State.collectiveTranslationSet state

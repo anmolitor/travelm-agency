@@ -124,7 +124,6 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
                     context =
                         { moduleName = Util.moduleName elmModuleName
                         , version = model.version
-                        , languages = State.getLanguages nonEmptyState
                         , names = defaultNames
                         }
                 in

@@ -9,7 +9,6 @@ type alias Context =
     { version : String
     , moduleName : CG.ModuleName
     , names : Names
-    , languages : List String
     }
 
 

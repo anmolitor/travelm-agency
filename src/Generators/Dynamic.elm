@@ -5,6 +5,7 @@ import CodeGen.DecodeM as DecodeM
 import CodeGen.Imports
 import CodeGen.References as Refs
 import CodeGen.Shared exposing (Context)
+import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
 import Generators.Names exposing (Names)
@@ -16,13 +17,21 @@ import Util
 
 
 toFile : Context -> NonEmptyState OptimizedJson -> CG.File
-toFile { moduleName, version, names, languages } state =
+toFile { moduleName, version, names } state =
     let
         languagesName =
             "languages"
 
         identifiers =
             Dict.NonEmpty.keys state
+
+        languages =
+            State.getLanguages state
+
+        interpolationMap =
+            state
+                |> Dict.NonEmpty.map (\_ -> State.interpolationMap)
+                |> Dict.NonEmpty.foldl1 Dict.union
 
         i18nTypeDecl =
             CG.customTypeDecl Nothing
@@ -71,7 +80,10 @@ you should write your own parsing function."""))
         accessorDeclaration identifier index ( key, value ) =
             let
                 placeholders =
-                    Types.getInterpolationVarNames value |> Set.toList |> List.sort
+                    Dict.get key interpolationMap
+                        |> Maybe.withDefault Set.empty
+                        |> Set.toList
+                        |> List.sort
 
                 placeholderPatterns =
                     case placeholders of

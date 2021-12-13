@@ -119,6 +119,7 @@ propertiesParser =
                 |. P.spaces
                 |= P.oneOf
                     [ P.succeed (P.Done <| List.reverse st) |. P.end
+                    , P.succeed (P.Loop st) |. P.token "#" |. P.chompWhile ((/=) '\n')
                     , P.succeed (\kv -> P.Loop <| kv :: st)
                         |= keyValueParser
                     ]

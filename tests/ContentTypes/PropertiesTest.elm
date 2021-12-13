@@ -49,6 +49,13 @@ prop=A \\
   for\\
 this
                 """ |> Expect.equal (Ok [ ( [ "prop" ], "A testforthis" ) ])
+        , test "comments are ignored" <|
+            \_ ->
+                Properties.parseProperties """
+# some comment
+msg = abc
+# bla bla
+                """ |> Expect.equal (Ok [ ( [ "msg" ], "abc" ) ])
         ]
 
 

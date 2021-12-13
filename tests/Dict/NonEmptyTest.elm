@@ -4,8 +4,7 @@ import Dict exposing (Dict)
 import Dict.NonEmpty as DNE
 import Expect
 import Fuzz exposing (Fuzzer)
-import List.NonEmpty
-import Test exposing (Test, describe, fuzz, fuzz2, fuzz3, test)
+import Test exposing (Test, describe, fuzz, fuzz2, fuzz3)
 
 
 fuzzDict : Fuzzer comparable -> Fuzzer v -> Fuzzer (Dict comparable v)

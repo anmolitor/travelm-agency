@@ -1,5 +1,7 @@
 module Dict.NonEmpty exposing
     ( NonEmpty
+    , foldl
+    , foldl1
     , fromDict
     , fromList
     , getFirstEntry
@@ -53,8 +55,8 @@ toDict (NonEmpty ( ( k, v ), rest )) =
 
 
 fromList : List.NonEmpty.NonEmpty ( comparable, v ) -> NonEmpty comparable v
-fromList ( (firstK, firstV), tail ) =
-    List.foldl (\(k, v) -> insert k v) (singleton firstK firstV) tail
+fromList ( ( firstK, firstV ), tail ) =
+    List.foldl (\( k, v ) -> insert k v) (singleton firstK firstV) tail
 
 
 insert : comparable -> v -> NonEmpty comparable v -> NonEmpty comparable v
@@ -88,3 +90,13 @@ toList =
 map : (k -> u -> v) -> NonEmpty k u -> NonEmpty k v
 map f (NonEmpty ( ( k, v ), rest )) =
     NonEmpty ( ( k, f k v ), Dict.map f rest )
+
+
+foldl : (k -> v -> b -> b) -> b -> NonEmpty k v -> b
+foldl f acc (NonEmpty ( ( k, v ), rest )) =
+    Dict.foldl f (f k v acc) rest
+
+
+foldl1 : (v -> v -> v) -> NonEmpty k v -> v
+foldl1 f (NonEmpty ( ( _, v ), rest )) =
+    Dict.foldl (always f) v rest

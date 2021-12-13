@@ -2,10 +2,11 @@ module Generators.Inline exposing (..)
 
 import CodeGen.Imports
 import CodeGen.Shared exposing (Context)
+import Dict exposing (Dict)
 import Dict.NonEmpty
 import Elm.CodeGen as CG
 import List.NonEmpty
-import Set
+import Set exposing (Set)
 import State exposing (NonEmptyState, Translation)
 import String.Extra
 import Types
@@ -23,14 +24,32 @@ toFile { moduleName, names, version, languages } state =
                 |> .pairs
                 |> List.sortBy Tuple.first
 
+        interpolationMap : Dict Types.TKey (Set String)
+        interpolationMap =
+            translationSet
+                |> Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Types.getInterpolationVarNames) ts.pairs |> Dict.fromList)
+                |> Dict.NonEmpty.foldl1
+                    (\t1 t2 ->
+                        Dict.merge
+                            Dict.insert
+                            (\key s1 s2 -> Dict.insert key <| Set.union s1 s2)
+                            Dict.insert
+                            t1
+                            t2
+                            Dict.empty
+                    )
+
         translationSet =
             State.collectiveTranslationSet state
 
-        tValueToRecordTypeAnn : Types.TValue -> CG.TypeAnnotation
-        tValueToRecordTypeAnn value =
+        translationToRecordTypeAnn : Types.TKey -> CG.TypeAnnotation
+        translationToRecordTypeAnn key =
             let
                 placeholders =
-                    Types.getInterpolationVarNames value |> Set.toList |> List.sort
+                    Dict.get key interpolationMap
+                        |> Maybe.withDefault Set.empty
+                        |> Set.toList
+                        |> List.sort
             in
             case placeholders of
                 [] ->
@@ -50,7 +69,7 @@ toFile { moduleName, names, version, languages } state =
                 names.i18nTypeName
                 []
                 (CG.recordAnn <|
-                    List.map (Tuple.mapSecond tValueToRecordTypeAnn) pairs
+                    List.map (\( k, _ ) -> ( k, translationToRecordTypeAnn k )) pairs
                 )
 
         i18nDeclForLang : String -> Translation () -> CG.Declaration

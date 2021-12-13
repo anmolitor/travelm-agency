@@ -2,7 +2,6 @@ module RequestDecoderTest exposing (..)
 
 import Expect
 import Json.Decode as D
-import Json.Encode as E
 import Ports exposing (Request(..), requestDecoder)
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..))

@@ -115,6 +115,7 @@ Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use 
 - Term arguments ({ -term-name(name: "Andy") })
 - Text placeables ({"{\""})
 - Multiline Texts
+- Attributes
 
 The more advanced parts such as runtime matching on variables
 (numbers, gender) are not supported yet and require more thought.

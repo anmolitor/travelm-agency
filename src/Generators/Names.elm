@@ -1,6 +1,5 @@
 module Generators.Names exposing (Names, defaultNames)
 
-import State exposing (Identifier)
 import String.Extra
 
 

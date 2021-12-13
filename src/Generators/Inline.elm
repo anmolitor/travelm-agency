@@ -2,8 +2,7 @@ module Generators.Inline exposing (..)
 
 import CodeGen.Imports
 import CodeGen.Shared exposing (Context)
-import Dict exposing (Dict)
-import Dict.NonEmpty exposing (NonEmpty)
+import Dict.NonEmpty
 import Elm.CodeGen as CG
 import List.NonEmpty
 import Set

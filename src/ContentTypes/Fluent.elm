@@ -8,7 +8,11 @@ module ContentTypes.Fluent exposing
     , Resource(..)
     , ast
     , fluentToInternalRep
+    , identifier
     , message
+    , messageLine
+    , multilineHelper
+    , noAttrs
     , runFluentParser
     , stringLit
     )
@@ -16,11 +20,12 @@ module ContentTypes.Fluent exposing
 import Dict exposing (Dict)
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompIf, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import String.Extra
 import Types
+import Util
 
 
 type alias AST =
@@ -31,9 +36,21 @@ type Resource
     = MessageResource Message
 
 
+noAttrs : { identifier : Identifier, content : NonEmpty Content } -> Resource
+noAttrs msg =
+    MessageResource { identifier = msg.identifier, content = msg.content, attrs = [] }
+
+
+type alias Attribute =
+    { identifier : String
+    , content : NonEmpty Content
+    }
+
+
 type alias Message =
     { identifier : Identifier
     , content : NonEmpty Content
+    , attrs : List Attribute
     }
 
 
@@ -118,17 +135,38 @@ fluentToInternalRep ast_ =
                 MessageIdentifier _ ->
                     True
 
-        resourceToInternalRep : Resource -> Result String ( Types.TKey, Types.TValue )
+        attrToInternalRep : Attribute -> Result String ( Types.TKey, Types.TValue )
+        attrToInternalRep attr =
+            List.NonEmpty.map contentsToValue attr.content
+                |> combineMapResultNonEmpty
+                |> Result.map
+                    (List.NonEmpty.concat
+                        >> Types.concatenateTextSegments
+                        >> Tuple.pair attr.identifier
+                    )
+
+        msgToAttrs : Message -> NonEmpty Attribute
+        msgToAttrs msg =
+            let
+                key =
+                    identifierToKey msg.identifier
+            in
+            List.NonEmpty.fromCons { identifier = key, content = msg.content } <|
+                List.map
+                    (\attr -> { attr | identifier = Util.keyToName [ key, attr.identifier ] })
+                    msg.attrs
+
+        resourceToInternalRep : Resource -> Result String (NonEmpty ( Types.TKey, Types.TValue ))
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
-                    Result.map (Tuple.pair <| identifierToKey msg.identifier)
-                        (List.NonEmpty.map contentsToValue msg.content
-                            |> combineMapResultNonEmpty
-                            |> Result.map (List.NonEmpty.concat >> Types.concatenateTextSegments)
-                        )
+                    msgToAttrs msg
+                        |> List.NonEmpty.map attrToInternalRep
+                        |> combineMapResultNonEmpty
     in
-    List.filter termFilter ast_ |> Result.Extra.combineMap resourceToInternalRep
+    List.filter termFilter ast_
+        |> Result.Extra.combineMap resourceToInternalRep
+        |> Result.map (List.concatMap List.NonEmpty.toList)
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)
@@ -161,30 +199,103 @@ ast =
 
 message : Parser Message
 message =
-    (succeed (\id firstLineCnt otherLines -> { identifier = id, content = combineLines <| firstLineCnt :: removeCommonIndentCnt otherLines })
+    (succeed
+        (\id firstLineCnt multilines ->
+            addMultilines multilines firstLineCnt id
+        )
         |= identifier
         |. spaces
         |= messageLine
-        |= loop [] multilineHelper
+        |= loop End multilineHelper
     )
         |> andThen
-            (\msg ->
-                List.NonEmpty.fromList msg.content
-                    |> Result.fromMaybe "Content of message cannot be empty"
-                    |> resultToParser
-                    |> map (Message msg.identifier)
+            (Result.fromMaybe "Content of message cannot be empty"
+                >> resultToParser
             )
 
 
-multilineHelper : List (List Content) -> Parser (Step (List (List Content)) (List (List Content)))
-multilineHelper revLines =
-    succeed identity
+addMultilines : Multiline -> List Content -> Identifier -> Maybe Message
+addMultilines multis firstLineCnts id =
+    let
+        extractContents : Multiline -> ( List (List Content), List Attribute )
+        extractContents multi =
+            case multi of
+                Continuation lineCnts nextLine ->
+                    let
+                        ( recursiveCnts, recursiveAttrs ) =
+                            extractContents nextLine
+                    in
+                    ( lineCnts :: recursiveCnts, recursiveAttrs )
+
+                AttributeDef msg nextLine ->
+                    let
+                        ( recursiveCnts, recursiveAttrs ) =
+                            extractContents nextLine
+                    in
+                    ( recursiveCnts
+                    , { identifier =
+                            case msg.identifier of
+                                TermIdentifier term ->
+                                    term
+
+                                MessageIdentifier msgId ->
+                                    msgId
+                      , content = msg.content
+                      }
+                        :: recursiveAttrs
+                        ++ msg.attrs
+                    )
+
+                End ->
+                    ( [], [] )
+
+        ( otherLineCnts, attrs ) =
+            extractContents multis
+    in
+    List.NonEmpty.fromList (combineLines <| firstLineCnts :: removeCommonIndentCnt (List.reverse otherLineCnts))
+        |> Maybe.map (\cnts -> { identifier = id, content = cnts, attrs = attrs })
+
+
+type Multiline
+    = Continuation (List Content) Multiline
+    | AttributeDef Message Multiline
+    | End
+
+
+multilineHelper : Multiline -> Parser (Step Multiline Multiline)
+multilineHelper multi =
+    let
+        prefixTextContent prefix step =
+            case step of
+                Loop (Continuation ((TextContent text) :: otherCnts) m) ->
+                    Loop (Continuation (TextContent (prefix ++ text) :: otherCnts) m)
+
+                Loop (Continuation cnts m) ->
+                    Loop (Continuation (TextContent prefix :: cnts) m)
+
+                _ ->
+                    step
+
+        addNewLines numberOfNewLines step =
+            case step of
+                Loop (Continuation c m) ->
+                    Loop (Continuation c <| List.foldl Continuation m (List.repeat numberOfNewLines []))
+
+                _ ->
+                    step
+    in
+    succeed (\newLines step -> addNewLines (String.length newLines) step)
         |. oneOf [ end, Parser.token "\n" ]
+        |= (chompWhile ((==) '\n') |> getChompedString)
         |= oneOf
-            [ succeed (\cnts -> Loop <| cnts :: revLines)
+            [ succeed prefixTextContent
                 |. Parser.chompIf isSpace
-                |= messageLine
-            , succeed (Done <| List.reverse revLines)
+                |= (spaces |> getChompedString)
+                |= oneOf
+                    [ Parser.token "." |> Parser.andThen (\_ -> message) |> Parser.map (\msg -> AttributeDef msg multi |> Done)
+                    , messageLine |> Parser.map (\cnts -> Loop (Continuation cnts multi))
+                    ]
+            , succeed (Done multi)
             ]
 
 
@@ -334,6 +445,7 @@ identifier =
         |. token "="
 
 
+endsVar : Char -> Bool
 endsVar c =
     c == ' ' || c == '\n' || c == '\u{000D}' || c == '}'
 

@@ -31,16 +31,17 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       - name: npm publish
         if: ${{ github.event_name == 'push' }}
-        working-directory: intl
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
-          npm publish --access public || true
+          cd intl && npm publish --access public || true
         env:
           CI: true
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
       - name: publish
         uses: dillonkearns/elm-publish-action@v1
-        working-directory: intl
+        defaults:
+          run:
+            working-directory: scripts
         if: ${{ github.event_name == 'push' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

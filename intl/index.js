@@ -11,6 +11,9 @@ const wrap = (fun) =>
     }
   );
 
+/**
+ * An object enabling access to the Intl API via JSON. *
+ * */
 export default intl_proxy = wrap((json) => {
   try {
     const [api, apiArgs, method, methodArgs] = JSON.parse(json);

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "intl/**"
+      - ".github/workflows/build_and_test_intl.yml"
   pull_request:
     branches: [main]
     paths:

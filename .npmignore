@@ -6,6 +6,7 @@ node_modules/
 /.github/
 /src
 /.coverage
+/intl
 
 /build.js
 

@@ -20,7 +20,7 @@ This package is a library and an executable to generate Elm Modules from differe
 
 == 📖 How to use
 
-. Install this package from npm with `npm install --save-dev elm-i18n`.
+. Install this package from npm with `npm install --save-dev travelm-agency`.
 
 . Put your translations in files of one of the supported formats and bundle them in a folder. The filenames should follow the pattern `[identifier].[language].[extension]`.
 . Choose a filepath for the generated Elm file.

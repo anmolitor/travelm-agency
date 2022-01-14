@@ -2,10 +2,10 @@ module RequestDecoderTest exposing (..)
 
 import Expect
 import Json.Decode as D
-import Ports exposing (Request(..), requestDecoder)
+import Ports exposing (GeneratorMode(..), Request(..), requestDecoder)
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..))
-import Ports exposing (GeneratorMode(..))
+import Util exposing (emptyIntl)
 
 
 suite : Test
@@ -13,7 +13,7 @@ suite =
     describe "Request Decoder"
         [ test "decode translation request" <|
             \_ ->
-                D.decodeString requestDecoder """{
+                D.decodeString (requestDecoder emptyIntl) """{
   "type": "translation",
   "fileName": "demo.en.json",
   "fileContent": "{\\"demoKey\\": \\"demoValue\\"}"
@@ -28,7 +28,7 @@ suite =
                         )
         , test "decode finish request" <|
             \_ ->
-                D.decodeString requestDecoder """{
+                D.decodeString (requestDecoder emptyIntl) """{
   "type": "finish",
   "elmModuleName": "Test.elm",
   "generatorMode": "inline",

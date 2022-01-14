@@ -9,9 +9,10 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <script src="index.js"></script>
     <script src="main.js"></script>
     <script>
-      Elm.Main.init({ flags: 'en' })
+      Elm.Main.init({ flags: { language: 'en', intl: window.intl_proxy }})
     </script>
   </body>
 </html>

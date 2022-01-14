@@ -6,6 +6,7 @@ import Elm.Pretty as Pretty
 import Generators.Dynamic
 import Generators.Inline
 import Generators.Names exposing (defaultNames)
+import Intl exposing (Intl)
 import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
@@ -16,19 +17,21 @@ import Util
 
 
 type alias Flags =
-    { version : String }
+    { version : String, intl : Intl }
 
 
 type alias Model =
     { version : String
     , state : State ()
+    , intl : Intl
     }
 
 
-init : String -> Model
-init version =
+init : String -> Intl -> Model
+init version intl =
     { version = version
     , state = Dict.empty
+    , intl = intl
     }
 
 
@@ -75,7 +78,7 @@ update msg model =
                     )
 
         GotRequest (Ports.FinishModule req) ->
-            ( init model.version
+            ( init model.version model.intl
             , onFinishModule model req
             )
 
@@ -125,6 +128,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
                         { moduleName = Util.moduleName elmModuleName
                         , version = model.version
                         , names = defaultNames
+                        , intl = model.intl
                         }
                 in
                 case generatorMode of
@@ -144,8 +148,8 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Ports.subToRequests <|
+subscriptions model =
+    Ports.subToRequests model.intl <|
         \result ->
             case result of
                 Ok req ->
@@ -158,7 +162,7 @@ subscriptions _ =
 main : Program Flags Model Msg
 main =
     Platform.worker
-        { init = \flags -> ( init flags.version, Cmd.none )
+        { init = \flags -> ( init flags.version flags.intl, Cmd.none )
         , update = update
         , subscriptions = subscriptions
         }

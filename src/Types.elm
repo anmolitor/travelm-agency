@@ -1,15 +1,19 @@
 module Types exposing
-    ( TKey
+    ( InterpolationKind(..)
+    , TKey
     , TSegment(..)
     , TValue
     , Translations
     , concatenateTextSegments
     , getInterpolationVarNames
     , indicifyInterpolations
-    , optimizeJson
+    , interpolationKindToTypeAnn
+    , optimizeJson, isIntlInterpolation
     )
 
 import Array
+import Dict exposing (Dict)
+import Elm.CodeGen as CG
 import Json.Encode as E
 import List.NonEmpty exposing (NonEmpty)
 import Set exposing (Set)
@@ -38,6 +42,10 @@ type TSegment
     | Interpolation String
       -- {$var -> case var of [List String TValue]} [TValue]
     | InterpolationCase String (NonEmpty ( TPattern, TValue ))
+      -- {NUMBER($var, minimumFractionDigits: 2)}
+    | FormatNumber String (List ( String, String ))
+      -- {DATE($var, hour12: true)}
+    | FormatDate String (List ( String, String ))
 
 
 type TPattern
@@ -45,16 +53,47 @@ type TPattern
     | RangePattern Int Int
 
 
-interpolationVar : TSegment -> Maybe String
-interpolationVar segment =
+type InterpolationKind
+    = SimpleInterpolation
+    | IntlInterpolation CG.TypeAnnotation
+
+
+interpolationKindToTypeAnn : InterpolationKind -> CG.TypeAnnotation
+interpolationKindToTypeAnn kind =
+    case kind of
+        SimpleInterpolation ->
+            CG.stringAnn
+
+        IntlInterpolation ann ->
+            ann
+
+
+isIntlInterpolation : InterpolationKind -> Bool
+isIntlInterpolation kind =
+    case kind of
+        SimpleInterpolation ->
+            False
+
+        IntlInterpolation _ ->
+            True
+
+
+classifyInterpolationSegment : TSegment -> Maybe ( String, InterpolationKind )
+classifyInterpolationSegment segment =
     case segment of
         Interpolation var ->
-            Just var
+            Just ( var, SimpleInterpolation )
 
         InterpolationCase var _ ->
-            Just var
+            Just ( var, SimpleInterpolation )
 
-        _ ->
+        FormatNumber var _ ->
+            Just ( var, IntlInterpolation CG.floatAnn )
+
+        FormatDate var _ ->
+            Just ( var, IntlInterpolation <| CG.fqTyped [ "Time" ] "Posix" [] )
+
+        Text _ ->
             Nothing
 
 
@@ -65,41 +104,52 @@ Multiple interpolations with the same key get the same number.
 indicifyInterpolations : TValue -> TValue
 indicifyInterpolations =
     let
-        sortByInterpolation : TSegment -> String
         sortByInterpolation =
-            interpolationVar >> Maybe.withDefault ""
+            classifyInterpolationSegment >> Maybe.map Tuple.first >> Maybe.withDefault ""
     in
     List.NonEmpty.indexedMap Tuple.pair
         >> List.NonEmpty.sortBy (Tuple.second >> sortByInterpolation)
         >> (\( first, rest ) ->
                 List.foldl
                     (\( i, segment ) ( currentIndex, previousVar, segments ) ->
+                        let
+                            handleInterpolation var toSegment =
+                                if previousVar == Just var then
+                                    ( currentIndex, Just var, List.NonEmpty.cons ( i, toSegment <| String.fromInt <| currentIndex - 1 ) segments )
+
+                                else
+                                    ( currentIndex + 1, Just var, List.NonEmpty.cons ( i, toSegment <| String.fromInt currentIndex ) segments )
+                        in
                         case segment of
                             Interpolation var ->
-                                if previousVar == Just var then
-                                    ( currentIndex, Just var, List.NonEmpty.cons ( i, Interpolation <| String.fromInt <| currentIndex - 1 ) segments )
-
-                                else
-                                    ( currentIndex + 1, Just var, List.NonEmpty.cons ( i, Interpolation <| String.fromInt currentIndex ) segments )
+                                handleInterpolation var Interpolation
 
                             InterpolationCase var cases ->
-                                if previousVar == Just var then
-                                    ( currentIndex, Just var, List.NonEmpty.cons ( i, InterpolationCase (String.fromInt <| currentIndex - 1) cases ) segments )
+                                handleInterpolation var (\v -> InterpolationCase v cases)
 
-                                else
-                                    ( currentIndex + 1, Just var, List.NonEmpty.cons ( i, InterpolationCase (String.fromInt currentIndex) cases ) segments )
+                            FormatNumber var args ->
+                                handleInterpolation var (\v -> FormatNumber v args)
 
-                            _ ->
+                            FormatDate var args ->
+                                handleInterpolation var (\v -> FormatDate v args)
+
+                            Text _ ->
                                 ( currentIndex, previousVar, List.NonEmpty.cons ( i, segment ) segments )
                     )
                     (case first of
                         ( i, Interpolation var ) ->
                             ( 1, Just var, List.NonEmpty.singleton ( i, Interpolation "0" ) )
 
-                        ( i, InterpolationCase var _ ) ->
-                            ( 1, Just var, List.NonEmpty.singleton ( i, Interpolation "0" ) )
+                        ( i, InterpolationCase var cases ) ->
+                            ( 1, Just var, List.NonEmpty.singleton ( i, InterpolationCase "0" cases ) )
 
-                        _ ->
+                        ( i, FormatNumber var args ) ->
+                            ( 1, Just var, List.NonEmpty.singleton ( i, FormatNumber var args ) )
+
+                        ( i, FormatDate var args ) ->
+                            ( 1, Just var, List.NonEmpty.singleton ( i, FormatDate var args ) )
+
+                        ( _, Text _ ) ->
                             ( 0, Nothing, List.NonEmpty.singleton first )
                     )
                     rest
@@ -112,6 +162,10 @@ indicifyInterpolations =
 optimizeJson : Translations -> E.Value
 optimizeJson translations =
     let
+        wrapVar : String -> String
+        wrapVar var =
+            "{" ++ var ++ "}"
+
         optimizeSegments : TValue -> String
         optimizeSegments =
             indicifyInterpolations
@@ -122,10 +176,16 @@ optimizeJson translations =
                                 str
 
                             Interpolation var ->
-                                "{" ++ var ++ "}"
+                                wrapVar var
 
                             InterpolationCase var _ ->
-                                "{" ++ var ++ "}"
+                                wrapVar var
+
+                            FormatNumber var _ ->
+                                wrapVar <| "N" ++ var
+
+                            FormatDate var _ ->
+                                wrapVar <| "D" ++ var
                     )
                 >> List.NonEmpty.toList
                 >> String.join ""
@@ -136,11 +196,11 @@ optimizeJson translations =
         |> E.array E.string
 
 
-getInterpolationVarNames : NonEmpty TSegment -> Set String
+getInterpolationVarNames : NonEmpty TSegment -> Dict String InterpolationKind
 getInterpolationVarNames =
     List.NonEmpty.toList
-        >> List.filterMap interpolationVar
-        >> Set.fromList
+        >> List.filterMap classifyInterpolationSegment
+        >> Dict.fromList
 
 
 {-| Concatenate multiple text segments that occur after each other

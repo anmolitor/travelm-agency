@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npm run build && npm run live",
     "live": "elm-live --open --dir=../dist -- src/Main.elm --output=../dist/main.js",
+    "parcel": "parcel index.html",
     "build": "node ../../index.js --inline --elm_path=src/I18n.elm ../translations"
   },
   "author": "Andreas Molitor",

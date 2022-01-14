@@ -2,9 +2,12 @@ module ContentTypes.FluentTest exposing (..)
 
 import ContentTypes.Fluent as F
 import Expect
+import Intl exposing (Intl)
+import Json.Encode
 import Parser
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..))
+import Util exposing (emptyIntl)
 
 
 parserTests : Test
@@ -238,19 +241,19 @@ toInternalRepConverterTests =
         [ test "single message" <|
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some text", [] ) } ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok [ ( "msg", ( Text "some text", [] ) ) ])
         , test "single message with interpolation" <|
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some ", [ F.PlaceableContent (F.VarRef "name") ] ) } ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok [ ( "msg", ( Text "some ", [ Interpolation "name" ] ) ) ])
         , test "single message with term reference" <|
             \_ ->
                 [ F.noAttrs { identifier = F.TermIdentifier "term", content = ( F.TextContent "World", [] ) }
                 , F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "Hello ", [ F.PlaceableContent (F.TermRef "term" []) ] ) }
                 ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok [ ( "msg", ( Text "Hello World", [] ) ) ])
         , test "errors out on term recursion" <|
             \_ ->
@@ -259,7 +262,7 @@ toInternalRepConverterTests =
                 , F.noAttrs { identifier = F.TermIdentifier "term3", content = ( F.PlaceableContent (F.TermRef "term1" []), [] ) }
                 , F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.PlaceableContent (F.TermRef "term1" []), [] ) }
                 ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Err "Recursive term reference term1 <- term3 <- term2 <- term1")
         , test "term ref with arguments gets inlined" <|
             \_ ->
@@ -287,7 +290,7 @@ toInternalRepConverterTests =
                         )
                     }
                 ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok [ ( "msg", ( Text "text: hi worldCost: 420.69", [] ) ) ])
         , test "attributes get converted to extra keys" <|
             \_ ->
@@ -300,7 +303,7 @@ toInternalRepConverterTests =
                         ]
                     }
                 ]
-                    |> F.fluentToInternalRep
+                    |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal
                         (Ok
                             [ ( "msg", ( Text "some text", [] ) )

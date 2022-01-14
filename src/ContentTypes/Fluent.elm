@@ -18,12 +18,15 @@ module ContentTypes.Fluent exposing
     )
 
 import Dict exposing (Dict)
+import Intl exposing (Intl)
+import Iso8601
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import String.Extra
+import Time
 import Types
 import Util
 
@@ -59,8 +62,8 @@ type Content
     | PlaceableContent Placeable
 
 
-fluentToInternalRep : AST -> Result String Types.Translations
-fluentToInternalRep ast_ =
+fluentToInternalRep : Intl -> String -> AST -> Result String Types.Translations
+fluentToInternalRep intl language ast_ =
     let
         identifierToKey : Identifier -> Types.TKey
         identifierToKey id =
@@ -74,6 +77,29 @@ fluentToInternalRep ast_ =
         contentsToValue : Content -> Result String (NonEmpty Types.TSegment)
         contentsToValue =
             contentsToValueHelper [] []
+
+        formatNumberLit : Literal -> Result String Types.TSegment
+        formatNumberLit lit =
+            case lit of
+                StringLiteral str ->
+                    Err <| "Cannot format the string literal '" ++ str ++ "' as a number"
+
+                NumberLiteral n ->
+                    Ok <| Types.Text <| Intl.formatFloat intl { number = n, language = language, args = [] }
+
+        formatDateLit : Literal -> Result String Types.TSegment
+        formatDateLit lit =
+            case lit of
+                StringLiteral str ->
+                    Result.map
+                        (\time ->
+                            Types.Text <|
+                                Intl.formatDateTime intl { time = time, language = language, args = [] }
+                        )
+                        (Iso8601.toTime str |> Result.mapError Parser.DeadEnds.deadEndsToString)
+
+                NumberLiteral n ->
+                    Ok <| Types.Text <| Intl.formatDateTime intl { time = Time.millisToPosix <| floor n, language = language, args = [] }
 
         -- Limits recursion by keeping track of terms
         -- Inlines arguments known at compile time
@@ -111,6 +137,30 @@ fluentToInternalRep ast_ =
 
                 PlaceableContent (StringLit lit) ->
                     Ok <| List.NonEmpty.singleton <| Types.Text lit
+
+                PlaceableContent (FunctionCall NUMBER (VarArgument var)) ->
+                    Result.map List.NonEmpty.singleton <|
+                        case List.find (Tuple.first >> (==) var) accumulatedArgs of
+                            Just ( _, lit ) ->
+                                formatNumberLit lit
+
+                            Nothing ->
+                                Ok <| Types.FormatNumber var []
+
+                PlaceableContent (FunctionCall DATETIME (VarArgument var)) ->
+                    Result.map List.NonEmpty.singleton <|
+                        case List.find (Tuple.first >> (==) var) accumulatedArgs of
+                            Just ( _, lit ) ->
+                                formatDateLit lit
+
+                            Nothing ->
+                                Ok <| Types.FormatDate var []
+
+                PlaceableContent (FunctionCall NUMBER (LiteralArgument lit)) ->
+                    Result.map List.NonEmpty.singleton <| formatNumberLit lit
+
+                PlaceableContent (FunctionCall DATETIME (LiteralArgument lit)) ->
+                    Result.map List.NonEmpty.singleton <| formatDateLit lit
 
         termDict : Dict String (NonEmpty Content)
         termDict =
@@ -423,6 +473,17 @@ type Placeable
     = VarRef String
     | TermRef String (List ( String, Literal ))
     | StringLit String
+    | FunctionCall BuiltInFunction FunctionArgument
+
+
+type FunctionArgument
+    = VarArgument String
+    | LiteralArgument Literal
+
+
+type BuiltInFunction
+    = NUMBER
+    | DATETIME
 
 
 type Literal
@@ -447,7 +508,21 @@ identifier =
 
 endsVar : Char -> Bool
 endsVar c =
-    c == ' ' || c == '\n' || c == '\u{000D}' || c == '}'
+    c == ' ' || c == '\n' || c == '\u{000D}' || c == '}' || c == ')'
+
+
+varParser : Parser String
+varParser =
+    token "$" |> andThen (\_ -> chompWhile (not << endsVar) |> getChompedString)
+
+
+argumentParser : Parser FunctionArgument
+argumentParser =
+    oneOf
+        [ varParser |> map VarArgument
+        , stringLit |> map (StringLiteral >> LiteralArgument)
+        , float |> map (NumberLiteral >> LiteralArgument)
+        ]
 
 
 placeable : Parser Placeable
@@ -455,7 +530,25 @@ placeable =
     succeed identity
         |. spaces
         |= oneOf
-            [ token "$" |> andThen (\_ -> chompWhile (not << endsVar) |> getChompedString |> map VarRef)
+            [ token "NUMBER("
+                |> andThen
+                    (\_ ->
+                        succeed (FunctionCall NUMBER)
+                            |. spaces
+                            |= argumentParser
+                            |. spaces
+                            |. token ")"
+                    )
+            , token "DATETIME("
+                |> andThen
+                    (\_ ->
+                        succeed (FunctionCall DATETIME)
+                            |. spaces
+                            |= argumentParser
+                            |. spaces
+                            |. token ")"
+                    )
+            , varParser |> map VarRef
             , token "-" |> andThen (\_ -> termRefParser)
             , stringLit |> map StringLit
             ]

@@ -6,6 +6,8 @@ import Html.Attributes exposing (class, selected, value)
 import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onChange)
 import I18n exposing (I18n)
+import Intl exposing (Intl)
+import Time
 
 
 type Msg
@@ -16,29 +18,18 @@ type Msg
 type alias Model =
     { i18n : I18n
     , name : String
-    , language : String
+    , language : I18n.Language
     }
 
 
-init : String -> ( Model, Cmd Msg )
-init language =
-    ( { i18n = I18n.en, name = "", language = language }, Cmd.none )
-
-
-i18nFromString : String -> I18n
-i18nFromString input =
-    case input of
-        "de" ->
-            I18n.de
-
-        "en" ->
-            I18n.en
-
-        "fr" ->
-            I18n.fr
-
-        _ ->
-            I18n.en
+init : { intl : Intl, language : String } -> ( Model, Cmd Msg )
+init { intl, language } =
+    ( { i18n = I18n.init intl I18n.En
+      , name = ""
+      , language = I18n.languageFromString language |> Maybe.withDefault I18n.En
+      }
+    , Cmd.none
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -47,30 +38,46 @@ update msg model =
         ChangedName name ->
             ( { model | name = name }, Cmd.none )
 
-        ChangeLanguage language ->
-            ( { model | language = language, i18n = i18nFromString language }, Cmd.none )
+        ChangeLanguage langString ->
+            case I18n.languageFromString langString of
+                Just language ->
+                    ( { model | language = language, i18n = I18n.load language model.i18n }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
 
 view : Model -> Document Msg
 view model =
-    { title = "Example: " ++ model.language
+    let
+        currentLangString =
+            I18n.languageToString model.language
+    in
+    { title = "Example: " ++ currentLangString
     , body =
         [ div
             []
             [ input [ value model.name, onInput ChangedName, class "name_input" ] []
-            , p [ class "info_text" ] [ text <| model.i18n.languageSwitchInfo model.language ]
+            , p [ class "info_text" ] [ text <| I18n.languageSwitchInfo model.i18n currentLangString ]
             , select [ onChange ChangeLanguage, class "language_select" ] <|
                 List.map
-                    (\language -> option [ selected <| language == model.language, class language ] [ text language ])
-                    [ "de", "en", "fr" ]
-            , p [ class "greeting" ] [ text <| model.i18n.greeting model.name ]
-            , p [ class "order_text" ] [ text <| model.i18n.order { language = model.language, name = model.name } ]
+                    (\language ->
+                        option
+                            [ selected <| language == model.language
+                            , class <| I18n.languageToString language
+                            ]
+                            [ text <| I18n.languageToString language ]
+                    )
+                    I18n.languages
+            , p [ class "greeting" ] [ text <| I18n.greeting model.i18n model.name ]
+            , p [ class "order_text" ] [ text <| I18n.order model.i18n { language = currentLangString, name = model.name } ]
+            , p [ class "sent_on" ] [ text <| I18n.sentOn model.i18n <| Time.millisToPosix 0 ]
             ]
         ]
     }
 
 
-main : Program String Model Msg
+main : Program { intl : Intl, language : String } Model Msg
 main =
     Browser.document
         { init = init

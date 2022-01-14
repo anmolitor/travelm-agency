@@ -7,6 +7,7 @@ import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onChange)
 import Http
 import I18n exposing (I18n)
+import Intl exposing (Intl)
 
 
 type Msg
@@ -17,14 +18,15 @@ type Msg
 
 type alias Model =
     { i18n : I18n
+    , intl : Intl
     , name : String
     , language : String
     }
 
 
-init : String -> ( Model, Cmd Msg )
-init language =
-    ( { i18n = I18n.init, name = "", language = language }, loadTranslations language )
+init : Flags -> ( Model, Cmd Msg )
+init { intl, language } =
+    ( { i18n = I18n.init, name = "", language = language, intl = intl }, loadTranslations language )
 
 
 loadTranslations : String -> Cmd Msg
@@ -72,7 +74,13 @@ view model =
     }
 
 
-main : Program String Model Msg
+type alias Flags =
+    { language : String
+    , intl : Intl
+    }
+
+
+main : Program Flags Model Msg
 main =
     Browser.document
         { init = init

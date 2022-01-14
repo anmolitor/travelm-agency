@@ -9,11 +9,12 @@ import Generators.Names exposing (defaultNames)
 import State exposing (NonEmptyState)
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..), Translations)
+import Util exposing (emptyIntl)
 
 
 context : Context
 context =
-    { version = "1.0.0", moduleName = [ "Test" ], names = defaultNames }
+    { version = "1.0.0", moduleName = [ "Test" ], names = defaultNames, intl = emptyIntl }
 
 
 simpleState : Translations -> NonEmptyState ()

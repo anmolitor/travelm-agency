@@ -40,7 +40,7 @@ declare module "*elm.min.js" {
 
   export const Elm: {
     Main: {
-      init(args: { flags: { version: string } }): {
+      init(args: { flags: { version: string; intl: {} } }): {
         ports: Ports;
       };
     };

@@ -5,6 +5,7 @@ import String.Extra
 
 type alias Names =
     { languageTypeName : String
+    , languagesName : String
     , i18nTypeName : String
     , initFunName : String
     , loadName : String -> String
@@ -17,6 +18,7 @@ type alias Names =
 defaultNames : Names
 defaultNames =
     { languageTypeName = "Language"
+    , languagesName = "languages"
     , i18nTypeName = "I18n"
     , initFunName = "init"
     , loadName = \identifier -> "load" ++ String.Extra.classify identifier

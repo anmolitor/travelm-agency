@@ -1,1 +1,1 @@
-demoKey=demoWert
+sentOn = Envoyé sur {DATETIME($date)}

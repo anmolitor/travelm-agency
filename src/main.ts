@@ -1,4 +1,5 @@
 import fs from "fs";
+import intl_proxy from "intl-proxy";
 import path from "path";
 import { promisify } from "util";
 import {
@@ -33,7 +34,7 @@ export const withElmApp = async <T>(
   let error: string | undefined;
   if (!ports) {
     const version = getPluginVersion();
-    ({ ports } = Elm.Main.init({ flags: { version } }));
+    ({ ports } = Elm.Main.init({ flags: { version, intl: intl_proxy } }));
     const throwOnError: ResponseHandler = (response) => {
       if (response.error) {
         error = response.error;

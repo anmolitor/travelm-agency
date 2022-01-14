@@ -1,5 +1,6 @@
 node_modules
 elm-stuff
+.parcel-cache
 
 /.coverage
 /lib
@@ -9,3 +10,5 @@ elm-stuff
 /example/dist/**
 !/example/dist/index.html
 !/example/dist/favicon.ico
+
+/example/inline/dist

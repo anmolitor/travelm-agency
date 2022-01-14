@@ -5,7 +5,13 @@
   "main": "index.js",
   "author": "Andreas Molitor",
   "license": "ISC",
+  "dependencies": {
+    "intl-proxy": "^1.0.0"
+  },
   "devDependencies": {
-    "elm-live": "^4.0.2"
+    "@parcel/transformer-elm": "^2.2.0",
+    "elm": "^0.19.1-5",
+    "elm-live": "^4.0.2",
+    "parcel": "^2.2.0"
   }
 }

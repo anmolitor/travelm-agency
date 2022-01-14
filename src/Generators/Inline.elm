@@ -1,7 +1,7 @@
 module Generators.Inline exposing (..)
 
 import CodeGen.Imports
-import CodeGen.Shared exposing (Context)
+import CodeGen.Shared exposing (Context, endoAnn, intlAnn, languageRelatedDecls)
 import Dict exposing (Dict)
 import Dict.NonEmpty
 import Elm.CodeGen as CG
@@ -24,6 +24,63 @@ toFile { moduleName, names, version } state =
                 |> .pairs
                 |> List.sortBy Tuple.first
 
+        needsIntl =
+            State.stateNeedsIntl state
+
+        initDecl : CG.Declaration
+        initDecl =
+            let
+                langToI18nAnn =
+                    CG.funAnn (CG.typed names.languageTypeName []) (CG.typed names.i18nTypeName [])
+
+                initBody exprFromLang =
+                    CG.caseExpr (CG.val "lang_")
+                        (languages
+                            |> List.map
+                                (\lang ->
+                                    ( CG.namedPattern (String.Extra.classify lang) []
+                                    , exprFromLang lang
+                                    )
+                                )
+                        )
+            in
+            if needsIntl then
+                CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an i18n instance based on a language and access to the Intl API"))
+                    (Just <| CG.funAnn intlAnn langToI18nAnn)
+                    names.initFunName
+                    [ CG.varPattern "intl_", CG.varPattern "lang_" ]
+                    (initBody <| \lang -> CG.tuple [ CG.val lang, CG.val "intl_" ])
+
+            else
+                CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an i18n instance based on a language"))
+                    (Just langToI18nAnn)
+                    names.initFunName
+                    [ CG.varPattern "lang_" ]
+                    (initBody <| \lang -> CG.val lang)
+
+        loadFunName =
+            names.loadName ""
+
+        loadLanguageDecl : CG.Declaration
+        loadLanguageDecl =
+            let
+                loadLanguageAnn =
+                    Just <| CG.funAnn (CG.typed names.languageTypeName []) (endoAnn <| CG.typed names.i18nTypeName [])
+            in
+            if needsIntl then
+                CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Switch to another i18n instance based on a language"))
+                    loadLanguageAnn
+                    loadFunName
+                    [ CG.varPattern "lang_", CG.tuplePattern [ CG.allPattern, CG.varPattern "intl_" ] ]
+                    (CG.apply [ CG.fun names.initFunName, CG.val "intl_", CG.val "lang_" ])
+
+            else
+                CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Switch to another i18n instance based on a language"))
+                    loadLanguageAnn
+                    loadFunName
+                    [ CG.varPattern "lang_", CG.allPattern ]
+                    (CG.apply [ CG.fun names.initFunName, CG.val "lang_" ])
+
         languages =
             State.getLanguages state
 
@@ -33,53 +90,121 @@ toFile { moduleName, names, version } state =
         translationSet =
             State.collectiveTranslationSet state
 
+        isIntlNeededForKey key =
+            Dict.get key interpolationMap
+                |> Maybe.withDefault Dict.empty
+                |> Dict.toList
+                |> List.any (Tuple.second >> Types.isIntlInterpolation)
+
         translationToRecordTypeAnn : Types.TKey -> CG.TypeAnnotation
         translationToRecordTypeAnn key =
             let
                 placeholders =
                     Dict.get key interpolationMap
-                        |> Maybe.withDefault Set.empty
-                        |> Set.toList
-                        |> List.sort
+                        |> Maybe.withDefault Dict.empty
+                        |> Dict.toList
+                        |> List.sortBy Tuple.first
             in
             case placeholders of
                 [] ->
                     CG.stringAnn
 
-                [ _ ] ->
-                    CG.funAnn CG.stringAnn CG.stringAnn
+                [ ( _, kind ) ] ->
+                    CG.funAnn (Types.interpolationKindToTypeAnn kind) CG.stringAnn
 
                 many ->
                     many
-                        |> List.map (\name -> ( name, CG.stringAnn ))
+                        |> List.map (Tuple.mapSecond Types.interpolationKindToTypeAnn)
                         |> (\fields -> CG.funAnn (CG.recordAnn fields) CG.stringAnn)
 
-        i18nTypeDecl : CG.Declaration
-        i18nTypeDecl =
-            CG.aliasDecl Nothing
-                names.i18nTypeName
-                []
-                (CG.recordAnn <|
-                    List.map (\( k, _ ) -> ( k, translationToRecordTypeAnn k )) pairs
-                )
+        i18nTypeDecls : List CG.Declaration
+        i18nTypeDecls =
+            if needsIntl then
+                let
+                    addIntlIfNeeded key =
+                        if isIntlNeededForKey key then
+                            CG.funAnn intlAnn
+
+                        else
+                            identity
+                in
+                [ CG.aliasDecl Nothing names.i18nTypeName [] (CG.tupleAnn [ CG.typed (Util.safeName names.i18nTypeName) [], intlAnn ])
+                , CG.aliasDecl Nothing
+                    (Util.safeName names.i18nTypeName)
+                    []
+                    (CG.recordAnn <|
+                        List.map (\( k, _ ) -> ( Util.safeName k, addIntlIfNeeded k <| translationToRecordTypeAnn k )) pairs
+                    )
+                ]
+
+            else
+                [ CG.aliasDecl Nothing
+                    names.i18nTypeName
+                    []
+                    (CG.recordAnn <|
+                        List.map (\( k, _ ) -> ( Util.safeName k, translationToRecordTypeAnn k )) pairs
+                    )
+                ]
 
         i18nDeclForLang : String -> Translation () -> CG.Declaration
         i18nDeclForLang lang translation =
-            CG.valDecl (Just (CG.emptyDocComment |> CG.markdown ("`I18n` instance containing all values for the language " ++ String.Extra.classify lang))) (Just <| CG.typed "I18n" []) lang <|
-                CG.record (List.map (Tuple.mapSecond inlineTemplate) <| List.sortBy Tuple.first translation.pairs)
+            let
+                typeDecl =
+                    if needsIntl then
+                        CG.typed (Util.safeName names.i18nTypeName) []
 
-        inlineTemplate : Types.TValue -> CG.Expression
-        inlineTemplate value =
+                    else
+                        CG.typed names.i18nTypeName []
+            in
+            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown ("`I18n` instance containing all values for the language " ++ String.Extra.classify lang)))
+                (Just typeDecl)
+                lang
+                []
+            <|
+                CG.record (List.map (Tuple.mapBoth Util.safeName <| inlineTemplate lang) <| List.sortBy Tuple.first translation.pairs)
+
+        accessorDeclForKey : Types.TKey -> CG.Declaration
+        accessorDeclForKey key =
+            CG.funDecl Nothing
+                (Just <| CG.funAnn (CG.typed names.i18nTypeName []) (translationToRecordTypeAnn key))
+                key
+                [ if needsIntl then
+                    CG.tuplePattern [ CG.varPattern "i18n_", CG.varPattern "intl_" ]
+
+                  else
+                    CG.varPattern "i18n_"
+                ]
+                (if isIntlNeededForKey key then
+                    CG.apply [ CG.access (CG.val "i18n_") (Util.safeName key), CG.val "intl_" ]
+
+                 else
+                    CG.access (CG.val "i18n_") (Util.safeName key)
+                )
+
+        accessorDecls =
+            interpolationMap
+                |> Dict.keys
+                |> List.map accessorDeclForKey
+
+        inlineTemplate : String -> Types.TValue -> CG.Expression
+        inlineTemplate lang value =
             let
                 placeholders =
                     Types.getInterpolationVarNames value
 
                 accessParam =
-                    if Set.size placeholders == 1 then
+                    if Dict.size placeholders == 1 then
                         CG.val << Util.safeName
 
                     else
                         CG.access (CG.val "data_")
+
+                addIntlIfNeeded =
+                    if State.valNeedsIntl value then
+                        (::) (CG.varPattern "intl_")
+
+                    else
+                        identity
 
                 segmentToExpression : Types.TSegment -> CG.Expression
                 segmentToExpression segm =
@@ -90,6 +215,28 @@ toFile { moduleName, names, version } state =
                         Types.InterpolationCase var _ ->
                             accessParam var
 
+                        Types.FormatDate var _ ->
+                            CG.apply
+                                [ CG.fqFun [ "Intl" ] "formatDateTime"
+                                , CG.val "intl_"
+                                , CG.record
+                                    [ ( "time", accessParam var )
+                                    , ( "language", CG.string lang )
+                                    , ( "args", CG.list [] )
+                                    ]
+                                ]
+
+                        Types.FormatNumber var _ ->
+                            CG.apply
+                                [ CG.fqFun [ "Intl" ] "formatFloat"
+                                , CG.val "intl_"
+                                , CG.record
+                                    [ ( "number", accessParam var )
+                                    , ( "language", CG.string lang )
+                                    , ( "args", CG.list [] )
+                                    ]
+                                ]
+
                         Types.Text text ->
                             CG.string text
 
@@ -98,15 +245,15 @@ toFile { moduleName, names, version } state =
             in
             List.NonEmpty.map segmentToExpression value
                 |> List.NonEmpty.foldl1 concatenateExpressions
-                |> (case Set.toList placeholders of
+                |> (case Dict.toList placeholders of
                         [] ->
                             identity
 
-                        [ single ] ->
-                            CG.lambda [ CG.varPattern <| Util.safeName single ]
+                        [ ( single, _ ) ] ->
+                            CG.lambda <| addIntlIfNeeded [ CG.varPattern <| Util.safeName single ]
 
                         _ ->
-                            CG.lambda [ CG.varPattern "data_" ]
+                            CG.lambda <| addIntlIfNeeded [ CG.varPattern "data_" ]
                    )
 
         i18nDecls : List CG.Declaration
@@ -115,12 +262,19 @@ toFile { moduleName, names, version } state =
                 |> Dict.NonEmpty.toList
                 |> List.map Tuple.second
 
+        ( languageDecls, languageExposes ) =
+            languageRelatedDecls names languages
+
         declarations =
-            i18nTypeDecl :: i18nDecls
+            i18nTypeDecls ++ initDecl :: loadLanguageDecl :: i18nDecls ++ languageDecls ++ accessorDecls
 
         exposed =
             CG.typeOrAliasExpose names.i18nTypeName
+                :: CG.funExpose names.initFunName
+                :: CG.funExpose loadFunName
                 :: List.map CG.funExpose languages
+                ++ languageExposes
+                ++ List.map CG.funExpose (Dict.keys interpolationMap)
 
         fileComment =
             CG.emptyFileComment |> CG.markdown ("This file was generated by elm-i18n version " ++ version ++ ".")

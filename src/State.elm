@@ -2,11 +2,13 @@ module State exposing (..)
 
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
+import Elm.CodeGen as CG
 import FNV1a
 import Json.Encode as E
 import List.NonEmpty
 import Set exposing (Set)
 import Types exposing (Translations)
+import Types exposing (InterpolationKind)
 
 
 type alias Identifier =
@@ -107,16 +109,49 @@ getAllResources =
     Dict.values >> List.concatMap (Dict.NonEmpty.values >> List.map .resources)
 
 
-interpolationMap : TranslationSet any -> Dict Types.TKey (Set String)
+interpolationMap : TranslationSet any -> Dict Types.TKey (Dict String InterpolationKind)
 interpolationMap =
     Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Types.getInterpolationVarNames) ts.pairs |> Dict.fromList)
         >> Dict.NonEmpty.foldl1
             (\t1 t2 ->
                 Dict.merge
                     Dict.insert
-                    (\key s1 s2 -> Dict.insert key <| Set.union s1 s2)
+                    (\key s1 s2 -> Dict.insert key <| Dict.union s1 s2)
                     Dict.insert
                     t1
                     t2
                     Dict.empty
             )
+
+
+stateNeedsIntl : NonEmptyState any -> Bool
+stateNeedsIntl =
+    Dict.NonEmpty.values >> List.any translationSetNeedsIntl
+
+
+translationSetNeedsIntl : TranslationSet any -> Bool
+translationSetNeedsIntl =
+    Dict.NonEmpty.values >> List.any (.pairs >> translationsNeedIntl)
+
+
+translationsNeedIntl : Types.Translations -> Bool
+translationsNeedIntl =
+    List.any (Tuple.second >> valNeedsIntl)
+
+
+valNeedsIntl : Types.TValue -> Bool
+valNeedsIntl =
+    List.NonEmpty.any segNeedsIntl
+
+
+segNeedsIntl : Types.TSegment -> Bool
+segNeedsIntl seg =
+    case seg of
+        Types.FormatNumber _ _ ->
+            True
+
+        Types.FormatDate _ _ ->
+            True
+
+        _ ->
+            False

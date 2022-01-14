@@ -4,7 +4,7 @@ import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
 import CodeGen.Imports
 import CodeGen.References as Refs
-import CodeGen.Shared exposing (Context)
+import CodeGen.Shared exposing (Context, languageRelatedDecls)
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
@@ -19,9 +19,6 @@ import Util
 toFile : Context -> NonEmptyState OptimizedJson -> CG.File
 toFile { moduleName, version, names } state =
     let
-        languagesName =
-            "languages"
-
         identifiers =
             Dict.NonEmpty.keys state
 
@@ -48,49 +45,21 @@ toFile { moduleName, version, names } state =
         fallbackValDecl =
             CG.valDecl Nothing (Just CG.stringAnn) "fallbackValue_" (CG.string "...")
 
-        languageTypeDecl : CG.Declaration
-        languageTypeDecl =
-            CG.customTypeDecl (Just (CG.emptyDocComment |> CG.markdown "Enumeration of the supported languages")) names.languageTypeName [] <|
-                List.map (String.Extra.classify >> (\lang -> ( lang, [] ))) languages
-
-        languageToStringDecl : CG.Declaration
-        languageToStringDecl =
-            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Convert a `Language` to its `String` representation."))
-                (Just <| CG.funAnn (CG.typed names.languageTypeName []) CG.stringAnn)
-                names.languageToStringFunName
-                [ CG.varPattern "lang_" ]
-                (CG.caseExpr (CG.val "lang_") <|
-                    List.map (\lang -> ( CG.namedPattern (String.Extra.classify lang) [], CG.string lang )) languages
-                )
-
-        languageFromStringDecl : CG.Declaration
-        languageFromStringDecl =
-            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Maybe parse a `Language` from a `String`. 
-This only considers the keys given during compile time, if you need something like 'en-US' to map to the correct `Language`,
-you should write your own parsing function."""))
-                (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed names.languageTypeName []))
-                names.languageFromStringFunName
-                [ CG.varPattern "lang_" ]
-                (CG.caseExpr (CG.val "lang_") <|
-                    List.map (\lang -> ( CG.stringPattern lang, CG.apply [ CG.fun "Just", CG.val <| String.Extra.classify lang ] )) languages
-                        ++ [ ( CG.allPattern, CG.val "Nothing" ) ]
-                )
-
         accessorDeclaration : Identifier -> Int -> ( Types.TKey, Types.TValue ) -> CG.Declaration
         accessorDeclaration identifier index ( key, value ) =
             let
                 placeholders =
                     Dict.get key interpolationMap
-                        |> Maybe.withDefault Set.empty
-                        |> Set.toList
-                        |> List.sort
+                        |> Maybe.withDefault Dict.empty
+                        |> Dict.toList
+                        |> List.sortBy Tuple.first
 
                 placeholderPatterns =
                     case placeholders of
                         [] ->
                             []
 
-                        [ single ] ->
+                        [ ( single, _ ) ] ->
                             [ CG.varPattern <| Util.safeName single ]
 
                         _ ->
@@ -101,11 +70,11 @@ you should write your own parsing function."""))
                         [] ->
                             []
 
-                        [ single ] ->
+                        [ ( single, _ ) ] ->
                             [ CG.val <| Util.safeName single ]
 
                         many ->
-                            List.map (\name -> CG.access (CG.val "placeholders_") name) many
+                            List.map (\( name, _ ) -> CG.access (CG.val "placeholders_") name) many
 
                 typeAnn =
                     case placeholders of
@@ -117,7 +86,7 @@ you should write your own parsing function."""))
 
                         many ->
                             many
-                                |> List.map (\name -> ( name, CG.stringAnn ))
+                                |> List.map (Tuple.mapSecond Types.interpolationKindToTypeAnn)
                                 |> (\fields -> CG.funAnn (CG.extRecordAnn "a" fields) CG.stringAnn)
             in
             CG.funDecl Nothing
@@ -147,13 +116,6 @@ you should write your own parsing function."""))
                             (Dict.NonEmpty.getFirstEntry translationSet |> Tuple.second).pairs
                     )
 
-        languagesDecl : CG.Declaration
-        languagesDecl =
-            CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "A list containing all `Language`s"))
-                (Just <| CG.listAnn <| CG.typed names.languageTypeName [])
-                languagesName
-                (CG.list <| List.map (String.Extra.classify >> CG.val) languages)
-
         decodeAndLoadDecls : List CG.Declaration
         decodeAndLoadDecls =
             state
@@ -161,28 +123,24 @@ you should write your own parsing function."""))
                 |> Dict.NonEmpty.values
                 |> List.concat
 
+        ( languageDecls, languageExposes ) =
+            languageRelatedDecls names languages
+
         declarations =
             [ i18nTypeDecl
             , initDecl
-            , languageTypeDecl
-            , languagesDecl
-            , languageToStringDecl
-            , languageFromStringDecl
             , fallbackValDecl
             , replacePlaceholdersDecl
             ]
+                ++ languageDecls
                 ++ accessorDecls
                 ++ decodeAndLoadDecls
 
         exposed =
             CG.closedTypeExpose names.i18nTypeName
                 :: CG.openTypeExpose names.languageTypeName
-                :: List.map CG.funExpose
-                    [ names.initFunName
-                    , languagesName
-                    , names.languageToStringFunName
-                    , names.languageFromStringFunName
-                    ]
+                :: CG.funExpose names.initFunName
+                :: languageExposes
                 ++ List.filterMap (Refs.declName >> Maybe.map CG.funExpose) accessorDecls
                 ++ List.filterMap (Refs.declName >> Maybe.map CG.funExpose) decodeAndLoadDecls
 

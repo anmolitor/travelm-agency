@@ -1,9 +1,14 @@
-module Util exposing (keyToName, moduleName, resultToDecoder, safeName)
+module Util exposing (keyToName, moduleName, resultToDecoder, safeName, emptyIntl)
 
 import Elm.CodeGen exposing (ModuleName)
 import Json.Decode as D
 import String.Extra
+import Intl exposing (Intl)
+import Json.Encode
 
+emptyIntl : Intl
+emptyIntl =
+    Json.Encode.object []
 
 keyToName : List String -> String
 keyToName =

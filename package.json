@@ -6,7 +6,8 @@
   "bin": "index.js",
   "scripts": {
     "build": "tsc && node build.js",
-    "test": "elm-test && mocha tests --timeout 10000",
+    "test": "elm-test && npm run test:integration",
+    "test:integration": "mocha tests --timeout 10000",
     "coverage": "elm-coverage"
   },
   "keywords": [
@@ -19,11 +20,12 @@
   "license": "ISC",
   "types": "./lib/main.d.ts",
   "dependencies": {
+    "intl-proxy": "^1.0.1",
     "yargs": "^17.3.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.0",
-    "elm-coverage": "github:marc136/elm-coverage",
+    "elm-coverage": "^0.4.0",
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.1.2",
     "http-shutdown": "^1.2.2",

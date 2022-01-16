@@ -1,7 +1,7 @@
 {
   "name": "example",
   "version": "1.0.0",
-  "description": "Examples for elm-i18n usage",
+  "description": "Examples for travelm-agency usage",
   "main": "index.js",
   "author": "Andreas Molitor",
   "license": "ISC",

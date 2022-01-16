@@ -1,14 +1,18 @@
 module Types exposing
-    ( InterpolationKind(..)
+    ( ArgValue(..)
+    , InterpolationKind(..)
     , TKey
     , TSegment(..)
     , TValue
     , Translations
     , concatenateTextSegments
+    , encodeArgValue
+    , genArgValue
     , getInterpolationVarNames
     , indicifyInterpolations
     , interpolationKindToTypeAnn
-    , optimizeJson, isIntlInterpolation
+    , isIntlInterpolation
+    , optimizeJson
     )
 
 import Array
@@ -43,9 +47,45 @@ type TSegment
       -- {$var -> case var of [List String TValue]} [TValue]
     | InterpolationCase String (NonEmpty ( TPattern, TValue ))
       -- {NUMBER($var, minimumFractionDigits: 2)}
-    | FormatNumber String (List ( String, String ))
+    | FormatNumber String (List ( String, ArgValue ))
       -- {DATE($var, hour12: true)}
-    | FormatDate String (List ( String, String ))
+    | FormatDate String (List ( String, ArgValue ))
+
+
+type ArgValue
+    = BoolArg Bool
+    | StringArg String
+    | NumberArg Float
+
+
+encodeArgValue : ArgValue -> E.Value
+encodeArgValue v =
+    case v of
+        BoolArg b ->
+            E.bool b
+
+        StringArg s ->
+            E.string s
+
+        NumberArg f ->
+            E.float f
+
+
+genArgValue : ArgValue -> CG.Expression
+genArgValue v =
+    case v of
+        BoolArg b ->
+            if b then
+                CG.apply [CG.fqFun ["Json", "Encode"] "bool", CG.val "True"]
+
+            else
+                CG.apply [CG.fqFun ["Json", "Encode"] "bool", CG.val "False"]
+
+        StringArg s ->
+            CG.apply [CG.fqFun ["Json", "Encode"] "string", CG.string s]
+
+        NumberArg f ->
+            CG.apply [CG.fqFun ["Json", "Encode"] "float", CG.float f]
 
 
 type TPattern

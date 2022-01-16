@@ -215,25 +215,25 @@ toFile { moduleName, names, version } state =
                         Types.InterpolationCase var _ ->
                             accessParam var
 
-                        Types.FormatDate var _ ->
+                        Types.FormatDate var args ->
                             CG.apply
                                 [ CG.fqFun [ "Intl" ] "formatDateTime"
                                 , CG.val "intl_"
                                 , CG.record
                                     [ ( "time", accessParam var )
                                     , ( "language", CG.string lang )
-                                    , ( "args", CG.list [] )
+                                    , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, Types.genArgValue v ]) |> CG.list )
                                     ]
                                 ]
 
-                        Types.FormatNumber var _ ->
+                        Types.FormatNumber var args ->
                             CG.apply
                                 [ CG.fqFun [ "Intl" ] "formatFloat"
                                 , CG.val "intl_"
                                 , CG.record
                                     [ ( "number", accessParam var )
                                     , ( "language", CG.string lang )
-                                    , ( "args", CG.list [] )
+                                    , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, Types.genArgValue v ]) |> CG.list )
                                     ]
                                 ]
 

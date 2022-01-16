@@ -17,9 +17,11 @@ module ContentTypes.Fluent exposing
     , stringLit
     )
 
+import Char exposing (isAlphaNum)
 import Dict exposing (Dict)
 import Intl exposing (Intl)
 import Iso8601
+import Json.Encode as E
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
@@ -78,23 +80,33 @@ fluentToInternalRep intl language ast_ =
         contentsToValue =
             contentsToValueHelper [] []
 
-        formatNumberLit : Literal -> Result String Types.TSegment
-        formatNumberLit lit =
+        formatNumberLit : Literal -> ExtraArguments -> Result String Types.TSegment
+        formatNumberLit lit args =
             case lit of
                 StringLiteral str ->
                     Err <| "Cannot format the string literal '" ++ str ++ "' as a number"
 
                 NumberLiteral n ->
-                    Ok <| Types.Text <| Intl.formatFloat intl { number = n, language = language, args = [] }
+                    Ok <|
+                        Types.Text <|
+                            Intl.formatFloat intl
+                                { number = n
+                                , language = language
+                                , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                                }
 
-        formatDateLit : Literal -> Result String Types.TSegment
-        formatDateLit lit =
+        formatDateLit : Literal -> ExtraArguments -> Result String Types.TSegment
+        formatDateLit lit args =
             case lit of
                 StringLiteral str ->
                     Result.map
                         (\time ->
                             Types.Text <|
-                                Intl.formatDateTime intl { time = time, language = language, args = [] }
+                                Intl.formatDateTime intl
+                                    { time = time
+                                    , language = language
+                                    , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                                    }
                         )
                         (Iso8601.toTime str |> Result.mapError Parser.DeadEnds.deadEndsToString)
 
@@ -138,29 +150,29 @@ fluentToInternalRep intl language ast_ =
                 PlaceableContent (StringLit lit) ->
                     Ok <| List.NonEmpty.singleton <| Types.Text lit
 
-                PlaceableContent (FunctionCall NUMBER (VarArgument var)) ->
+                PlaceableContent (FunctionCall NUMBER (VarArgument var) extraArgs) ->
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatNumberLit lit
+                                formatNumberLit lit extraArgs
 
                             Nothing ->
-                                Ok <| Types.FormatNumber var []
+                                Ok <| Types.FormatNumber var extraArgs
 
-                PlaceableContent (FunctionCall DATETIME (VarArgument var)) ->
+                PlaceableContent (FunctionCall DATETIME (VarArgument var) extraArgs) ->
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatDateLit lit
+                                formatDateLit lit extraArgs
 
                             Nothing ->
-                                Ok <| Types.FormatDate var []
+                                Ok <| Types.FormatDate var extraArgs
 
-                PlaceableContent (FunctionCall NUMBER (LiteralArgument lit)) ->
-                    Result.map List.NonEmpty.singleton <| formatNumberLit lit
+                PlaceableContent (FunctionCall NUMBER (LiteralArgument lit) extraArgs) ->
+                    Result.map List.NonEmpty.singleton <| formatNumberLit lit extraArgs
 
-                PlaceableContent (FunctionCall DATETIME (LiteralArgument lit)) ->
-                    Result.map List.NonEmpty.singleton <| formatDateLit lit
+                PlaceableContent (FunctionCall DATETIME (LiteralArgument lit) extraArgs) ->
+                    Result.map List.NonEmpty.singleton <| formatDateLit lit extraArgs
 
         termDict : Dict String (NonEmpty Content)
         termDict =
@@ -473,7 +485,11 @@ type Placeable
     = VarRef String
     | TermRef String (List ( String, Literal ))
     | StringLit String
-    | FunctionCall BuiltInFunction FunctionArgument
+    | FunctionCall BuiltInFunction FunctionArgument ExtraArguments
+
+
+type alias ExtraArguments =
+    List ( String, Types.ArgValue )
 
 
 type FunctionArgument
@@ -513,7 +529,7 @@ endsVar c =
 
 varParser : Parser String
 varParser =
-    token "$" |> andThen (\_ -> chompWhile (not << endsVar) |> getChompedString)
+    token "$" |> andThen (\_ -> chompWhile isAlphaNum |> getChompedString)
 
 
 argumentParser : Parser FunctionArgument
@@ -523,6 +539,34 @@ argumentParser =
         , stringLit |> map (StringLiteral >> LiteralArgument)
         , float |> map (NumberLiteral >> LiteralArgument)
         ]
+
+
+argValueParser : Parser Types.ArgValue
+argValueParser =
+    oneOf
+        [ stringLit |> map Types.StringArg
+        , float |> map Types.NumberArg
+        , succeed (Types.BoolArg True) |. token "true"
+        , succeed (Types.BoolArg False) |. token "false"
+        ]
+
+
+otherArgumentsParser : Parser (List ( String, Types.ArgValue ))
+otherArgumentsParser =
+    loop [] <|
+        \state ->
+            oneOf
+                [ succeed (\k v -> Loop <| ( k, v ) :: state)
+                    |. token ","
+                    |. spaces
+                    |= (chompWhile (\c -> c /= ' ' && c /= ':') |> getChompedString)
+                    |. spaces
+                    |. token ":"
+                    |. spaces
+                    |= argValueParser
+                    |. spaces
+                , succeed (Done <| List.reverse state) |. token ")"
+                ]
 
 
 placeable : Parser Placeable
@@ -537,7 +581,7 @@ placeable =
                             |. spaces
                             |= argumentParser
                             |. spaces
-                            |. token ")"
+                            |= otherArgumentsParser
                     )
             , token "DATETIME("
                 |> andThen
@@ -546,7 +590,7 @@ placeable =
                             |. spaces
                             |= argumentParser
                             |. spaces
-                            |. token ")"
+                            |= otherArgumentsParser
                     )
             , varParser |> map VarRef
             , token "-" |> andThen (\_ -> termRefParser)

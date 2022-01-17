@@ -1,1 +1,1 @@
-sentOn = Gesendet am {DATETIME($date)}
+sentOn = Gesendet am {DATETIME($date, hour12: "true", dateStyle: "full")}

@@ -1,4 +1,4 @@
-module CodeGen.Shared exposing (Context, languageRelatedDecls, unwrapDecl, intlAnn, endoAnn)
+module CodeGen.Shared exposing (Context, languageRelatedDecls, unwrapDecl, intlAnn, endoAnn, appendAll)
 
 import Elm.CodeGen as CG
 import Elm.Syntax.Declaration exposing (Declaration)
@@ -30,6 +30,10 @@ endoAnn ann = CG.funAnn ann ann
 intlAnn : CG.TypeAnnotation
 intlAnn =
     CG.fqTyped [ "Intl" ] "Intl" []
+
+appendAll : CG.Expression -> List CG.Expression -> CG.Expression
+appendAll =
+    List.foldl (\before new -> CG.applyBinOp new CG.append before)    
 
 
 languageRelatedDecls : Names -> List String -> ( List CG.Declaration, List CG.TopLevelExpose )

@@ -1,1 +1,1 @@
-sentOn = Sent on {DATETIME($date)}
+sentOn = Sent on {DATETIME($date, timeStyle: "long", dateStyle: "full")}

@@ -12,3 +12,4 @@ elm-stuff
 !/example/dist/favicon.ico
 
 /example/inline/dist
+/example/dynamic/dist

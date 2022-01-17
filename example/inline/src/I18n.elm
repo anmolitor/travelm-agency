@@ -6,6 +6,7 @@ module I18n exposing (I18n, Language(..), de, en, escapedChars, fr, greeting, in
 -}
 
 import Intl
+import Json.Encode
 import Time
 
 
@@ -65,7 +66,15 @@ de =
                 ++ data_.name
                 ++ ", Sprache: "
                 ++ data_.language
-    , sentOn_ = \intl_ date_ -> "Gesendet am " ++ Intl.formatDateTime intl_ { time = date_, language = "de", args = [] }
+    , sentOn_ =
+        \intl_ date_ ->
+            "Gesendet am "
+                ++ Intl.formatDateTime
+                    intl_
+                    { time = date_
+                    , language = "de"
+                    , args = [ ( "hour12", Json.Encode.string "true" ), ( "dateStyle", Json.Encode.string "full" ) ]
+                    }
     , static_ = "Statischer Text"
     }
 
@@ -87,7 +96,15 @@ en =
                 ++ ", Name: "
                 ++ data_.name
                 ++ "."
-    , sentOn_ = \intl_ date_ -> "Sent on " ++ Intl.formatDateTime intl_ { time = date_, language = "en", args = [] }
+    , sentOn_ =
+        \intl_ date_ ->
+            "Sent on "
+                ++ Intl.formatDateTime
+                    intl_
+                    { time = date_
+                    , language = "en"
+                    , args = [ ( "timeStyle", Json.Encode.string "long" ), ( "dateStyle", Json.Encode.string "full" ) ]
+                    }
     , static_ = "Static text"
     }
 

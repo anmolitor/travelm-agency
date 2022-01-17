@@ -1,6 +1,7 @@
-module CodeGen.Imports exposing (basicImport, extractImports)
+module CodeGen.Imports exposing (dictToImports, extractImports)
 
 import CodeGen.Shared exposing (unwrapDecl)
+import Dict exposing (Dict)
 import Elm.CodeGen as CG
 import Elm.Syntax.Declaration as Decl
 import Elm.Syntax.Expression as Expr
@@ -12,20 +13,31 @@ import Elm.Syntax.TypeAnnotation as Ann
 import Set exposing (Set)
 
 
-basicImport : CG.ModuleName -> CG.Import
-basicImport moduleName =
-    CG.importStmt moduleName Nothing Nothing
+dictToImports : Dict CG.ModuleName (Set String) -> List CG.Import
+dictToImports =
+    Dict.toList
+        >> List.map
+            (\( moduleName, exposes ) ->
+                CG.importStmt moduleName
+                    Nothing
+                    (if Set.isEmpty exposes then
+                        Nothing
+
+                     else
+                        Just <| CG.exposeExplicit <| List.map CG.funExpose <| Set.toList exposes
+                    )
+            )
 
 
-extractImports : List CG.Declaration -> Set CG.ModuleName
+extractImports : List CG.Declaration -> Dict CG.ModuleName (Set String)
 extractImports =
-    List.map extractImportsDecl >> concatSets >> Set.filter ((/=) [])
+    List.map extractImportsDecl >> concatDicts >> Dict.filter (\key _ -> key /= [])
 
 
-extractImportsDecl : CG.Declaration -> Set CG.ModuleName
+extractImportsDecl : CG.Declaration -> Dict CG.ModuleName (Set String)
 extractImportsDecl =
     let
-        extractImportsDeclInternal : Decl.Declaration -> Set CG.ModuleName
+        extractImportsDeclInternal : Decl.Declaration -> Dict CG.ModuleName (Set String)
         extractImportsDeclInternal d =
             case d of
                 Decl.AliasDeclaration { typeAnnotation } ->
@@ -41,21 +53,21 @@ extractImportsDecl =
                     extractImportsSig sig
 
                 Decl.InfixDeclaration _ ->
-                    Set.empty
+                    Dict.empty
 
                 Decl.Destructuring pat expr ->
-                    Set.union
+                    Dict.union
                         (extractImportsPat <| Node.value pat)
                         (extractImportsExpr <| Node.value expr)
     in
     unwrapDecl >> extractImportsDeclInternal
 
 
-extractImportsTypeAnn : CG.TypeAnnotation -> Set CG.ModuleName
+extractImportsTypeAnn : CG.TypeAnnotation -> Dict CG.ModuleName (Set String)
 extractImportsTypeAnn typeAnn =
     let
         extractImportsRecord =
-            concatSets
+            concatDicts
                 << List.map
                     (Node.value
                         >> Tuple.second
@@ -65,11 +77,11 @@ extractImportsTypeAnn typeAnn =
     in
     case typeAnn of
         Ann.Typed (Node.Node _ ( moduleName, _ )) typeAnns ->
-            Set.insert moduleName <|
-                concatSets (List.map (Node.value >> extractImportsTypeAnn) typeAnns)
+            insertNoExpose moduleName <|
+                concatDicts (List.map (Node.value >> extractImportsTypeAnn) typeAnns)
 
         Ann.Tupled typeAnns ->
-            concatSets <| List.map (Node.value >> extractImportsTypeAnn) typeAnns
+            concatDicts <| List.map (Node.value >> extractImportsTypeAnn) typeAnns
 
         Ann.Record recordFields ->
             extractImportsRecord recordFields
@@ -78,29 +90,29 @@ extractImportsTypeAnn typeAnn =
             extractImportsRecord recordFields
 
         Ann.FunctionTypeAnnotation f1 f2 ->
-            Set.union
+            merge
                 (extractImportsTypeAnn <| Node.value f1)
                 (extractImportsTypeAnn <| Node.value f2)
 
         _ ->
-            Set.empty
+            Dict.empty
 
 
-extractImportsFun : Expr.Function -> Set CG.ModuleName
+extractImportsFun : Expr.Function -> Dict CG.ModuleName (Set String)
 extractImportsFun { signature, declaration } =
     Maybe.map (Node.value >> extractImportsSig) signature
-        |> Maybe.withDefault Set.empty
-        |> Set.union (Node.value declaration |> .expression |> Node.value |> extractImportsExpr)
+        |> Maybe.withDefault Dict.empty
+        |> merge (Node.value declaration |> .expression |> Node.value |> extractImportsExpr)
 
 
-extractImportsSig : Sig.Signature -> Set CG.ModuleName
+extractImportsSig : Sig.Signature -> Dict CG.ModuleName (Set String)
 extractImportsSig { typeAnnotation } =
     extractImportsTypeAnn <| Node.value typeAnnotation
 
 
-extractImportsType : Type.Type -> Set CG.ModuleName
+extractImportsType : Type.Type -> Dict CG.ModuleName (Set String)
 extractImportsType { constructors } =
-    concatSets <|
+    concatDicts <|
         List.concatMap
             (Node.value
                 >> .arguments
@@ -109,23 +121,23 @@ extractImportsType { constructors } =
             constructors
 
 
-extractImportsExpr : CG.Expression -> Set CG.ModuleName
+extractImportsExpr : CG.Expression -> Dict CG.ModuleName (Set String)
 extractImportsExpr expr =
     let
-        extractImportsLetDecl : Expr.LetDeclaration -> Set CG.ModuleName
+        extractImportsLetDecl : Expr.LetDeclaration -> Dict CG.ModuleName (Set String)
         extractImportsLetDecl letDecl =
             case letDecl of
                 Expr.LetFunction fun ->
                     extractImportsFun fun
 
                 Expr.LetDestructuring pat e ->
-                    Set.union
+                    merge
                         (extractImportsPat <| Node.value pat)
                         (extractImportsExpr <| Node.value e)
 
-        extractImportsRecordSetter : List (Node.Node Expr.RecordSetter) -> Set CG.ModuleName
+        extractImportsRecordSetter : List (Node.Node Expr.RecordSetter) -> Dict CG.ModuleName (Set String)
         extractImportsRecordSetter recordSetter =
-            concatSets <|
+            concatDicts <|
                 List.map
                     (Node.value
                         >> Tuple.second
@@ -136,38 +148,39 @@ extractImportsExpr expr =
     in
     case expr of
         Expr.Application exprs ->
-            concatSets <| List.map (Node.value >> extractImportsExpr) exprs
+            concatDicts <| List.map (Node.value >> extractImportsExpr) exprs
 
-        Expr.OperatorApplication _ _ e1 e2 ->
-            Set.union
+        Expr.OperatorApplication symbol _ e1 e2 ->
+            merge
                 (extractImportsExpr <| Node.value e1)
                 (extractImportsExpr <| Node.value e2)
+                |> handleOperatorApplication symbol
 
         Expr.FunctionOrValue moduleName _ ->
-            Set.singleton moduleName
+            Dict.singleton moduleName Set.empty
 
         Expr.IfBlock e1 e2 e3 ->
-            concatSets <| List.map (Node.value >> extractImportsExpr) [ e1, e2, e3 ]
+            concatDicts <| List.map (Node.value >> extractImportsExpr) [ e1, e2, e3 ]
 
         Expr.Negation e ->
             extractImportsExpr <| Node.value e
 
         Expr.TupledExpression exprs ->
-            concatSets <| List.map (Node.value >> extractImportsExpr) exprs
+            concatDicts <| List.map (Node.value >> extractImportsExpr) exprs
 
         Expr.ParenthesizedExpression e ->
             extractImportsExpr <| Node.value e
 
         Expr.LetExpression letBlock ->
-            Set.union (extractImportsExpr <| Node.value letBlock.expression)
-                (concatSets <| List.map (Node.value >> extractImportsLetDecl) letBlock.declarations)
+            merge (extractImportsExpr <| Node.value letBlock.expression)
+                (concatDicts <| List.map (Node.value >> extractImportsLetDecl) letBlock.declarations)
 
         Expr.CaseExpression caseBlock ->
-            Set.union (extractImportsExpr <| Node.value caseBlock.expression)
-                (concatSets <|
+            merge (extractImportsExpr <| Node.value caseBlock.expression)
+                (concatDicts <|
                     List.map
                         (\( pat, e ) ->
-                            Set.union
+                            merge
                                 (extractImportsPat <| Node.value pat)
                                 (extractImportsExpr <| Node.value e)
                         )
@@ -175,14 +188,14 @@ extractImportsExpr expr =
                 )
 
         Expr.LambdaExpression lambda ->
-            Set.union (extractImportsExpr <| Node.value lambda.expression)
-                (concatSets <| List.map (Node.value >> extractImportsPat) lambda.args)
+            merge (extractImportsExpr <| Node.value lambda.expression)
+                (concatDicts <| List.map (Node.value >> extractImportsPat) lambda.args)
 
         Expr.RecordExpr recordSetter ->
             extractImportsRecordSetter recordSetter
 
         Expr.ListExpr list ->
-            concatSets <| List.map (Node.value >> extractImportsExpr) list
+            concatDicts <| List.map (Node.value >> extractImportsExpr) list
 
         Expr.RecordAccess e _ ->
             extractImportsExpr <| Node.value e
@@ -191,26 +204,26 @@ extractImportsExpr expr =
             extractImportsRecordSetter recordSetter
 
         _ ->
-            Set.empty
+            Dict.empty
 
 
-extractImportsPat : CG.Pattern -> Set CG.ModuleName
+extractImportsPat : CG.Pattern -> Dict CG.ModuleName (Set String)
 extractImportsPat pat =
     case pat of
         Pat.TuplePattern pats ->
-            concatSets <| List.map (Node.value >> extractImportsPat) pats
+            concatDicts <| List.map (Node.value >> extractImportsPat) pats
 
         Pat.UnConsPattern p1 p2 ->
-            Set.union
+            merge
                 (extractImportsPat <| Node.value p1)
                 (extractImportsPat <| Node.value p2)
 
         Pat.ListPattern pats ->
-            concatSets <| List.map (Node.value >> extractImportsPat) pats
+            concatDicts <| List.map (Node.value >> extractImportsPat) pats
 
         Pat.NamedPattern { moduleName } pats ->
-            Set.insert moduleName <|
-                concatSets <|
+            insertNoExpose moduleName <|
+                concatDicts <|
                     List.map (Node.value >> extractImportsPat) pats
 
         Pat.AsPattern p _ ->
@@ -220,9 +233,37 @@ extractImportsPat pat =
             extractImportsPat <| Node.value p
 
         _ ->
-            Set.empty
+            Dict.empty
 
 
-concatSets : List (Set comparable) -> Set comparable
-concatSets =
-    List.foldl Set.union Set.empty
+handleOperatorApplication : String -> Dict CG.ModuleName (Set String) -> Dict CG.ModuleName (Set String)
+handleOperatorApplication symbol =
+    case symbol of
+        "|=" ->
+            insert [ "Parser" ] (Set.singleton "(|=)")
+
+        "|." ->
+            insert [ "Parser" ] (Set.singleton "(|.)")
+
+        _ ->
+            identity
+
+
+concatDicts : List (Dict CG.ModuleName (Set String)) -> Dict CG.ModuleName (Set String)
+concatDicts =
+    List.foldl merge Dict.empty
+
+
+insert : CG.ModuleName -> Set String -> Dict CG.ModuleName (Set String) -> Dict CG.ModuleName (Set String)
+insert k v =
+    Dict.update k (Maybe.map (Set.union v) >> Maybe.withDefault v >> Just)
+
+
+insertNoExpose : CG.ModuleName -> Dict CG.ModuleName (Set String) -> Dict CG.ModuleName (Set String)
+insertNoExpose k =
+    insert k Set.empty
+
+
+merge : Dict CG.ModuleName (Set String) -> Dict CG.ModuleName (Set String) -> Dict CG.ModuleName (Set String)
+merge l r =
+    Dict.merge insert (\k a b -> insert k a >> insert k b) insert l r Dict.empty

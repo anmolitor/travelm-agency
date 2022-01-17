@@ -1,1 +1,0 @@
-sentOn = Envoyé sur {DATETIME($date)}

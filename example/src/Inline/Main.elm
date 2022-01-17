@@ -1,13 +1,11 @@
-module Main exposing (main)
+module Inline.Main exposing (main)
 
 import Browser exposing (Document)
 import Html exposing (div, input, option, p, select, text)
 import Html.Attributes exposing (class, selected, value)
 import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onChange)
-import I18n exposing (I18n)
-import Intl exposing (Intl)
-import Time
+import Inline.I18n as I18n exposing (I18n)
 
 
 type Msg
@@ -22,9 +20,9 @@ type alias Model =
     }
 
 
-init : { intl : Intl, language : String } -> ( Model, Cmd Msg )
-init { intl, language } =
-    ( { i18n = I18n.init intl I18n.En
+init : { language : String } -> ( Model, Cmd Msg )
+init { language } =
+    ( { i18n = I18n.init I18n.En
       , name = ""
       , language = I18n.languageFromString language |> Maybe.withDefault I18n.En
       }
@@ -48,17 +46,15 @@ update msg model =
 
 
 view : Model -> Document Msg
-view model =
+view ({ i18n } as model) =
     let
         currentLangString =
             I18n.languageToString model.language
     in
     { title = "Example: " ++ currentLangString
     , body =
-        [ div
-            []
-            [ input [ value model.name, onInput ChangedName, class "name_input" ] []
-            , p [ class "info_text" ] [ text <| I18n.languageSwitchInfo model.i18n currentLangString ]
+        [ div [ class "row" ]
+            [ p [ class "info_text" ] [ text <| I18n.languageSwitchInfo model.i18n currentLangString ]
             , select [ onChange ChangeLanguage, class "language_select" ] <|
                 List.map
                     (\language ->
@@ -69,15 +65,17 @@ view model =
                             [ text <| I18n.languageToString language ]
                     )
                     I18n.languages
-            , p [ class "greeting" ] [ text <| I18n.greeting model.i18n model.name ]
-            , p [ class "order_text" ] [ text <| I18n.order model.i18n { language = currentLangString, name = model.name } ]
-            , p [ class "sent_on" ] [ text <| I18n.sentOn model.i18n <| Time.millisToPosix 0 ]
+            , div [ class "row" ] [ text <| I18n.staticText i18n ]
+            , div [ class "row" ] [ p [ class "greeting" ] [ text <| I18n.greeting model.i18n model.name ], input [ value model.name, onInput ChangedName, class "name_input" ] [] ]
+            , div [ class "row" ] [ text <| I18n.specialCharacters i18n ]
+            , div [ class "row" ] [ text <| I18n.orderDemo i18n { language = currentLangString, name = model.name } ]
+            , div [ class "row" ] [ text <| I18n.differentVars i18n { elmEn = "Elm", unionGer = "Vereinigung" } ]
             ]
         ]
     }
 
 
-main : Program { intl : Intl, language : String } Model Msg
+main : Program { language : String } Model Msg
 main =
     Browser.document
         { init = init

@@ -2,15 +2,14 @@ module Generators.Dynamic exposing (toFile)
 
 import CodeGen.BasicM as BasicM
 import CodeGen.DecodeM as DecodeM
-import CodeGen.DynamicParser exposing (genParser)
+import CodeGen.DynamicParser exposing (replacePlaceholdersIntlDecl)
 import CodeGen.Imports
 import CodeGen.References as Refs
-import CodeGen.Shared exposing (Context, appendAll, languageRelatedDecls)
+import CodeGen.Shared exposing (Context, appendAll, intlAnn, languageRelatedDecls)
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
 import Generators.Names exposing (Names)
-import Set
 import State exposing (Identifier, NonEmptyState, OptimizedJson, TranslationSet)
 import String.Extra
 import Types
@@ -23,6 +22,9 @@ toFile { moduleName, version, names } state =
         identifiers =
             Dict.NonEmpty.keys state
 
+        needsIntl =
+            State.stateNeedsIntl state
+
         languages =
             State.getLanguages state
 
@@ -31,17 +33,51 @@ toFile { moduleName, version, names } state =
                 |> Dict.NonEmpty.map (\_ -> State.interpolationMap)
                 |> Dict.NonEmpty.foldl1 Dict.union
 
+        simpleI18nType =
+            CG.recordAnn <| List.map (\id -> ( id, CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] )) identifiers
+
         i18nTypeDecl =
             CG.customTypeDecl Nothing
                 names.i18nTypeName
                 []
-                [ ( names.i18nTypeName, [ CG.recordAnn <| List.map (\id -> ( id, CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] )) identifiers ] ) ]
+                [ ( names.i18nTypeName
+                  , if needsIntl then
+                        [ simpleI18nType, intlAnn, CG.typed names.languageTypeName [] ]
+
+                    else
+                        [ simpleI18nType ]
+                  )
+                ]
+
+        emptyI18nRecord =
+            CG.record (List.map (\id -> ( id, CG.fqFun [ "Array" ] "empty" )) identifiers)
 
         initDecl =
-            CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an (empty) `I18n` instance. This is useful on startup when no JSON was `load`ed yet."))
-                (Just <| CG.typed names.i18nTypeName [])
+            CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an (empty) `I18n` instance. This is useful on startup when no JSON was `load`ed yet."))
+                (Just <|
+                    if needsIntl then
+                        CG.funAnn intlAnn (CG.funAnn (CG.typed names.languageTypeName []) (CG.typed names.i18nTypeName []))
+
+                    else
+                        CG.typed names.i18nTypeName []
+                )
                 names.initFunName
-                (CG.apply [ CG.fun names.i18nTypeName, CG.record (List.map (\id -> ( id, CG.fqFun [ "Array" ] "empty" )) identifiers) ])
+                (if needsIntl then
+                    [ CG.varPattern "intl_", CG.varPattern "lang_" ]
+
+                 else
+                    []
+                )
+                (CG.apply
+                    (CG.fun names.i18nTypeName
+                        :: (if needsIntl then
+                                [ emptyI18nRecord, CG.val "intl_", CG.val "lang_" ]
+
+                            else
+                                [ emptyI18nRecord ]
+                           )
+                    )
+                )
 
         fallbackValDecl =
             CG.valDecl Nothing (Just CG.stringAnn) "fallbackValue_" (CG.string "...")
@@ -89,15 +125,32 @@ toFile { moduleName, version, names } state =
                             many
                                 |> List.map (Tuple.mapSecond Types.interpolationKindToTypeAnn)
                                 |> (\fields -> CG.funAnn (CG.extRecordAnn "a" fields) CG.stringAnn)
+
+                aliasPatternIfNotEmptyPlaceholders =
+                    if List.isEmpty placeholders then
+                        identity
+
+                    else
+                        \pat -> CG.asPattern pat "i18n_"
             in
             CG.funDecl Nothing
                 (Just <| CG.funAnn (CG.typed names.i18nTypeName []) typeAnn)
                 key
-                (CG.namedPattern names.i18nTypeName [ CG.recordPattern [ identifier ] ] :: placeholderPatterns)
+                ((if needsIntl then
+                    aliasPatternIfNotEmptyPlaceholders (CG.namedPattern names.i18nTypeName [ CG.recordPattern [ identifier ], CG.allPattern, CG.allPattern ])
+
+                  else
+                    CG.namedPattern names.i18nTypeName [ CG.recordPattern [ identifier ] ]
+                 )
+                    :: placeholderPatterns
+                )
                 (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                     [ ( CG.namedPattern "Just" [ CG.varPattern "translation_" ]
                       , if List.isEmpty placeholderFunctionArguments then
                             CG.val "translation_"
+
+                        else if needsIntl then
+                            CG.apply [ CG.fun "replacePlaceholders", CG.val "i18n_", CG.list placeholderFunctionArguments, CG.val "translation_" ]
 
                         else
                             CG.apply [ CG.fun "replacePlaceholders", CG.list placeholderFunctionArguments, CG.val "translation_" ]
@@ -120,7 +173,7 @@ toFile { moduleName, version, names } state =
         decodeAndLoadDecls : List CG.Declaration
         decodeAndLoadDecls =
             state
-                |> Dict.NonEmpty.map (generateDeclarationsForIdentifier names)
+                |> Dict.NonEmpty.map (generateDeclarationsForIdentifier names needsIntl)
                 |> Dict.NonEmpty.values
                 |> List.concat
 
@@ -131,12 +184,15 @@ toFile { moduleName, version, names } state =
             [ i18nTypeDecl
             , initDecl
             , fallbackValDecl
-            , replacePlaceholdersDecl
+            , if needsIntl then
+                replacePlaceholdersIntlDecl names
+
+              else
+                replacePlaceholdersDecl
             ]
                 ++ languageDecls
                 ++ accessorDecls
                 ++ decodeAndLoadDecls
-                ++ [ genParser names ]
 
         exposed =
             CG.closedTypeExpose names.i18nTypeName
@@ -155,8 +211,8 @@ toFile { moduleName, version, names } state =
         (Just fileComment)
 
 
-generateDeclarationsForIdentifier : Names -> Identifier -> TranslationSet OptimizedJson -> List CG.Declaration
-generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName } identifier translations =
+generateDeclarationsForIdentifier : Names -> Bool -> Identifier -> TranslationSet OptimizedJson -> List CG.Declaration
+generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, decoderName } needsIntl identifier translations =
     let
         ( someLanguage, someTranslation ) =
             Dict.NonEmpty.getFirstEntry translations
@@ -177,8 +233,24 @@ generateDeclarationsForIdentifier { languageTypeName, i18nTypeName, loadName, de
                     (CG.apply
                         [ DecodeM.map
                         , CG.lambda
-                            [ CG.varPattern "arr_", CG.namedPattern i18nTypeName [ CG.varPattern "i18n_" ] ]
-                            (CG.apply [ CG.fun i18nTypeName, CG.update "i18n_" [ ( identifier, CG.val "arr_" ) ] ])
+                            [ CG.varPattern "arr_"
+                            , CG.namedPattern i18nTypeName
+                                (if needsIntl then
+                                    [ CG.varPattern "i18n_", CG.varPattern "intl_", CG.varPattern "lang_" ]
+
+                                 else
+                                    [ CG.varPattern "i18n_" ]
+                                )
+                            ]
+                            (CG.apply <|
+                                [ CG.fun i18nTypeName, CG.update "i18n_" [ ( identifier, CG.val "arr_" ) ] ]
+                                    ++ (if needsIntl then
+                                            [ CG.val "intl_", CG.val "lang_" ]
+
+                                        else
+                                            []
+                                       )
+                            )
                         ]
                     )
                 )

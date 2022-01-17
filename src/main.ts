@@ -166,7 +166,7 @@ const elmPathToModuleName = (elmPath: string): string => {
   return elmPathRelativeToElmJson
     .replace(".elm", "")
     .replace(possibleSourceDirs[0], "")
-    .split("/")
+    .split(path.sep)
     .filter((s) => s)
     .join(".");
 };

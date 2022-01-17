@@ -1,4 +1,4 @@
-module Util exposing (keyToName, moduleName, resultToDecoder, safeName, emptyIntl)
+module Util exposing (keyToName, moduleName, resultToDecoder, safeName, emptyIntl, quoteString)
 
 import Elm.CodeGen exposing (ModuleName)
 import Json.Decode as D
@@ -14,6 +14,9 @@ keyToName : List String -> String
 keyToName =
     String.join "." >> String.Extra.classify >> String.Extra.decapitalize
 
+
+quoteString : String -> String
+quoteString str = "\"" ++ str ++ "\""
 
 safeName : String -> String
 safeName name =

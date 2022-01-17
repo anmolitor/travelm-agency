@@ -76,16 +76,16 @@ genArgValue v =
     case v of
         BoolArg b ->
             if b then
-                CG.apply [CG.fqFun ["Json", "Encode"] "bool", CG.val "True"]
+                CG.apply [ CG.fqFun [ "Json", "Encode" ] "bool", CG.val "True" ]
 
             else
-                CG.apply [CG.fqFun ["Json", "Encode"] "bool", CG.val "False"]
+                CG.apply [ CG.fqFun [ "Json", "Encode" ] "bool", CG.val "False" ]
 
         StringArg s ->
-            CG.apply [CG.fqFun ["Json", "Encode"] "string", CG.string s]
+            CG.apply [ CG.fqFun [ "Json", "Encode" ] "string", CG.string s ]
 
         NumberArg f ->
-            CG.apply [CG.fqFun ["Json", "Encode"] "float", CG.float f]
+            CG.apply [ CG.fqFun [ "Json", "Encode" ] "float", CG.float f ]
 
 
 type TPattern
@@ -206,6 +206,11 @@ optimizeJson translations =
         wrapVar var =
             "{" ++ var ++ "}"
 
+        encodeArgs : List ( String, ArgValue ) -> String
+        encodeArgs =
+            List.map (\( k, v ) -> (E.string k |> E.encode 0) ++ ":" ++ (encodeArgValue v |> E.encode 0))
+                >> String.join ","
+
         optimizeSegments : TValue -> String
         optimizeSegments =
             indicifyInterpolations
@@ -221,11 +226,11 @@ optimizeJson translations =
                             InterpolationCase var _ ->
                                 wrapVar var
 
-                            FormatNumber var _ ->
-                                wrapVar <| "N" ++ var
+                            FormatNumber var args ->
+                                wrapVar <| "N" ++ var ++ encodeArgs args
 
-                            FormatDate var _ ->
-                                wrapVar <| "D" ++ var
+                            FormatDate var args ->
+                                wrapVar <| "D" ++ var ++ encodeArgs args
                     )
                 >> List.NonEmpty.toList
                 >> String.join ""

@@ -75,12 +75,12 @@ import Parser exposing (..)
         Parser.run parser >> Result.toMaybe >> Maybe.withDefault ""
 
 -}
-genParser : Names -> CG.Declaration
-genParser names =
+replacePlaceholdersIntlDecl : Names -> CG.Declaration
+replacePlaceholdersIntlDecl names =
     CG.funDecl (CG.emptyDocComment |> CG.markdown "Replaces all placeholders with the given arguments using the Intl API on the marked spots" |> Just)
         (Just <| CG.funAnn (CG.typed names.i18nTypeName []) <| CG.funAnn (CG.listAnn CG.stringAnn) (endoAnn CG.stringAnn))
         "replacePlaceholders"
-        [ CG.tuplePattern [ CG.allPattern, CG.varPattern "intl_", CG.varPattern "lang_" ], CG.varPattern "argList_" ]
+        [ CG.namedPattern names.i18nTypeName [ CG.allPattern, CG.varPattern "intl_", CG.varPattern "lang_" ], CG.varPattern "argList_" ]
         (CG.letExpr
             [ CG.letVal "args_" (CG.apply [ CG.fqFun [ "Array" ] "fromList", CG.val "argList_" ])
             , CG.letFunction "getArg_"
@@ -88,6 +88,27 @@ genParser names =
                 (CG.applyBinOp (CG.apply [ CG.fqFun [ "Array" ] "get", CG.val "n_", CG.val "args_" ])
                     CG.piper
                     defaultMaybeToEmptyString
+                )
+            , CG.letVal "wrappedLang_"
+                (CG.binOpChain (CG.string "\"")
+                    CG.append
+                    [ CG.apply [ CG.val names.languageToStringFunName, CG.val "lang_" ]
+                    , CG.string "\""
+                    ]
+                )
+            , CG.letVal "argParser_"
+                (p_oneOf
+                    [ p_succeed (CG.val "wrappedLang_") |> p_drop_infix (p_token "}")
+                    , p_succeed
+                        (CG.parens <|
+                            CG.lambda [ CG.varPattern "str_" ] <|
+                                CG.binOpChain (CG.val "wrappedLang_") CG.append [ CG.string ",{", CG.val "str_", CG.string "}" ]
+                        )
+                        |> p_keep_infix
+                            (CG.parens (CG.applyBinOp (p_chompUntil "}") CG.piper p_getChompedString)
+                                |> p_drop_infix (p_token "}")
+                            )
+                    ]
                 )
             , CG.letFunction "numberFormatUnsafe_"
                 [ CG.varPattern "n_", CG.varPattern "parsedArgString_" ]
@@ -122,23 +143,37 @@ genParser names =
             , CG.letVal "parser_" <|
                 CG.applyBinOp (CG.apply [ p_loop, CG.string "" ]) CG.pipel <|
                     CG.lambda [ CG.varPattern "state_" ] <|
-                        CG.apply
-                            [ p_oneOf
-                            , CG.list
-                                [ CG.apply
-                                    [ p_succeed
-                                    , CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val "state_" ]) CG.composer p_Loop
-                                    ]
-                                    |> p_drop_infix
-                                        (CG.apply [ p_token, CG.string "{" ]
-                                            |> p_keep_infix
-                                                (CG.apply
-                                                    [ p_oneOf
-                                                    , CG.list
-                                                        []
-                                                    ]
-                                                )
-                                        )
+                        p_oneOf
+                            [ p_succeed
+                                (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val "state_" ]) CG.composer p_Loop)
+                                |> p_drop_infix
+                                    (p_token "{"
+                                        |> p_keep_infix
+                                            (p_oneOf
+                                                [ p_succeed (CG.val "getArg_") |> p_keep_infix (p_int |> p_drop_infix (p_token "}"))
+                                                , p_succeed (CG.val "numberFormatUnsafe_")
+                                                    |> p_drop_infix
+                                                        (p_token "N"
+                                                            |> p_keep_infix (p_int |> p_keep_infix (CG.val "argParser_"))
+                                                        )
+                                                , p_succeed (CG.val "dateFormatUnsafe_")
+                                                    |> p_drop_infix
+                                                        (p_token "D"
+                                                            |> p_keep_infix (p_int |> p_keep_infix (CG.val "argParser_"))
+                                                        )
+                                                ]
+                                            )
+                                    )
+                            , CG.pipe (p_chompUntilEndOr "{")
+                                [ p_getChompedString
+                                , p_map <| CG.parens <| CG.apply [ CG.fun "(++)", CG.val "state_" ]
+                                , p_andThen <|
+                                    CG.parens <|
+                                        CG.lambda [ CG.varPattern "str_" ] <|
+                                            p_oneOf
+                                                [ (p_succeed <| CG.parens <| CG.apply [ p_Done, CG.val "str_" ]) |> p_drop_infix p_end
+                                                , p_succeed <| CG.parens <| CG.apply [ p_Loop, CG.val "str_" ]
+                                                ]
                                 ]
                             ]
             ]
@@ -164,14 +199,27 @@ p_drop_infix =
     customOp "|."
 
 
-
--- reversed to better work with |>
--- left |> customOp "|." right
-
-
+{-| reversed to better work with |>
+left |> customOp "|." right
+-}
 customOp : String -> CG.Expression -> CG.Expression -> CG.Expression
 customOp symbol right left =
     Expr.OperatorApplication symbol Infix.Left (Node emptyRange left) (Node emptyRange right)
+
+
+p_chompUntil : String -> CG.Expression
+p_chompUntil symbol =
+    CG.apply [ CG.fqFun [ "Parser" ] "chompUntil", CG.string symbol ]
+
+
+p_chompUntilEndOr : String -> CG.Expression
+p_chompUntilEndOr symbol =
+    CG.apply [ CG.fqFun [ "Parser" ] "chompUntilEndOr", CG.string symbol ]
+
+
+p_getChompedString : CG.Expression
+p_getChompedString =
+    CG.fqFun [ "Parser" ] "getChompedString"
 
 
 p_loop : CG.Expression
@@ -184,29 +232,44 @@ p_Loop =
     CG.fqFun [ "Parser" ] "Loop"
 
 
-p_map : CG.Expression
-p_map =
-    CG.fqFun [ "Parser" ] "map"
+p_Done : CG.Expression
+p_Done =
+    CG.fqFun [ "Parser" ] "Done"
 
 
-p_succeed : CG.Expression
-p_succeed =
-    CG.fqFun [ "Parser" ] "succeed"
+p_end : CG.Expression
+p_end =
+    CG.fqFun [ "Parser" ] "end"
 
 
-p_oneOf : CG.Expression
-p_oneOf =
-    CG.fqFun [ "Parser" ] "oneOf"
+p_map : CG.Expression -> CG.Expression
+p_map expr =
+    CG.apply [ CG.fqFun [ "Parser" ] "map", expr ]
 
 
-p_andThen : CG.Expression
-p_andThen =
-    CG.fqFun [ "Parser" ] "andThen"
+p_succeed : CG.Expression -> CG.Expression
+p_succeed expr =
+    CG.apply [ CG.fqFun [ "Parser" ] "succeed", expr ]
 
 
-p_token : CG.Expression
-p_token =
-    CG.fqFun [ "Parser" ] "token"
+p_oneOf : List CG.Expression -> CG.Expression
+p_oneOf opts =
+    CG.apply [ CG.fqFun [ "Parser" ] "oneOf", CG.list opts ]
+
+
+p_andThen : CG.Expression -> CG.Expression
+p_andThen expr =
+    CG.apply [ CG.fqFun [ "Parser" ] "andThen", expr ]
+
+
+p_token : String -> CG.Expression
+p_token tok =
+    CG.apply [ CG.fqFun [ "Parser" ] "token", CG.string tok ]
+
+
+p_int : CG.Expression
+p_int =
+    CG.fqFun [ "Parser" ] "int"
 
 
 p_run : CG.Expression

@@ -5,6 +5,12 @@
   "main": "index.js",
   "author": "Andreas Molitor",
   "license": "ISC",
+  "scripts": {
+    "start": "parcel index.html",
+    "build": "npm run build:dynamic && npm run build:inline",
+    "build:dynamic": "node ../index.js --elm_path=src/Dynamic/I18n.elm --json_path=dist/i18n --hash translations",
+    "build:inline": "node ../index.js --inline --elm_path=src/Inline/I18n.elm --json_path=dist/i18n --hash translations"
+  },
   "dependencies": {
     "intl-proxy": "^1.0.0"
   },

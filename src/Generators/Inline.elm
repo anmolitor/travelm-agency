@@ -2,11 +2,10 @@ module Generators.Inline exposing (..)
 
 import CodeGen.Imports
 import CodeGen.Shared exposing (Context, endoAnn, intlAnn, languageRelatedDecls)
-import Dict exposing (Dict)
+import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
 import List.NonEmpty
-import Set exposing (Set)
 import State exposing (NonEmptyState, Translation)
 import String.Extra
 import Types
@@ -161,7 +160,7 @@ toFile { moduleName, names, version } state =
                 lang
                 []
             <|
-                CG.record (List.map (Tuple.mapBoth Util.safeName <| inlineTemplate lang) <| List.sortBy Tuple.first translation.pairs)
+                CG.record (List.map (\( k, v ) -> ( Util.safeName k, inlineTemplate lang k v )) <| List.sortBy Tuple.first translation.pairs)
 
         accessorDeclForKey : Types.TKey -> CG.Declaration
         accessorDeclForKey key =
@@ -186,10 +185,13 @@ toFile { moduleName, names, version } state =
                 |> Dict.keys
                 |> List.map accessorDeclForKey
 
-        inlineTemplate : String -> Types.TValue -> CG.Expression
-        inlineTemplate lang value =
+        inlineTemplate : String -> Types.TKey -> Types.TValue -> CG.Expression
+        inlineTemplate lang key value =
             let
                 placeholders =
+                    Dict.get key interpolationMap |> Maybe.withDefault Dict.empty
+
+                specificPlaceholdersForThisLanguage =
                     Types.getInterpolationVarNames value
 
                 accessParam =
@@ -253,7 +255,14 @@ toFile { moduleName, names, version } state =
                             CG.lambda <| addIntlIfNeeded [ CG.varPattern <| Util.safeName single ]
 
                         _ ->
-                            CG.lambda <| addIntlIfNeeded [ CG.varPattern "data_" ]
+                            CG.lambda <|
+                                addIntlIfNeeded
+                                    [ if Dict.isEmpty specificPlaceholdersForThisLanguage then
+                                        CG.allPattern
+
+                                      else
+                                        CG.varPattern "data_"
+                                    ]
                    )
 
         i18nDecls : List CG.Declaration

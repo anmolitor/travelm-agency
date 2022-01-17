@@ -1,29 +1,262 @@
+# Optimization
+
 The question here is: Assuming we know all translations at compile time, what is the most efficient way to load and parse them at runtime?
 
 We focus mostly on the loading part, since IO is usually the bottleneck.
 
-For static key/value translations, it's very simple. The value has to be stored somewhere (it is shown to the user afterall), so we just load the value. The key is not needed if we send the keys in a specific order, which is determined at compile time.
+## Static Key/Value Pairs
+
+The most simple scenario. The value has to be stored somewhere (it is shown to the user afterall), so we just load the value. The key is not needed if we send the keys in a specific order, which is determined at compile time.
 
 We thus end up with an ordered list of strings. A json array is a fine choice of encoding here, we could potentially save some '"' and two brackets if we just send a delimiter seperated string, but then we would need to escape the delimiter in some cases so not worth the hassle.
 
+An example:
+[source,properties]
+----
+# messages.en.properties
+some.translation = Hello world
+other.key = Test
+----
+
+will be compiled into
+
+----
+// messages.en.json
+["Hello world","Test"]
+----
+
+and the Elm accessors
+
+[source,elm]
+----
+-- Translations.elm
+someTranslation : I18n -> String
+someTranslation (I18n { messages }) = 
+  case Array.get 0 messages of
+    Just msg -> msg
+    Nothing -> fallbackValue
+
+otherKey : I18n -> String
+otherKey (I18n { messages }) = 
+  case Array.get 1 messages of
+    Just msg -> msg
+    Nothing -> fallbackValue
+----
+
+## String interpolation
+
 Now in many cases we want some kind of dynamic values:
+The simplest one is runtime string interpolation. Here we sort the placeholder keys alphabetically and replace them with numbers 0, 1, etc. 
 
-. interpolating runtime strings
-. interpolating a value of another key (for consistency)
-. using different interpolation targets based on the value (e.g. singular/plural)
-. interpolating values in some language dependant format (e.g. dates)
+An example:
+----
+# messages.en.properties
+greeting = Hello {target} from {name}
+----
 
-The first two are relatively easy to solve.
-For (1.), we sort the placeholder keys alphabetically and replace them with short and simple numbers (0,1,...).
+will be compiled to
 
-For (2.) we have two options:
+----
+// messages.en.json
+["Hello {1} from {0}"]
+----
+
+and the Elm accessor
+
+[source,elm]
+----
+-- Translations.elm
+greeting : I18n -> { name : String, target : String } -> String
+greeting (I18n { messages }) data_ = 
+  case Array.get 0 messages of
+    Just msg -> msg
+      |> String.replace "{0}" data_.name
+      |> String.replace "{1}" data_.target
+    Nothing -> fallbackValue
+----
+
+## Composing values
+
+In some cases we want to reuse values for consistency.
+We have pretty much two options what to do at compile time:
 
 * allow references to other elements in the array with some syntax * inline the references at compile time
 
 Inlining seems the best approach to me, since the JSON is probably sent zipped anyways, which will optimize away the duplicate strings. It certainly makes for the more efficient parser.
+I do not think that duplicating large portions of strings is a common usecase either way.
 
-For (3.), we probably generate all cases at compile time and generate code that chooses the correct target at runtime.
+An example:
 
-(4.) is a challenge, since it is language-dependant. We can support a fixed set of value transformations that is calculated at compile time and generated into the Elm code. Not sure what the syntax should be, the optimized form probably boils down to some prefix + numbers again.
+[source,fluent]
+----
+# messages.en.ftl
+-frontend-language = Elm
+header = Why {-language}?
+intro = {-language} is a great language for writing maintainable frontend code. 
+----
+
+will be compiled to
+
+----
+// messages.en.json
+["Why Elm?", "Elm is a great language for writing maintainable frontend code"]
+----
+
+and the expected Elm accessors.
+
+## Formatting Dates, Times and Numbers
+
+This is the first challenge we cannot solve with pure Elm. It requires use of the Browsers Intl API, which has classes/methods like `new Intl.NumberFormat(language, opts).format(number)`.
+
+There are several options how to do JS Interop in Elm
+
+### Flags
+
+Does not work since we need to format runtime values
+
+### Ports
+
+We could generate two ports, one for sending messages to an Intl Wrapper and one for receiving the formatted strings. This is kind of bad since it will call the main update function for each thing we format and its kind of weird to use for the end user of this library. The receival not so much, we could require the user to add a subscription, but the sending part. You would need to remember sending each thing in your model that you intend to format as a date or number!
+
+### Webcomponents 
+
+We could provide a set of base components for formatted numbers and dates. For example
+----
+<number-format style="percent">0.5<number-format>
+----
+would delegate to a webcomponent that renders `50%`. This is definitely a better approach than ports. However, this is also weird to use for the end user. The fact that Html would be the main translation type for all translations requires migration from the previously String based API. It also limits the uses to Html output whereas Strings can be used for many things.
+
+### Proxy decoding 
+
+This is new approach that I haven't seen before. Credit goes to Jan Wirth for suggesting the idea. I consider this kind of a hack but it works out wonderfully. It lets us keep the String-based API while not needing any more update/subscription boilerplate.
+
+Now how does it work?
+Well, when decoding an objects field like this:
+[source,elm] 
+----
+import Json.Decode as D
+
+D.decode (D.field "hello" D.string) object
+----
+the Elm compiler actually generates code that
+
+1. checks if `object` has a property `hello`
+2. checks if `object.hello` is of type `String`
+3. returns the value
+
+If the value is not actually a simple key/value object but a ES6 Proxy instead, we can disguise methods behind property accessors like this:
+
+[source,javascript]
+----
+const wrap = (fun) =>
+  new Proxy(
+    {},
+    {
+      get(_target, arg) {
+        // calls the given function with the called field name
+        return fun(arg);
+      },
+      has(_target, _arg) {
+        // makes sure that the property existance check succeeds
+        return true;
+      },
+    }
+  );
+----
+
+Since the Intl APIs follow a common pattern
+
+`Intl.[SubApiName]([apiArgs]).[methodName]([methodArgs])`
+
+we use an encoded JSON string as our field, which includes the four parts as an array. The Proxy then simply decodes the JSON and calls the corresponding functions.
+
+For example:
+[source,javascript]
+----
+proxy['["NumberFormat", ["en", { "style": "percent" }], "format", 0.5]'] === '50%'
+----
+
+All we need to do is
+
+1. Pass the proxy as a `Json.Decode.Value` to Elm (e.g. with a flag)
+2. construct the needed field accessor JSONs in Elm and decode the field to get the formatted value.
+
+How to solve (2)? Embedding the JSON string inside of a i18n value is possible, but hard to parse:
+We cannot just send the JSON to the proxy, but need to interpolate some runtime value beforehand. Also, coincidentally curly brackets are used as our interpolation markers, but also for JSON objects.
+Additionally, this has the potential to produce a lot of bloat in the JSON files.
+Thus, we opt for another approach: Embed the significant parts of the JSON string in the i18n value and do the Proxy Argument construction at runtime in Elm.
+The i18n value `Confidence: {N0\"style\":\"percent\"}` gets parsed in Elm as follows:
+
+* The N signals that we want to use the `NumberFormat` Intl API
+* The 0 signals that we want to inject the first given runtime value
+* The rest of the string until the next closing curly brace gets surrounded by curly braces and passed as an arg
+
+So far, we have only 2 markers for Proxy calls, `N` for NumberFormat.format and `D` for DateTimeFormat.format.
+
+## Plural Rules
+
+Commonly you want to use slightly different formulations depending on some number e.g. "1 Book" vs "2 Books". For some languages it is possible to do without any extra help: just use a case/if statement in Elm and have 2 different i18n key/value pairs.
+
+However, not every language is as simple as English in this regard.
+The Intl API offers a simple conversion from numbers to strings from the set `zero`, `one`, `two`, `few`, `many` and `other`.
+
+So once again, we need to access the Intl API in Elm which we can do using the same trick as in the previous section.
+
+Additionally, we need to use the value we get back from the Intl API to decide which given value to interpolate. We will have another marker `P` for `PluralRules.select` and use the same method as before to pass options. Then, for choosing the right value, we just order the values starting at zero, seperate them with a seperator and use the empty string between seperators to communicate no translation for that case. Also, we need a marker to signify the default case.
+
+For example:
+The fluent code
+[language,fluent]
+----
+message = {$userName} {$photoCount ->
+            [one] added a new photo
+           *[other] added {$photoCount} new photos
+          }
+----
+
+generates the JSON code
+[language,json]
+----
+["{1} {P0|5||added a new photo||||added {0} new photos}"]
+----
+
+which is then parsed by Elm:
+
+* {1} is a simple string interpolation of the second given value
+* `P` signals us to use the `PluralRules` API, 0 means to pass the first given value
+* `|` ends the arguments and starts the cases
+* `|5|` means that the default case is the 6th one (other)
+* The first case (for `zero`) is empty, therefore unused
+* Same for third, forth and fifth slot
+* The second and sixth slot are non-empty and are considered in the decision
+* If the Intl API responds with "one", we use the second slot, in any other case we default to the sixth slot ("other")
+
+## Other matching scenarios
+
+Fluent supports runtime matching for arbitrary strings. A simple usecase for this would be a gender distinction: "Her book" vs "His book".
+
+This is obviously doable without the Intl API and kind of goes against the way you would typically design something like this in Elm. In the case of gender, you might have a data type like this
+
+[source,elm]
+----
+-- Please don't judge me if I forgot your gender, I just want to make an example, not a political debate.
+type Gender = Male | Female | ...
+----
+
+And you would typically match like this
+
+[source,elm]
+----
+renderBookOwnership : Gender -> String
+renderBookOwnership gender = case gender of
+  Male -> "His book"
+  Female -> "Her book"
+  ...
+----
+
+To have the case distinction inside of the i18n files, we would have to implement at least a function to serialize our custom datatype into a string as well. 
+
+There is a simple but potentially inefficient solution to this.
+Just do the case distinction in Elm and have seperate i18n pairs for the genders. Unless someone actually runs into problems with this, I think this solution is perfectly fine.
 
 

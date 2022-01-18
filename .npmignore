@@ -1,5 +1,6 @@
 elm-stuff/
 node_modules/
+.parcel-cache/
 /tests/
 /docs
 /example/
@@ -10,6 +11,5 @@ node_modules/
 
 /build.js
 
-/emitDts.js
 tsconfig.json
 elm.json

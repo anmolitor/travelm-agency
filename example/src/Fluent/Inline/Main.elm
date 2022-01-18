@@ -51,10 +51,10 @@ view ({ i18n } as model) =
     { title = "Example: " ++ currentLangString
     , body =
         [ div [ class "row" ] (List.map (\lang -> button [ onClick <| ChangeLanguage lang ] [ text <| I18n.languageToString lang ]) I18n.languages)
-        , div [ class "row" ] [ text <| I18n.staticTermKey i18n ]
-        , div [ class "row" ] [ text <| I18n.dynamicTermKey i18n "\"interpolated\"" ]
-        , div [ class "row" ] [ text <| I18n.nestedTermKey i18n ]
-        , div [ class "row" ]
+        , div [ class "row static_term" ] [ text <| I18n.staticTermKey i18n ]
+        , div [ class "row dynamic_term" ] [ text <| I18n.dynamicTermKey i18n "\"interpolated\"" ]
+        , div [ class "row nested_term" ] [ text <| I18n.nestedTermKey i18n ]
+        , div [ class "row attribute_example" ]
             [ text <|
                 I18n.attributes i18n
                     ++ ": "
@@ -62,9 +62,9 @@ view ({ i18n } as model) =
                     ++ " | "
                     ++ I18n.attributesWithVarAndTerm i18n "Variable"
             ]
-        , div [ class "row" ] [ text <| I18n.dateTimeFun i18n (Time.millisToPosix 0) ]
-        , div [ class "row" ] [ text <| I18n.numberFun i18n 0.42526 ]
-        , div [ class "row" ] [ text <| I18n.compileTimeDatesAndNumbers i18n ]
+        , div [ class "row datetime_example" ] [ text <| I18n.dateTimeFun i18n (Time.millisToPosix 0) ]
+        , div [ class "row number_example" ] [ text <| I18n.numberFun i18n 0.42526 ]
+        , div [ class "row compile_time_functions" ] [ text <| I18n.compileTimeDatesAndNumbers i18n ]
         ]
     }
 

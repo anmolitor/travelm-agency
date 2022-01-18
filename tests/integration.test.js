@@ -27,17 +27,7 @@ describe("integration-test", () => {
     describe(`integration-test: ${scenario}`, () => {
       let cleanDom;
       before(async () => {
-        const html = await fs.readFile(
-          path.join(__dirname, "..", "example", "dist", `${scenario}.html`),
-          { encoding: "utf-8" }
-        );
-
-        cleanDom = jsdomGlobal(html, {
-          url: "http://localhost:9000",
-          runScripts: "dangerously",
-          resources: "usable",
-        });
-        await waitMs(500);
+        cleanDom = await startScenario(scenario);
       });
 
       after(() => {
@@ -99,7 +89,87 @@ describe("integration-test", () => {
       });
     });
   });
+
+  ["fluent_dynamic", "fluent_inline"].forEach((scenario) => {
+    describe(`integration-test: ${scenario}`, () => {
+      let cleanDom;
+      before(async () => {
+        cleanDom = await startScenario(scenario);
+      });
+
+      after(() => {
+        document.body.innerHTML = "";
+        cleanDom();
+        // needed because for some reason this particular part is not restored by JSDOM global.
+        global.URL = global_URL;
+      });
+
+      it("displays the expected static term text", () => {
+        assert.match(
+          getContentByClass("static_term"),
+          /static terms are supported/
+        );
+      });
+
+      it("displays the expected dynamic term text", () => {
+        assert.match(
+          getContentByClass("dynamic_term"),
+          /dynamic, "interpolated" terms are supported/
+        );
+      });
+
+      it("displays the expected nested term text", () => {
+        assert.match(
+          getContentByClass("nested_term"),
+          /nested terms are supported/
+        );
+      });
+
+      it("displays the expected text with attributes", () => {
+        assert.match(
+          getContentByClass("attribute_example"),
+          /Attributes are supported: Attributes | Variable static term/
+        );
+      });
+
+      it("displays the expected text using datetime", () => {
+        assert.match(
+          getContentByClass("datetime_example"),
+          /DATETIME function is supported: Thursday, January 1, 1970 at 1:00:00 AM GMT\+1/
+        );
+      });
+
+      it("displays the expected text using number", () => {
+        assert.match(
+          getContentByClass("number_example"),
+          /NUMBER function is supported: 43%/
+        );
+      });
+
+      it("displays the expected text using number", () => {
+        assert.match(
+          getContentByClass("compile_time_functions"),
+          /DATETIME und NUMBER functions with known values are evaluated at compile time:\n1\/18\/2022\n1\/1\/1970\n500,000/
+        );
+      });
+    });
+  });
 });
+
+const startScenario = async (scenario) => {
+  const html = await fs.readFile(
+    path.join(__dirname, "..", "example", "dist", `${scenario}.html`),
+    { encoding: "utf-8" }
+  );
+
+  const cleanDom = jsdomGlobal(html, {
+    url: "http://localhost:9000",
+    runScripts: "dangerously",
+    resources: "usable",
+  });
+  await waitMs(500);
+  return cleanDom;
+};
 
 const waitMs = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -115,8 +185,11 @@ const switchLanguage = (newLanguage) => {
   langSelect.dispatchEvent(new Event("change"));
 };
 
-const getGreeting = () => document.querySelector(".greeting").textContent;
+const getContentByClass = (className) =>
+  document.querySelector(`.${className}`).textContent;
 
-const getInfoText = () => document.querySelector(".info_text").textContent;
+const getGreeting = () => getContentByClass("greeting");
 
-const getOrderText = () => document.querySelector(".order_text").textContent;
+const getInfoText = () => getContentByClass("info_text");
+
+const getOrderText = () => getContentByClass("order_text");

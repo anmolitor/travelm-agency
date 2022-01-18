@@ -107,8 +107,8 @@ toFile { moduleName, version, names } state =
                         [] ->
                             []
 
-                        [ ( single, _ ) ] ->
-                            [ CG.val <| Util.safeName single ]
+                        [ ( single, kind ) ] ->
+                            [ Types.transformExprToString kind <| CG.val <| Util.safeName single ]
 
                         many ->
                             List.map (\( name, _ ) -> CG.access (CG.val "placeholders_") name) many
@@ -118,8 +118,8 @@ toFile { moduleName, version, names } state =
                         [] ->
                             CG.stringAnn
 
-                        [ _ ] ->
-                            CG.funAnn CG.stringAnn CG.stringAnn
+                        [ ( _, kind ) ] ->
+                            CG.funAnn (Types.interpolationKindToTypeAnn kind) CG.stringAnn
 
                         many ->
                             many

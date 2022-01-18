@@ -10,6 +10,3 @@ elm-stuff
 /example/dist/**
 !/example/dist/index.html
 !/example/dist/favicon.ico
-
-/example/inline/dist
-/example/dynamic/dist

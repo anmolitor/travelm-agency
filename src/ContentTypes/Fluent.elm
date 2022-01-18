@@ -24,14 +24,13 @@ import Iso8601
 import Json.Encode as E
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import String.Extra
 import Time
 import Types
 import Util
-import Parser exposing (chompUntilEndOr)
 
 
 type alias AST =
@@ -110,7 +109,7 @@ fluentToInternalRep intl language ast_ =
                                     , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
                                     }
                         )
-                        (Iso8601.toTime str |> Result.mapError Parser.DeadEnds.deadEndsToString)
+                        (Iso8601.toTime str |> Result.mapError (\err -> "Error while parsing the iso8601 date literal: '" ++ str ++ "': " ++ Parser.DeadEnds.deadEndsToString err))
 
                 NumberLiteral n ->
                     Ok <| Types.Text <| Intl.formatDateTime intl { time = Time.millisToPosix <| floor n, language = language, args = [] }

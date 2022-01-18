@@ -7,9 +7,11 @@
   "license": "ISC",
   "scripts": {
     "start": "parcel index.html",
-    "build": "npm run build:dynamic && npm run build:inline",
+    "build": "npm run build:dynamic && npm run build:inline && npm run build:fluent:dynamic && npm run build:fluent:inline",
     "build:dynamic": "node ../index.js --elm_path=src/Dynamic/I18n.elm --json_path=dist/i18n --hash translations",
-    "build:inline": "node ../index.js --inline --elm_path=src/Inline/I18n.elm --json_path=dist/i18n --hash translations"
+    "build:inline": "node ../index.js --inline --elm_path=src/Inline/I18n.elm --hash translations",
+    "build:fluent:dynamic": "node ../index.js --elm_path=src/Fluent/Dynamic/I18n.elm --json_path=dist/i18n --hash fluent_translations",
+    "build:fluent:inline": "node ../index.js --inline --elm_path=src/Fluent/Inline/I18n.elm --hash fluent_translations"
   },
   "dependencies": {
     "intl-proxy": "^1.0.0"

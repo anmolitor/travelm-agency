@@ -13,6 +13,7 @@ module Types exposing
     , interpolationKindToTypeAnn
     , isIntlInterpolation
     , optimizeJson
+    , transformExprToString
     )
 
 import Array
@@ -95,7 +96,8 @@ type TPattern
 
 type InterpolationKind
     = SimpleInterpolation
-    | IntlInterpolation CG.TypeAnnotation
+      -- Type and toString transformer
+    | IntlInterpolation { ann : CG.TypeAnnotation, toString : CG.Expression -> CG.Expression }
 
 
 interpolationKindToTypeAnn : InterpolationKind -> CG.TypeAnnotation
@@ -104,8 +106,18 @@ interpolationKindToTypeAnn kind =
         SimpleInterpolation ->
             CG.stringAnn
 
-        IntlInterpolation ann ->
+        IntlInterpolation { ann } ->
             ann
+
+
+transformExprToString : InterpolationKind -> CG.Expression -> CG.Expression
+transformExprToString kind =
+    case kind of
+        SimpleInterpolation ->
+            identity
+
+        IntlInterpolation { toString } ->
+            toString
 
 
 isIntlInterpolation : InterpolationKind -> Bool
@@ -128,10 +140,27 @@ classifyInterpolationSegment segment =
             Just ( var, SimpleInterpolation )
 
         FormatNumber var _ ->
-            Just ( var, IntlInterpolation CG.floatAnn )
+            Just
+                ( var
+                , IntlInterpolation
+                    { ann = CG.floatAnn
+                    , toString = \expr -> CG.apply [ CG.fqFun [ "String" ] "fromFloat", expr ]
+                    }
+                )
 
         FormatDate var _ ->
-            Just ( var, IntlInterpolation <| CG.fqTyped [ "Time" ] "Posix" [] )
+            Just
+                ( var
+                , IntlInterpolation
+                    { ann = CG.fqTyped [ "Time" ] "Posix" []
+                    , toString =
+                        \expr ->
+                            CG.applyBinOp
+                                (CG.fqFun [ "String" ] "fromInt")
+                                CG.pipel
+                                (CG.apply [ CG.fqFun [ "Time" ] "posixToMillis", expr ])
+                    }
+                )
 
         Text _ ->
             Nothing

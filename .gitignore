@@ -7,6 +7,4 @@ elm-stuff
 /generated/**
 !/generated/.gitkeep
 
-/example/dist/**
-!/example/dist/index.html
-!/example/dist/favicon.ico
+/example/dist

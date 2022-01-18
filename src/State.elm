@@ -2,11 +2,9 @@ module State exposing (..)
 
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
-import Elm.CodeGen as CG
 import FNV1a
 import Json.Encode as E
 import List.NonEmpty
-import Set exposing (Set)
 import Types exposing (Translations)
 import Types exposing (InterpolationKind)
 

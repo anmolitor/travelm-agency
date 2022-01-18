@@ -31,6 +31,7 @@ import String.Extra
 import Time
 import Types
 import Util
+import Parser exposing (chompUntilEndOr)
 
 
 type alias AST =
@@ -39,6 +40,7 @@ type alias AST =
 
 type Resource
     = MessageResource Message
+    | CommentResource String
 
 
 noAttrs : { identifier : Identifier, content : NonEmpty Content } -> Resource
@@ -177,25 +179,35 @@ fluentToInternalRep intl language ast_ =
         termDict : Dict String (NonEmpty Content)
         termDict =
             List.filterMap
-                (\(MessageResource msg) ->
-                    case msg.identifier of
-                        TermIdentifier str ->
-                            Just ( str, msg.content )
+                (\res ->
+                    case res of
+                        MessageResource msg ->
+                            case msg.identifier of
+                                TermIdentifier str ->
+                                    Just ( str, msg.content )
 
-                        MessageIdentifier _ ->
+                                MessageIdentifier _ ->
+                                    Nothing
+
+                        CommentResource _ ->
                             Nothing
                 )
                 ast_
                 |> Dict.fromList
 
         termFilter : Resource -> Bool
-        termFilter (MessageResource msg) =
-            case msg.identifier of
-                TermIdentifier _ ->
-                    False
+        termFilter res =
+            case res of
+                MessageResource msg ->
+                    case msg.identifier of
+                        TermIdentifier _ ->
+                            False
 
-                MessageIdentifier _ ->
-                    True
+                        MessageIdentifier _ ->
+                            True
+
+                CommentResource _ ->
+                    False
 
         attrToInternalRep : Attribute -> Result String ( Types.TKey, Types.TValue )
         attrToInternalRep attr =
@@ -218,17 +230,21 @@ fluentToInternalRep intl language ast_ =
                     (\attr -> { attr | identifier = Util.keyToName [ key, attr.identifier ] })
                     msg.attrs
 
-        resourceToInternalRep : Resource -> Result String (NonEmpty ( Types.TKey, Types.TValue ))
+        resourceToInternalRep : Resource -> Result String (List ( Types.TKey, Types.TValue ))
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
                     msgToAttrs msg
                         |> List.NonEmpty.map attrToInternalRep
                         |> combineMapResultNonEmpty
+                        |> Result.map List.NonEmpty.toList
+
+                CommentResource _ ->
+                    Ok []
     in
     List.filter termFilter ast_
         |> Result.Extra.combineMap resourceToInternalRep
-        |> Result.map (List.concatMap List.NonEmpty.toList)
+        |> Result.map List.concat
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)
@@ -251,7 +267,8 @@ ast =
                 |> andThen
                     (\_ ->
                         oneOf
-                            [ succeed (\msg -> Loop <| msg :: st) |= map MessageResource message
+                            [ succeed (\comment -> Loop <| comment :: st) |. token "#" |= map CommentResource (chompUntilEndOr "\n" |> getChompedString)
+                            , succeed (\msg -> Loop <| msg :: st) |= map MessageResource message
                             , succeed (Done st) |. end
                             ]
                     )

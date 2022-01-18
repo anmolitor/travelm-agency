@@ -15,7 +15,7 @@ const fixedElmDts = elmDts
 fs.writeFileSync("lib/elm.min.d.ts", fixedElmDts);
 
 const elmCode = ElmCompiler.compileToStringSync("src/Main.elm", {
-  // optimize: true,
+  optimize: true,
 });
 
 const minifiedElmCode = minify(elmCode, {

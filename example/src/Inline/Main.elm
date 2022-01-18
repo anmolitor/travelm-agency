@@ -68,7 +68,7 @@ view ({ i18n } as model) =
             , div [ class "row" ] [ text <| I18n.staticText i18n ]
             , div [ class "row" ] [ p [ class "greeting" ] [ text <| I18n.greeting model.i18n model.name ], input [ value model.name, onInput ChangedName, class "name_input" ] [] ]
             , div [ class "row" ] [ text <| I18n.specialCharacters i18n ]
-            , div [ class "row" ] [ text <| I18n.orderDemo i18n { language = currentLangString, name = model.name } ]
+            , div [ class "row order_text" ] [ text <| I18n.orderDemo i18n { language = currentLangString, name = model.name } ]
             , div [ class "row" ] [ text <| I18n.differentVars i18n { elmEn = "Elm", unionGer = "Vereinigung" } ]
             ]
         ]

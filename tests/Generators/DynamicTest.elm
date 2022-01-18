@@ -63,6 +63,24 @@ init =
     I18n { messages = Array.empty }
 
 
+fallbackValue_ : String
+fallbackValue_ =
+    "..."
+
+
+{-| Replaces all placeholder expressions in a string in order with the given values
+
+
+-}
+replacePlaceholders : List String -> String -> String
+replacePlaceholders list_ str_ =
+    List.foldl
+        (\\val_ ( i_, acc_ ) -> ( i_ + 1, String.replace ("{" ++ String.fromInt i_ ++ "}") val_ acc_ ))
+        ( 0, str_ )
+        list_
+        |> Tuple.second
+
+
 {-| Enumeration of the supported languages
 
 
@@ -105,24 +123,6 @@ languageFromString lang_ =
 
         _ ->
             Nothing
-
-
-fallbackValue_ : String
-fallbackValue_ =
-    "..."
-
-
-{-| Replaces all placeholder expressions in a string in order with the given values
-
-
--}
-replacePlaceholders : List String -> String -> String
-replacePlaceholders list_ str_ =
-    List.foldl
-        (\\val_ ( i_, acc_ ) -> ( i_ + 1, String.replace ("{" ++ String.fromInt i_ ++ "}") val_ acc_ ))
-        ( 0, str_ )
-        list_
-        |> Tuple.second
 
 
 key3 : I18n -> { a | bla : String, blub : String } -> String
@@ -236,6 +236,24 @@ init =
     I18n { messages = Array.empty }
 
 
+fallbackValue_ : String
+fallbackValue_ =
+    "..."
+
+
+{-| Replaces all placeholder expressions in a string in order with the given values
+
+
+-}
+replacePlaceholders : List String -> String -> String
+replacePlaceholders list_ str_ =
+    List.foldl
+        (\\val_ ( i_, acc_ ) -> ( i_ + 1, String.replace ("{" ++ String.fromInt i_ ++ "}") val_ acc_ ))
+        ( 0, str_ )
+        list_
+        |> Tuple.second
+
+
 {-| Enumeration of the supported languages
 
 
@@ -285,24 +303,6 @@ languageFromString lang_ =
 
         _ ->
             Nothing
-
-
-fallbackValue_ : String
-fallbackValue_ =
-    "..."
-
-
-{-| Replaces all placeholder expressions in a string in order with the given values
-
-
--}
-replacePlaceholders : List String -> String -> String
-replacePlaceholders list_ str_ =
-    List.foldl
-        (\\val_ ( i_, acc_ ) -> ( i_ + 1, String.replace ("{" ++ String.fromInt i_ ++ "}") val_ acc_ ))
-        ( 0, str_ )
-        list_
-        |> Tuple.second
 
 
 key : I18n -> { a | bla : String, blub : String, wow : String } -> String

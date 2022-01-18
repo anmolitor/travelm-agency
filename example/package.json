@@ -2,12 +2,12 @@
   "name": "example",
   "version": "1.0.0",
   "description": "Examples for travelm-agency usage",
-  "main": "index.js",
   "author": "Andreas Molitor",
   "license": "ISC",
   "scripts": {
     "start": "parcel index.html",
     "build": "npm run build:dynamic && npm run build:inline && npm run build:fluent:dynamic && npm run build:fluent:inline",
+    "build:parcel": "parcel build index.html --no-optimize",
     "build:dynamic": "node ../index.js --elm_path=src/Dynamic/I18n.elm --json_path=dist/i18n --hash translations",
     "build:inline": "node ../index.js --inline --elm_path=src/Inline/I18n.elm --hash translations",
     "build:fluent:dynamic": "node ../index.js --elm_path=src/Fluent/Dynamic/I18n.elm --json_path=dist/i18n --hash fluent_translations",
@@ -16,6 +16,7 @@
   "dependencies": {
     "intl-proxy": "^1.0.0"
   },
+  "browserslist": "> 0.5%, last 2 versions, not dead",
   "devDependencies": {
     "@parcel/transformer-elm": "^2.2.0",
     "elm": "^0.19.1-5",

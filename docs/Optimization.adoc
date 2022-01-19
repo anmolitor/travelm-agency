@@ -202,7 +202,7 @@ The Intl API offers a simple conversion from numbers to strings from the set `ze
 
 So once again, we need to access the Intl API in Elm which we can do using the same trick as in the previous section.
 
-Additionally, we need to use the value we get back from the Intl API to decide which given value to interpolate. We will have another marker `P` for `PluralRules.select` and use the same method as before to pass options. Then, for choosing the right value, we just order the values starting at zero, seperate them with a seperator and use the empty string between seperators to communicate no translation for that case. Also, we need a marker to signify the default case.
+Additionally, we need to use the value we get back from the Intl API to decide which given value to interpolate. We will have another marker `P` for `PluralRules.select` and use the same method as before to pass options. Then, for choosing the right value, we do simple string matching.
 
 For example:
 The fluent code
@@ -217,7 +217,7 @@ message = {$userName} {$photoCount ->
 generates the JSON code
 [language,json]
 ----
-["{1} {P0|5||added a new photo||||added {0} new photos}"]
+["{1} {P0|\"one\":\"added a new photo\",\"*\":\"added {0} new photos\"}"]
 ----
 
 which is then parsed by Elm:
@@ -225,11 +225,8 @@ which is then parsed by Elm:
 * {1} is a simple string interpolation of the second given value
 * `P` signals us to use the `PluralRules` API, 0 means to pass the first given value
 * `|` ends the arguments and starts the cases
-* `|5|` means that the default case is the 6th one (other)
-* The first case (for `zero`) is empty, therefore unused
-* Same for third, forth and fifth slot
-* The second and sixth slot are non-empty and are considered in the decision
-* If the Intl API responds with "one", we use the second slot, in any other case we default to the sixth slot ("other")
+* The arguments are given in JSON style
+* If the Intl API responds with "one", we use the value of the key "one", in any other case we default to the value of the key "*"
 
 ## Other matching scenarios
 
@@ -257,6 +254,13 @@ renderBookOwnership gender = case gender of
 To have the case distinction inside of the i18n files, we would have to implement at least a function to serialize our custom datatype into a string as well. 
 
 There is a simple but potentially inefficient solution to this.
-Just do the case distinction in Elm and have seperate i18n pairs for the genders. Unless someone actually runs into problems with this, I think this solution is perfectly fine.
+Just do the case distinction in Elm and have seperate i18n pairs for the genders.
 
+Still, this package offers a way to do this.
 
+[language,json]
+----
+["{1} {S0|\"male\":\"His book\",\"*\":\"Her book\"]
+----
+
+The `S` marker means use direct String matching. Otherwise, it works exactly as the PluralRules equivalent above.

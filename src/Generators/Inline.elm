@@ -208,14 +208,65 @@ toFile { moduleName, names, version } state =
                     else
                         identity
 
+                matchStatement default otherOptions =
+                    (Dict.toList otherOptions
+                        |> List.map
+                            (Tuple.mapBoth CG.stringPattern
+                                (List.NonEmpty.map segmentToExpression
+                                    >> List.NonEmpty.foldl1 concatenateExpressions
+                                )
+                            )
+                    )
+                        ++ [ ( CG.allPattern
+                             , List.NonEmpty.map segmentToExpression default
+                                |> List.NonEmpty.foldl1 concatenateExpressions
+                             )
+                           ]
+
                 segmentToExpression : Types.TSegment -> CG.Expression
                 segmentToExpression segm =
                     case segm of
                         Types.Interpolation var ->
                             accessParam var
 
-                        Types.InterpolationCase var _ ->
-                            accessParam var
+                        Types.InterpolationCase var default otherOptions ->
+                            CG.caseExpr (accessParam var)
+                                (matchStatement default otherOptions)
+
+                        Types.PluralCase var numArgs default otherOptions ->
+                            CG.caseExpr
+                                (CG.pipe
+                                    (CG.apply
+                                        [ CG.fqFun [ "Intl" ] "formatFloat"
+                                        , CG.val "intl_"
+                                        , CG.record
+                                            [ ( "number", accessParam var )
+                                            , ( "language", CG.string lang )
+                                            , ( "args", numArgs |> List.map (\( k, v ) -> CG.tuple [ CG.string k, Types.genArgValue v ]) |> CG.list )
+                                            ]
+                                        ]
+                                    )
+                                    [ CG.fqFun [ "String" ] "toFloat"
+                                    , CG.apply
+                                        [ CG.fqFun [ "Maybe" ] "map"
+                                        , CG.parens <|
+                                            CG.lambda [ CG.varPattern "n_" ]
+                                                (CG.apply
+                                                    [ CG.fqFun [ "Intl" ] "determinePluralRuleFloat"
+                                                    , CG.val "intl_"
+                                                    , CG.record
+                                                        [ ( "language", CG.string lang )
+                                                        , ( "number", CG.val "n_" )
+                                                        , ( "type_", CG.fqVal [ "Intl" ] "Cardinal" )
+                                                        ]
+                                                    ]
+                                                )
+                                        ]
+                                    , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.fqVal [ "Intl" ] "Other" ]
+                                    , CG.fqFun [ "Intl" ] "pluralRuleToString"
+                                    ]
+                                )
+                                (matchStatement default otherOptions)
 
                         Types.FormatDate var args ->
                             CG.apply

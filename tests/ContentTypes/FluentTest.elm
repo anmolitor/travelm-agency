@@ -2,8 +2,6 @@ module ContentTypes.FluentTest exposing (..)
 
 import ContentTypes.Fluent as F
 import Expect
-import Intl exposing (Intl)
-import Json.Encode
 import Parser
 import Test exposing (Test, describe, test)
 import Types exposing (TSegment(..))

@@ -140,5 +140,6 @@ objectDecoder =
         |> D.map Object
 
 
+stringDecoder : D.Decoder NestedJson
 stringDecoder =
     D.string |> D.map StringValue

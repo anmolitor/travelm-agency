@@ -45,7 +45,9 @@ type TSegment
       -- {$var}
     | Interpolation String
       -- {$var -> case var of [List String TValue]} [TValue]
-    | InterpolationCase String (NonEmpty ( TPattern, TValue ))
+    | InterpolationCase String TValue (Dict String TValue)
+      -- {$var -> case var of [List String TValue]} [TValue]
+    | PluralCase String (List ( String, ArgValue )) TValue (Dict String TValue)
       -- {NUMBER($var, minimumFractionDigits: 2)}
     | FormatNumber String (List ( String, ArgValue ))
       -- {DATE($var, hour12: true)}
@@ -86,11 +88,6 @@ genArgValue v =
 
         NumberArg f ->
             CG.apply [ CG.fqFun [ "Json", "Encode" ] "float", CG.float f ]
-
-
-type TPattern
-    = StringPattern String
-    | RangePattern Int Int
 
 
 type InterpolationKind
@@ -135,8 +132,17 @@ classifyInterpolationSegment segment =
         Interpolation var ->
             Just ( var, SimpleInterpolation )
 
-        InterpolationCase var _ ->
+        InterpolationCase var _ _ ->
             Just ( var, SimpleInterpolation )
+
+        PluralCase var _ _ _ ->
+            Just
+                ( var
+                , IntlInterpolation
+                    { ann = CG.floatAnn
+                    , toString = \expr -> CG.apply [ CG.fqFun [ "String" ] "fromFloat", expr ]
+                    }
+                )
 
         FormatNumber var _ ->
             Just
@@ -192,8 +198,11 @@ indicifyInterpolations =
                             Interpolation var ->
                                 handleInterpolation var Interpolation
 
-                            InterpolationCase var cases ->
-                                handleInterpolation var (\v -> InterpolationCase v cases)
+                            InterpolationCase var default cases ->
+                                handleInterpolation var (\v -> InterpolationCase v default cases)
+
+                            PluralCase var numOpts default cases ->
+                                handleInterpolation var (\v -> PluralCase v numOpts default cases)    
 
                             FormatNumber var args ->
                                 handleInterpolation var (\v -> FormatNumber v args)
@@ -208,8 +217,11 @@ indicifyInterpolations =
                         ( i, Interpolation var ) ->
                             ( 1, Just var, List.NonEmpty.singleton ( i, Interpolation "0" ) )
 
-                        ( i, InterpolationCase var cases ) ->
-                            ( 1, Just var, List.NonEmpty.singleton ( i, InterpolationCase "0" cases ) )
+                        ( i, InterpolationCase var default cases ) ->
+                            ( 1, Just var, List.NonEmpty.singleton ( i, InterpolationCase "0" default cases ) )
+
+                        ( i, PluralCase var numOpts default cases ) ->
+                            ( 1, Just var, List.NonEmpty.singleton ( i, PluralCase "0" numOpts default cases ) )
 
                         ( i, FormatNumber var args ) ->
                             ( 1, Just var, List.NonEmpty.singleton ( i, FormatNumber var args ) )
@@ -251,7 +263,10 @@ optimizeJson translations =
                             Interpolation var ->
                                 wrapVar var
 
-                            InterpolationCase var _ ->
+                            InterpolationCase var _ _ ->
+                                wrapVar var
+
+                            PluralCase var _ _ _ ->
                                 wrapVar var
 
                             FormatNumber var args ->

@@ -5,8 +5,7 @@ import Dict.NonEmpty exposing (NonEmpty)
 import FNV1a
 import Json.Encode as E
 import List.NonEmpty
-import Types exposing (Translations)
-import Types exposing (InterpolationKind)
+import Types exposing (InterpolationKind, Translations)
 
 
 type alias Identifier =
@@ -149,6 +148,9 @@ segNeedsIntl seg =
             True
 
         Types.FormatDate _ _ ->
+            True
+
+        Types.PluralCase _ _ _ _ ->
             True
 
         _ ->

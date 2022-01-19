@@ -1,6 +1,5 @@
 module CodeGen.DynamicParser exposing (..)
 
-import Array exposing (Array)
 import CodeGen.Shared exposing (appendAll, endoAnn)
 import Elm.CodeGen as CG
 import Elm.Syntax.Expression as Expr
@@ -8,7 +7,6 @@ import Elm.Syntax.Infix as Infix
 import Elm.Syntax.Node exposing (Node(..))
 import Elm.Syntax.Range exposing (emptyRange)
 import Generators.Names exposing (Names)
-import Intl
 import Parser exposing (..)
 
 

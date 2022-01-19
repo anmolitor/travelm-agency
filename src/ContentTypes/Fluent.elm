@@ -9,6 +9,7 @@ module ContentTypes.Fluent exposing
     , ast
     , fluentToInternalRep
     , identifier
+    , matchCaseParser
     , message
     , messageLine
     , multilineHelper
@@ -21,7 +22,6 @@ import Char exposing (isAlphaNum)
 import Dict exposing (Dict)
 import Intl exposing (Intl)
 import Iso8601
-import Json.Encode as E
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
@@ -81,7 +81,7 @@ fluentToInternalRep intl language ast_ =
         contentsToValue =
             contentsToValueHelper [] []
 
-        formatNumberLit : Literal -> ExtraArguments -> Result String Types.TSegment
+        formatNumberLit : Literal -> ExtraArguments -> Result String String
         formatNumberLit lit args =
             case lit of
                 StringLiteral str ->
@@ -89,35 +89,51 @@ fluentToInternalRep intl language ast_ =
 
                 NumberLiteral n ->
                     Ok <|
-                        Types.Text <|
-                            Intl.formatFloat intl
-                                { number = n
-                                , language = language
-                                , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
-                                }
+                        Intl.formatFloat intl
+                            { number = n
+                            , language = language
+                            , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                            }
 
-        formatDateLit : Literal -> ExtraArguments -> Result String Types.TSegment
+        formatDateLit : Literal -> ExtraArguments -> Result String String
         formatDateLit lit args =
             case lit of
                 StringLiteral str ->
                     Result.map
                         (\time ->
-                            Types.Text <|
-                                Intl.formatDateTime intl
-                                    { time = time
-                                    , language = language
-                                    , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
-                                    }
+                            Intl.formatDateTime intl
+                                { time = time
+                                , language = language
+                                , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                                }
                         )
                         (Iso8601.toTime str |> Result.mapError (\err -> "Error while parsing the iso8601 date literal: '" ++ str ++ "': " ++ Parser.DeadEnds.deadEndsToString err))
 
                 NumberLiteral n ->
-                    Ok <| Types.Text <| Intl.formatDateTime intl { time = Time.millisToPosix <| floor n, language = language, args = [] }
+                    Ok <| Intl.formatDateTime intl { time = Time.millisToPosix <| floor n, language = language, args = [] }
+
+        getPluralRule : String -> Result String String
+        getPluralRule str =
+            case String.toFloat str of
+                Just num ->
+                    Intl.determinePluralRuleFloat intl { language = language, number = num, type_ = Intl.Cardinal }
+                        |> Intl.pluralRuleToString
+                        |> Ok
+
+                Nothing ->
+                    Err <| "Cannot determine plural rule for '" ++ str ++ "'"
 
         -- Limits recursion by keeping track of terms
         -- Inlines arguments known at compile time
         contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Result String (NonEmpty Types.TSegment)
         contentsToValueHelper previousTerms accumulatedArgs cnt =
+            let
+                recurseOnContentList : NonEmpty Content -> Result String (NonEmpty Types.TSegment)
+                recurseOnContentList =
+                    List.NonEmpty.map (contentsToValueHelper previousTerms accumulatedArgs)
+                        >> combineMapResultNonEmpty
+                        >> Result.map List.NonEmpty.concat
+            in
             case cnt of
                 TextContent str ->
                     Ok <| List.NonEmpty.singleton <| Types.Text str
@@ -155,7 +171,7 @@ fluentToInternalRep intl language ast_ =
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatNumberLit lit extraArgs
+                                formatNumberLit lit extraArgs |> Result.map Types.Text
 
                             Nothing ->
                                 Ok <| Types.FormatNumber var extraArgs
@@ -164,16 +180,40 @@ fluentToInternalRep intl language ast_ =
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatDateLit lit extraArgs
+                                formatDateLit lit extraArgs |> Result.map Types.Text
 
                             Nothing ->
                                 Ok <| Types.FormatDate var extraArgs
 
                 PlaceableContent (FunctionCall NUMBER (LiteralArgument lit) extraArgs) ->
-                    Result.map List.NonEmpty.singleton <| formatNumberLit lit extraArgs
+                    formatNumberLit lit extraArgs |> Result.map (Types.Text >> List.NonEmpty.singleton)
 
                 PlaceableContent (FunctionCall DATETIME (LiteralArgument lit) extraArgs) ->
-                    Result.map List.NonEmpty.singleton <| formatDateLit lit extraArgs
+                    formatDateLit lit extraArgs |> Result.map (Types.Text >> List.NonEmpty.singleton)
+
+                PlaceableContent (NumberMatchStatement (LiteralArgument lit) extraArgs options) ->
+                    formatNumberLit lit extraArgs
+                        |> Result.andThen getPluralRule
+                        |> Result.map (chooseMatch options)
+                        |> Result.andThen recurseOnContentList
+
+                PlaceableContent (NumberMatchStatement (VarArgument var) extraArgs options) ->
+                    Result.map2 (Types.PluralCase var extraArgs)
+                        (recurseOnContentList options.default)
+                        (Dict.toList options.otherOptions
+                            |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList)
+                            |> Result.map Dict.fromList
+                        )
+                        |> Result.map List.NonEmpty.singleton
+
+                PlaceableContent (StringMatchStatement var options) ->
+                    Result.map2 (Types.InterpolationCase var)
+                        (recurseOnContentList options.default)
+                        (Dict.toList options.otherOptions
+                            |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList)
+                            |> Result.map Dict.fromList
+                        )
+                        |> Result.map List.NonEmpty.singleton
 
         termDict : Dict String (NonEmpty Content)
         termDict =
@@ -502,6 +542,19 @@ type Placeable
     | TermRef String (List ( String, Literal ))
     | StringLit String
     | FunctionCall BuiltInFunction FunctionArgument ExtraArguments
+    | NumberMatchStatement FunctionArgument ExtraArguments MatchOptions
+    | StringMatchStatement String MatchOptions
+
+
+type alias MatchOptions =
+    { default : NonEmpty Content
+    , otherOptions : Dict String (NonEmpty Content)
+    }
+
+
+chooseMatch : MatchOptions -> String -> NonEmpty Content
+chooseMatch { default, otherOptions } str =
+    Dict.get str otherOptions |> Maybe.withDefault default
 
 
 type alias ExtraArguments =
@@ -585,6 +638,57 @@ otherArgumentsParser =
                 ]
 
 
+type alias IntermediateMatchCase =
+    ( Maybe (NonEmpty Content), Dict String (NonEmpty Content) )
+
+
+matchCaseParser : Parser ( NonEmpty Content, Dict String (NonEmpty Content) )
+matchCaseParser =
+    let
+        matchCaseHelper : IntermediateMatchCase -> Parser (Step IntermediateMatchCase IntermediateMatchCase)
+        matchCaseHelper state =
+            oneOf
+                [ (succeed
+                    (\isDefault key value ->
+                        case List.NonEmpty.fromList value of
+                            Just nonEmptyContent ->
+                                succeed <|
+                                    Loop <|
+                                        if isDefault then
+                                            ( Just nonEmptyContent, Tuple.second state )
+
+                                        else
+                                            state |> Tuple.mapSecond (Dict.insert key nonEmptyContent)
+
+                            Nothing ->
+                                problem <| "Failed to read content for case match on '" ++ key ++ "'"
+                    )
+                    |= oneOf [ succeed True |. token "*[", succeed False |. token "[" ]
+                    |. spaces
+                    |= (chompWhile isAlphaNum |> getChompedString)
+                    |. spaces
+                    |. token "]"
+                    |. spaces
+                    |= messageLine
+                    |. token "\n"
+                    |. spaces
+                  )
+                    |> andThen identity
+                , succeed (Done state) |. token "}"
+                ]
+    in
+    loop ( Nothing, Dict.empty ) matchCaseHelper
+        |> andThen
+            (\( mayDefault, otherOptions ) ->
+                case mayDefault of
+                    Just default ->
+                        succeed ( default, otherOptions )
+
+                    Nothing ->
+                        problem "Could not find any default case. Make sure to mark one of the cases in a match statement with '*'."
+            )
+
+
 placeable : Parser Placeable
 placeable =
     succeed identity
@@ -593,11 +697,27 @@ placeable =
             [ token "NUMBER("
                 |> andThen
                     (\_ ->
-                        succeed (FunctionCall NUMBER)
+                        succeed
+                            (\arg otherArgs matchCase ->
+                                case matchCase of
+                                    Just ( defMay, matchOptions ) ->
+                                        NumberMatchStatement arg otherArgs { default = defMay, otherOptions = matchOptions }
+
+                                    Nothing ->
+                                        FunctionCall NUMBER arg otherArgs
+                            )
                             |. spaces
                             |= argumentParser
                             |. spaces
                             |= otherArgumentsParser
+                            |. spaces
+                            |= oneOf
+                                [ succeed Nothing |. token "}"
+                                , succeed Just
+                                    |. token "->"
+                                    |. spaces
+                                    |= matchCaseParser
+                                ]
                     )
             , token "DATETIME("
                 |> andThen
@@ -607,13 +727,33 @@ placeable =
                             |= argumentParser
                             |. spaces
                             |= otherArgumentsParser
+                            |. spaces
+                            |. token "}"
                     )
-            , varParser |> map VarRef
-            , token "-" |> andThen (\_ -> termRefParser)
-            , stringLit |> map StringLit
+            , succeed
+                (\var matchCase ->
+                    case matchCase of
+                        Just ( defMay, matchOptions ) ->
+                            StringMatchStatement var { default = defMay, otherOptions = matchOptions }
+
+                        Nothing ->
+                            VarRef var
+                )
+                |= varParser
+                |. spaces
+                |= oneOf
+                    [ succeed Nothing |. token "}"
+                    , succeed Just
+                        |. token "->"
+                        |. spaces
+                        |= matchCaseParser
+                    ]
+            , succeed identity |. token "-" |= termRefParser |. spaces |. token "}"
+            , succeed StringLit
+                |= stringLit
+                |. spaces
+                |. token "}"
             ]
-        |. spaces
-        |. token "}"
 
 
 termRefParser : Parser Placeable

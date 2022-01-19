@@ -28,7 +28,10 @@ jobs:
       - name: install
         run: npm ci && (cd example && npm ci)
       - name: build
+        # need to remove elm-stuff to prevent caching to result in a corrupt elm-stuff error
         run: |
+          rm -rf elm-stuff
+          rm -rf example/elm-stuff
           npm run build
           (cd example && npm run build && npm run build:parcel)
       - name: test

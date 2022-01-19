@@ -89,7 +89,7 @@ load : Language -> I18n -> I18n
 loadMessages : { language : Language, path : String, onLoad : Result Http.Error (I18n -> I18n) -> msg } -> Cmd msg
 ----
 
-The `load` family of functions modifies your `I18n` instance with the translations you want to load. Again the type signatures and their implementations vary, but the idea is the same. In the dynamic case, you can load seperate message bundles seperately, so the functions are names accordingly. In this case `loadMessages` is the result of a translation file named `messages.[language].[extension`.
+The `load` family of functions modifies your `I18n` instance with the translations you want to load. Again the type signatures and their implementations vary, but the idea is the same. In the dynamic case, you can load seperate message bundles seperately, so the functions are named accordingly. In this case `loadMessages` is the result of a translation file named `messages.[language].[extension]`.
 
 [source, elm]
 ----

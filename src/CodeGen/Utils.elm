@@ -1,9 +1,8 @@
-module CodeGen.Imports exposing (dictToImports, extractImports)
+module CodeGen.Utils exposing (dictToImports, extractImports, declName)
 
-import CodeGen.Shared exposing (unwrapDecl)
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
-import Elm.Syntax.Declaration as Decl
+import Elm.Syntax.Declaration as Decl exposing (Declaration(..))
 import Elm.Syntax.Expression as Expr
 import Elm.Syntax.Node as Node
 import Elm.Syntax.Pattern as Pat
@@ -11,6 +10,40 @@ import Elm.Syntax.Signature as Sig
 import Elm.Syntax.Type as Type
 import Elm.Syntax.TypeAnnotation as Ann
 import Set exposing (Set)
+
+
+unwrapDecl : CG.Declaration -> Declaration
+unwrapDecl decl =
+    case decl of
+        CG.DeclWithComment _ f ->
+            f ""
+
+        CG.DeclNoComment d ->
+            d
+
+
+declName : CG.Declaration -> Maybe String
+declName decl =
+    case unwrapDecl decl of
+        FunctionDeclaration { declaration } ->
+            (Node.value declaration).name |> Node.value |> Just
+
+        AliasDeclaration { name } ->
+            Node.value name |> Just
+
+        CustomTypeDeclaration { name } ->
+            Node.value name |> Just
+
+        PortDeclaration { name } ->
+            Node.value name |> Just
+
+        InfixDeclaration _ ->
+            -- Cannot be declared outside of internal modules anyways
+            Nothing
+
+        Destructuring _ _ ->
+            -- Cannot be top level
+            Nothing
 
 
 dictToImports : Dict CG.ModuleName (Set String) -> List CG.Import

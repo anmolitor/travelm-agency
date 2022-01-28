@@ -6,9 +6,9 @@ import Elm.Pretty
 import Expect
 import Generators.Dynamic as Dynamic
 import Generators.Names exposing (defaultNames)
-import State exposing (NonEmptyState, OptimizedJson)
+import State exposing (NonEmptyState, OptimizedJson, Translations)
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..), Translations)
+import Types.Segment as Segment
 import Util exposing (emptyIntl)
 
 
@@ -29,9 +29,9 @@ suite =
         [ test "single language" <|
             \_ ->
                 simpleState
-                    [ ( "key3", ( Text "value3 ", [ Interpolation "bla", Interpolation "blub" ] ) )
-                    , ( "key1", ( Text "value1", [] ) )
-                    , ( "key2", ( Text "value2 ", [ Interpolation "bla" ] ) )
+                    [ ( "key3", ( Segment.Text "value3 ", [ Segment.Interpolation "bla", Segment.Interpolation "blub" ] ) )
+                    , ( "key1", ( Segment.Text "value1", [] ) )
+                    , ( "key2", ( Segment.Text "value2 ", [ Segment.Interpolation "bla" ] ) )
                     ]
                     |> Dynamic.toFile context
                     |> Elm.Pretty.pretty 120
@@ -193,13 +193,13 @@ languageToFileName_messages lang_ =
                 Dict.NonEmpty.fromList
                     ( ( "de"
                       , { pairs =
-                            [ ( "key", ( Text "value", [ Interpolation "bla", Interpolation "blub" ] ) ) ]
+                            [ ( "key", ( Segment.Text "value", [ Segment.Interpolation "bla", Segment.Interpolation "blub" ] ) ) ]
                         , resources = { filename = "messages.1234.de.json", content = "" }
                         }
                       )
                     , [ ( "en"
                         , { pairs =
-                                [ ( "key", ( Interpolation "wow", [ Text "abc", Interpolation "blub" ] ) ) ]
+                                [ ( "key", ( Segment.Interpolation "wow", [ Segment.Text "abc", Segment.Interpolation "blub" ] ) ) ]
                           , resources = { filename = "messages.4321.en.json", content = "" }
                           }
                         )

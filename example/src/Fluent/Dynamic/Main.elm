@@ -2,7 +2,7 @@ module Fluent.Dynamic.Main exposing (main)
 
 import Browser exposing (Document)
 import Fluent.Dynamic.I18n as I18n exposing (I18n, Language)
-import Html exposing (button, div, input, option, p, select, text)
+import Html exposing (Html, button, div, input, option, p, select, text)
 import Html.Attributes exposing (class, selected, value)
 import Html.Events exposing (onClick, onInput)
 import Html.Events.Extra exposing (onChange)
@@ -14,6 +14,7 @@ import Time
 type Msg
     = GotTranslations (Result Http.Error (I18n -> I18n))
     | ChangedName String
+    | ChangedGender String
     | ChangeLanguage Language
 
 
@@ -21,6 +22,7 @@ type alias Model =
     { i18n : I18n
     , intl : Intl
     , name : String
+    , gender : String
     , language : Language
     }
 
@@ -31,7 +33,7 @@ init { intl, language } =
         lang =
             I18n.languageFromString language |> Maybe.withDefault I18n.En
     in
-    ( { i18n = I18n.init intl lang, name = "", language = lang, intl = intl }
+    ( { i18n = I18n.init intl lang, name = "", gender = "unknown", language = lang, intl = intl }
     , I18n.loadDemo { language = lang, path = "/i18n", onLoad = GotTranslations }
     )
 
@@ -47,6 +49,9 @@ update msg model =
 
         ChangedName name ->
             ( { model | name = name }, Cmd.none )
+
+        ChangedGender gender ->
+            ( { model | gender = gender }, Cmd.none )
 
         ChangeLanguage language ->
             ( { model | language = language }, I18n.loadDemo { language = language, path = "/i18n", onLoad = GotTranslations } )
@@ -75,8 +80,14 @@ view ({ i18n } as model) =
         , div [ class "row datetime_example" ] [ text <| I18n.dateTimeFun i18n (Time.millisToPosix 0) ]
         , div [ class "row number_example" ] [ text <| I18n.numberFun i18n 0.42526 ]
         , div [ class "row compile_time_functions" ] [ text <| I18n.compileTimeDatesAndNumbers i18n ]
+        , div [ class "row string_match" ] (text (I18n.matchOnGender i18n model.gender) :: List.map (switchGenderButton i18n) [ "male", "female" ])
         ]
     }
+
+
+switchGenderButton : I18n -> String -> Html Msg
+switchGenderButton i18n gender =
+    button [ onClick <| ChangedGender gender ] [ text <| I18n.displayGender i18n gender ]
 
 
 type alias Flags =

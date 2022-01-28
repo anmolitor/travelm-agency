@@ -5,8 +5,9 @@ import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
-import Types
+import Types.Segment as Segment
 import Util
+import State exposing (Translations)
 
 
 type alias Json =
@@ -22,7 +23,7 @@ type alias FlattenedJson =
     List ( List String, String )
 
 
-jsonToInternalRep : Json -> Result String Types.Translations
+jsonToInternalRep : Json -> Result String Translations
 jsonToInternalRep =
     flattenJson
         >> Result.Extra.combineMap
@@ -36,7 +37,7 @@ jsonToInternalRep =
             )
 
 
-parsePlaceholderString : Parser Types.TValue
+parsePlaceholderString : Parser Segment.TValue
 parsePlaceholderString =
     let
         escapeChars =
@@ -61,24 +62,24 @@ parsePlaceholderString =
                                             revSegments
 
                                         else
-                                            Types.Text text :: revSegments
+                                            Segment.Text text :: revSegments
                                 )
                                 |. P.end
                             , P.succeed
                                 (\var ->
                                     P.Loop <|
-                                        Types.Interpolation var
+                                        Segment.Interpolation var
                                             :: (if String.isEmpty text then
                                                     revSegments
 
                                                 else
-                                                    Types.Text text :: revSegments
+                                                    Segment.Text text :: revSegments
                                                )
                                 )
                                 |. P.token "{"
                                 |= (P.chompUntil "}" |> P.getChompedString)
                                 |. P.token "}"
-                            , P.succeed (\escapedChar -> P.Loop <| Types.Text (text ++ escapedChar) :: revSegments)
+                            , P.succeed (\escapedChar -> P.Loop <| Segment.Text (text ++ escapedChar) :: revSegments)
                                 |. P.token "\\"
                                 |= P.oneOf
                                     (P.problem "Invalid escaped char"
@@ -91,10 +92,10 @@ parsePlaceholderString =
             (\segments ->
                 case List.NonEmpty.fromList segments of
                     Just nonEmpty ->
-                        P.succeed <| Types.concatenateTextSegments nonEmpty
+                        P.succeed <| Segment.concatenateTextSegments nonEmpty
 
                     Nothing ->
-                        P.succeed <| List.NonEmpty.singleton (Types.Text "")
+                        P.succeed <| List.NonEmpty.singleton (Segment.Text "")
             )
 
 

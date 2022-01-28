@@ -6,8 +6,7 @@ import ContentTypes.Properties
 import Intl exposing (Intl)
 import Json.Decode as D
 import Json.Decode.Pipeline as D
-import State exposing (OptimizedJson)
-import Types
+import State exposing (OptimizedJson, Translations)
 import Util
 
 
@@ -42,7 +41,7 @@ type Request
 
 
 type alias TranslationRequest =
-    { content : Types.Translations
+    { content : Translations
     , identifier : String
     , language : String
     }
@@ -97,7 +96,7 @@ requestDecoder intl =
             )
 
 
-contentDecoder : Intl -> String -> String -> String -> D.Decoder Types.Translations
+contentDecoder : Intl -> String -> String -> String -> D.Decoder Translations
 contentDecoder intl language extension =
     (case extension of
         "json" ->

@@ -4,7 +4,7 @@ import Expect
 import Json.Decode as D
 import Ports exposing (GeneratorMode(..), Request(..), requestDecoder)
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..))
+import Types.Segment as Segment
 import Util exposing (emptyIntl)
 
 
@@ -21,7 +21,7 @@ suite =
                     |> Expect.equal
                         (Ok <|
                             AddTranslation
-                                { content = [ ( "demoKey", ( Text "demoValue", [] ) ) ]
+                                { content = [ ( "demoKey", ( Segment.Text "demoValue", [] ) ) ]
                                 , identifier = "demo"
                                 , language = "en"
                                 }

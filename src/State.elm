@@ -2,10 +2,10 @@ module State exposing (..)
 
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
-import FNV1a
-import Json.Encode as E
 import List.NonEmpty
-import Types exposing (InterpolationKind, Translations)
+import Types.Features as Features exposing (Features)
+import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
+import Types.Segment as Segment exposing (TKey, TValue)
 
 
 type alias Identifier =
@@ -14,6 +14,10 @@ type alias Identifier =
 
 type alias Language =
     String
+
+
+type alias Translations =
+    List ( TKey, TValue )
 
 
 type alias Translation resources =
@@ -74,84 +78,66 @@ combineTranslationSets t =
             t
 
 
-optimizeJsonAllLanguages : Bool -> Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
-optimizeJsonAllLanguages addContentHash identifier =
-    Dict.NonEmpty.map <|
-        \language { pairs } ->
-            { pairs = pairs
-            , resources =
-                let
-                    content =
-                        Types.optimizeJson pairs |> E.encode 0
-                in
-                { content = content
-                , filename =
-                    String.join "." <|
-                        List.filter (not << String.isEmpty)
-                            [ identifier
-                            , language
-                            , if addContentHash then
-                                FNV1a.hash content |> String.fromInt
-
-                              else
-                                ""
-                            , "json"
-                            ]
-                }
-            }
-
-
 getAllResources : State resources -> List resources
 getAllResources =
     Dict.values >> List.concatMap (Dict.NonEmpty.values >> List.map .resources)
 
 
-interpolationMap : TranslationSet any -> Dict Types.TKey (Dict String InterpolationKind)
+interpolationMap : TranslationSet any -> Dict TKey (Dict String InterpolationKind)
 interpolationMap =
-    Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Types.getInterpolationVarNames) ts.pairs |> Dict.fromList)
+    Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Segment.interpolationVars) ts.pairs |> Dict.fromList)
         >> Dict.NonEmpty.foldl1
-            (\t1 t2 ->
-                Dict.merge
-                    Dict.insert
-                    (\key s1 s2 -> Dict.insert key <| Dict.union s1 s2)
-                    Dict.insert
-                    t1
-                    t2
-                    Dict.empty
+            (mergeDictIntoDict <|
+                \key s1 s2 -> Dict.insert key <| mergeInterpolationKinds s1 s2
             )
 
 
-stateNeedsIntl : NonEmptyState any -> Bool
-stateNeedsIntl =
-    Dict.NonEmpty.values >> List.any translationSetNeedsIntl
+mergeInterpolationKinds : Dict String InterpolationKind -> Dict String InterpolationKind -> Dict String InterpolationKind
+mergeInterpolationKinds =
+    mergeDictIntoDict <|
+        \key i1 i2 ->
+            case i1 of
+                InterpolationKind.Simple ->
+                    Dict.insert key i2
+
+                InterpolationKind.Typed _ ->
+                    Dict.insert key i1
 
 
-translationSetNeedsIntl : TranslationSet any -> Bool
-translationSetNeedsIntl =
-    Dict.NonEmpty.values >> List.any (.pairs >> translationsNeedIntl)
+mergeDictIntoDict :
+    (comparable -> v -> v -> Dict comparable v -> Dict comparable v)
+    -> Dict comparable v
+    -> Dict comparable v
+    -> Dict comparable v
+mergeDictIntoDict f d1 d2 =
+    Dict.merge Dict.insert f Dict.insert d1 d2 Dict.empty
 
 
-translationsNeedIntl : Types.Translations -> Bool
-translationsNeedIntl =
-    List.any (Tuple.second >> valNeedsIntl)
+inferFeatures : NonEmptyState any -> Features
+inferFeatures =
+    Dict.NonEmpty.values >> Features.combineMap inferFeaturesTranslationSet
 
 
-valNeedsIntl : Types.TValue -> Bool
-valNeedsIntl =
-    List.NonEmpty.any segNeedsIntl
+inferFeaturesTranslationSet : TranslationSet any -> Features
+inferFeaturesTranslationSet =
+    Dict.NonEmpty.values >> Features.combineMap (.pairs >> inferFeaturesTranslations)
 
 
-segNeedsIntl : Types.TSegment -> Bool
-segNeedsIntl seg =
-    case seg of
-        Types.FormatNumber _ _ ->
-            True
+inferFeaturesTranslations : Translations -> Features
+inferFeaturesTranslations =
+    Features.combineMap (Tuple.second >> Segment.inferFeatures)
 
-        Types.FormatDate _ _ ->
-            True
 
-        Types.PluralCase _ _ _ _ ->
-            True
+isIntlNeededForKey : TKey -> NonEmptyState () -> Bool
+isIntlNeededForKey key =
+    collectiveTranslationSet
+        >> interpolationMap
+        >> Dict.get key
+        >> Maybe.withDefault Dict.empty
+        >> Dict.toList
+        >> List.any (Tuple.second >> InterpolationKind.isIntlInterpolation)
 
-        _ ->
-            False
+
+allTranslationKeys : NonEmptyState () -> List TKey
+allTranslationKeys =
+    collectiveTranslationSet >> interpolationMap >> Dict.keys

@@ -1,5 +1,6 @@
 module CodeGen.DynamicParser exposing (..)
 
+import CodeGen.DecodeM as DecodeM
 import CodeGen.Shared exposing (appendAll, endoAnn)
 import Elm.CodeGen as CG
 import Elm.Syntax.Expression as Expr
@@ -33,6 +34,25 @@ import Parser exposing (..)
                         |. token "}"
                     ]
 
+            matchParser : Parser ( String, Dict String String )
+            matchParser =
+                succeed Tuple.pair
+                    |= (chompUntil "|" |> getChompedString)
+                    |. token "|"
+                    |= (chompUntil "}"
+                            |> getChompedString
+                            |> andThen
+                                (\str ->
+                                    case Json.Decode.decodeString (Json.Decode.dict Json.Decode.string) str of
+                                        Ok ok ->
+                                            succeed ok
+
+                                        Err err ->
+                                            problem <| Json.Decode.errorToString err
+                                )
+                       )
+                    |. token "}"
+
             numberFormatUnsafe : Int -> String -> String
             numberFormatUnsafe n parsedArgString =
                 Maybe.withDefault "" <|
@@ -53,6 +73,9 @@ import Parser exposing (..)
                             ++ getArg n
                             ++ "]]"
 
+            matchStrings n ( default, cases ) =
+                Dict.get (getArg n) cases |> Maybe.withDefault default
+
             parser =
                 Parser.loop "" <|
                     \state ->
@@ -63,6 +86,7 @@ import Parser exposing (..)
                                     [ succeed getArg |= int |. token "}"
                                     , succeed numberFormatUnsafe |. token "N" |= int |= argParser
                                     , succeed dateFormatUnsafe |. token "D" |= int |= argParser
+                                    , succeed matchStrings |. token "S" |= int |= matchParser
                                     ]
                             , chompUntilEndOr "{"
                                 |> getChompedString
@@ -108,6 +132,24 @@ replacePlaceholdersIntlDecl names =
                             )
                     ]
                 )
+            , CG.letVal "matchParser_"
+                (p_succeed (CG.fqFun [ "Tuple" ] "pair")
+                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_chompUntil "|") CG.piper p_getChompedString)
+                    |> p_drop_infix (p_token "|")
+                    |> p_keep_infix
+                        (CG.parens <|
+                            CG.pipe (p_chompUntil "|")
+                                [ p_getChompedString
+                                , p_andThen <|
+                                    CG.lambda [ CG.varPattern "str_" ] <|
+                                        CG.caseExpr (CG.apply [ DecodeM.decodeString, CG.parens <| CG.apply [ DecodeM.dict, DecodeM.string ], CG.val "str_" ])
+                                            [ ( CG.namedPattern "Ok" [ CG.varPattern "ok_" ], p_succeed <| CG.val "ok_" )
+                                            , ( CG.namedPattern "Err" [ CG.varPattern "err_" ], p_problem <| CG.parens <| CG.apply [ DecodeM.errorToString, CG.val "err_" ] )
+                                            ]
+                                ]
+                        )
+                    |> p_drop_infix (p_token "}")
+                )
             , CG.letFunction "numberFormatUnsafe_"
                 [ CG.varPattern "n_", CG.varPattern "parsedArgString_" ]
                 (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
@@ -138,6 +180,10 @@ replacePlaceholdersIntlDecl names =
                             , CG.string "]]"
                             ]
                 )
+            , CG.letFunction "matchStrings_" [ CG.varPattern "n_", CG.tuplePattern [ CG.varPattern "default_", CG.varPattern "cases_" ] ] <|
+                CG.applyBinOp (CG.apply [ CG.fqFun [ "Dict" ] "get", CG.parens <| CG.apply [ CG.fun "getArg_", CG.val "n_" ], CG.val "cases_" ])
+                    CG.piper
+                    (CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val "default_" ])
             , CG.letVal "parser_" <|
                 CG.applyBinOp (CG.apply [ p_loop, CG.string "" ]) CG.pipel <|
                     CG.lambda [ CG.varPattern "state_" ] <|
@@ -158,6 +204,12 @@ replacePlaceholdersIntlDecl names =
                                                     |> p_drop_infix
                                                         (p_token "D"
                                                             |> p_keep_infix (p_int |> p_keep_infix (CG.val "argParser_"))
+                                                        )
+                                                , p_succeed (CG.val "matchStrings_")
+                                                    |> p_drop_infix
+                                                        (p_token "S"
+                                                            |> p_keep_infix p_int
+                                                            |> p_keep_infix (CG.val "matchParser_")
                                                         )
                                                 ]
                                             )
@@ -248,6 +300,11 @@ p_map expr =
 p_succeed : CG.Expression -> CG.Expression
 p_succeed expr =
     CG.apply [ CG.fqFun [ "Parser" ] "succeed", expr ]
+
+
+p_problem : CG.Expression -> CG.Expression
+p_problem expr =
+    CG.apply [ CG.fqFun [ "Parser" ] "problem", expr ]
 
 
 p_oneOf : List CG.Expression -> CG.Expression

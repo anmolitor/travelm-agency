@@ -1,4 +1,4 @@
-module CodeGen.DecodeM exposing (andThen, array, decoder, fail, map, required, string, succeed)
+module CodeGen.DecodeM exposing (andThen, array, decodeString, decoder, dict, fail, map, required, string, succeed, errorToString)
 
 import Elm.CodeGen as CG
 
@@ -41,6 +41,21 @@ andThen =
 decoder : CG.TypeAnnotation -> CG.TypeAnnotation
 decoder t =
     CG.fqTyped [ "Json", "Decode" ] "Decoder" [ t ]
+
+
+decodeString : CG.Expression
+decodeString =
+    fun "decodeString"
+
+
+errorToString : CG.Expression
+errorToString =
+    fun "errorToString"
+
+
+dict : CG.Expression
+dict =
+    fun "dict"
 
 
 fun : String -> CG.Expression

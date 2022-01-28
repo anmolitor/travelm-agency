@@ -11,9 +11,9 @@ import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
 import Set
-import State exposing (State, TranslationSet)
-import Types
+import State exposing (State, TranslationSet, Translations)
 import Util
+import Types.UniqueName as UniqueName
 
 
 type alias Flags =
@@ -86,7 +86,7 @@ update msg model =
             ( model, Ports.respond <| Err <| D.errorToString err )
 
 
-hasSameSignatureAsExistingTranslations : Types.Translations -> TranslationSet () -> Maybe String
+hasSameSignatureAsExistingTranslations : Translations -> TranslationSet () -> Maybe String
 hasSameSignatureAsExistingTranslations pairs translationSet =
     let
         ( _, v ) =
@@ -140,7 +140,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
                     Dynamic ->
                         let
                             stateWithResources =
-                                Dict.NonEmpty.map (State.optimizeJsonAllLanguages addContentHash) nonEmptyState
+                                Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages addContentHash) nonEmptyState
                         in
                         { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty 120
                         , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources

@@ -3,7 +3,7 @@ module ContentTypes.PropertiesTest exposing (..)
 import ContentTypes.Properties as Properties
 import Expect
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..))
+import Types.Segment exposing (TSegment(..))
 
 
 parserTests : Test

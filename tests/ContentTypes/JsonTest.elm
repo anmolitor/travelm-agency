@@ -3,7 +3,7 @@ module ContentTypes.JsonTest exposing (..)
 import ContentTypes.Json as Json exposing (NestedJson(..))
 import Expect
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..))
+import Types.Segment exposing (TSegment(..))
 
 
 parserTests : Test

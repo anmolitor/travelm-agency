@@ -27,9 +27,11 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
+import State exposing (Translations)
 import String.Extra
 import Time
-import Types
+import Types.ArgValue as ArgValue exposing (ArgValue)
+import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Util
 
 
@@ -65,10 +67,10 @@ type Content
     | PlaceableContent Placeable
 
 
-fluentToInternalRep : Intl -> String -> AST -> Result String Types.Translations
+fluentToInternalRep : Intl -> String -> AST -> Result String Translations
 fluentToInternalRep intl language ast_ =
     let
-        identifierToKey : Identifier -> Types.TKey
+        identifierToKey : Identifier -> TKey
         identifierToKey id =
             case id of
                 TermIdentifier t ->
@@ -77,7 +79,7 @@ fluentToInternalRep intl language ast_ =
                 MessageIdentifier m ->
                     m
 
-        contentsToValue : Content -> Result String (NonEmpty Types.TSegment)
+        contentsToValue : Content -> Result String (NonEmpty TSegment)
         contentsToValue =
             contentsToValueHelper [] []
 
@@ -92,7 +94,7 @@ fluentToInternalRep intl language ast_ =
                         Intl.formatFloat intl
                             { number = n
                             , language = language
-                            , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                            , args = List.map (Tuple.mapSecond ArgValue.encode) args
                             }
 
         formatDateLit : Literal -> ExtraArguments -> Result String String
@@ -104,7 +106,7 @@ fluentToInternalRep intl language ast_ =
                             Intl.formatDateTime intl
                                 { time = time
                                 , language = language
-                                , args = List.map (Tuple.mapSecond Types.encodeArgValue) args
+                                , args = List.map (Tuple.mapSecond ArgValue.encode) args
                                 }
                         )
                         (Iso8601.toTime str |> Result.mapError (\err -> "Error while parsing the iso8601 date literal: '" ++ str ++ "': " ++ Parser.DeadEnds.deadEndsToString err))
@@ -125,10 +127,10 @@ fluentToInternalRep intl language ast_ =
 
         -- Limits recursion by keeping track of terms
         -- Inlines arguments known at compile time
-        contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Result String (NonEmpty Types.TSegment)
+        contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Result String (NonEmpty TSegment)
         contentsToValueHelper previousTerms accumulatedArgs cnt =
             let
-                recurseOnContentList : NonEmpty Content -> Result String (NonEmpty Types.TSegment)
+                recurseOnContentList : NonEmpty Content -> Result String (NonEmpty TSegment)
                 recurseOnContentList =
                     List.NonEmpty.map (contentsToValueHelper previousTerms accumulatedArgs)
                         >> combineMapResultNonEmpty
@@ -136,20 +138,20 @@ fluentToInternalRep intl language ast_ =
             in
             case cnt of
                 TextContent str ->
-                    Ok <| List.NonEmpty.singleton <| Types.Text str
+                    Ok <| List.NonEmpty.singleton <| Segment.Text str
 
                 PlaceableContent (VarRef var) ->
                     Ok <|
                         List.NonEmpty.singleton <|
                             case List.find (Tuple.first >> (==) var) accumulatedArgs of
                                 Just ( _, StringLiteral str ) ->
-                                    Types.Text str
+                                    Segment.Text str
 
                                 Just ( _, NumberLiteral n ) ->
-                                    Types.Text <| String.fromFloat n
+                                    Segment.Text <| String.fromFloat n
 
                                 Nothing ->
-                                    Types.Interpolation var
+                                    Segment.Interpolation var
 
                 PlaceableContent (TermRef term args) ->
                     case ( List.member term previousTerms, Dict.get term termDict ) of
@@ -165,31 +167,31 @@ fluentToInternalRep intl language ast_ =
                             Err <| "Could not resolve term reference: '" ++ term ++ "'"
 
                 PlaceableContent (StringLit lit) ->
-                    Ok <| List.NonEmpty.singleton <| Types.Text lit
+                    Ok <| List.NonEmpty.singleton <| Segment.Text lit
 
                 PlaceableContent (FunctionCall NUMBER (VarArgument var) extraArgs) ->
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatNumberLit lit extraArgs |> Result.map Types.Text
+                                formatNumberLit lit extraArgs |> Result.map Segment.Text
 
                             Nothing ->
-                                Ok <| Types.FormatNumber var extraArgs
+                                Ok <| Segment.FormatNumber var extraArgs
 
                 PlaceableContent (FunctionCall DATETIME (VarArgument var) extraArgs) ->
                     Result.map List.NonEmpty.singleton <|
                         case List.find (Tuple.first >> (==) var) accumulatedArgs of
                             Just ( _, lit ) ->
-                                formatDateLit lit extraArgs |> Result.map Types.Text
+                                formatDateLit lit extraArgs |> Result.map Segment.Text
 
                             Nothing ->
-                                Ok <| Types.FormatDate var extraArgs
+                                Ok <| Segment.FormatDate var extraArgs
 
                 PlaceableContent (FunctionCall NUMBER (LiteralArgument lit) extraArgs) ->
-                    formatNumberLit lit extraArgs |> Result.map (Types.Text >> List.NonEmpty.singleton)
+                    formatNumberLit lit extraArgs |> Result.map (Segment.Text >> List.NonEmpty.singleton)
 
                 PlaceableContent (FunctionCall DATETIME (LiteralArgument lit) extraArgs) ->
-                    formatDateLit lit extraArgs |> Result.map (Types.Text >> List.NonEmpty.singleton)
+                    formatDateLit lit extraArgs |> Result.map (Segment.Text >> List.NonEmpty.singleton)
 
                 PlaceableContent (NumberMatchStatement (LiteralArgument lit) extraArgs options) ->
                     formatNumberLit lit extraArgs
@@ -198,7 +200,7 @@ fluentToInternalRep intl language ast_ =
                         |> Result.andThen recurseOnContentList
 
                 PlaceableContent (NumberMatchStatement (VarArgument var) extraArgs options) ->
-                    Result.map2 (Types.PluralCase var extraArgs)
+                    Result.map2 (Segment.PluralCase var extraArgs)
                         (recurseOnContentList options.default)
                         (Dict.toList options.otherOptions
                             |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList)
@@ -207,7 +209,7 @@ fluentToInternalRep intl language ast_ =
                         |> Result.map List.NonEmpty.singleton
 
                 PlaceableContent (StringMatchStatement var options) ->
-                    Result.map2 (Types.InterpolationCase var)
+                    Result.map2 (Segment.InterpolationCase var)
                         (recurseOnContentList options.default)
                         (Dict.toList options.otherOptions
                             |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList)
@@ -248,13 +250,13 @@ fluentToInternalRep intl language ast_ =
                 CommentResource _ ->
                     False
 
-        attrToInternalRep : Attribute -> Result String ( Types.TKey, Types.TValue )
+        attrToInternalRep : Attribute -> Result String ( TKey, TValue )
         attrToInternalRep attr =
             List.NonEmpty.map contentsToValue attr.content
                 |> combineMapResultNonEmpty
                 |> Result.map
                     (List.NonEmpty.concat
-                        >> Types.concatenateTextSegments
+                        >> Segment.concatenateTextSegments
                         >> Tuple.pair attr.identifier
                     )
 
@@ -269,7 +271,7 @@ fluentToInternalRep intl language ast_ =
                     (\attr -> { attr | identifier = Util.keyToName [ key, attr.identifier ] })
                     msg.attrs
 
-        resourceToInternalRep : Resource -> Result String (List ( Types.TKey, Types.TValue ))
+        resourceToInternalRep : Resource -> Result String (List ( TKey, TValue ))
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
@@ -558,7 +560,7 @@ chooseMatch { default, otherOptions } str =
 
 
 type alias ExtraArguments =
-    List ( String, Types.ArgValue )
+    List ( String, ArgValue )
 
 
 type FunctionArgument
@@ -610,17 +612,17 @@ argumentParser =
         ]
 
 
-argValueParser : Parser Types.ArgValue
+argValueParser : Parser ArgValue
 argValueParser =
     oneOf
-        [ stringLit |> map Types.StringArg
-        , float |> map Types.NumberArg
-        , succeed (Types.BoolArg True) |. token "true"
-        , succeed (Types.BoolArg False) |. token "false"
+        [ stringLit |> map ArgValue.StringArg
+        , float |> map ArgValue.NumberArg
+        , succeed (ArgValue.BoolArg True) |. token "true"
+        , succeed (ArgValue.BoolArg False) |. token "false"
         ]
 
 
-otherArgumentsParser : Parser (List ( String, Types.ArgValue ))
+otherArgumentsParser : Parser (List ( String, ArgValue ))
 otherArgumentsParser =
     loop [] <|
         \state ->

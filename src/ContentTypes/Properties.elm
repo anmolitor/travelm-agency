@@ -4,8 +4,9 @@ import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
-import Types
+import Types.Segment as Segment
 import Util
+import State exposing (Translations)
 
 
 type alias Properties =
@@ -53,7 +54,7 @@ valueParser =
         )
 
 
-parsePlaceholderString : Parser Types.TValue
+parsePlaceholderString : Parser Segment.TValue
 parsePlaceholderString =
     let
         specialChars =
@@ -75,18 +76,18 @@ parsePlaceholderString =
                                             revSegments
 
                                         else
-                                            Types.Text text :: revSegments
+                                            Segment.Text text :: revSegments
                                 )
                                 |. P.end
-                            , P.succeed (\var -> P.Loop <| Types.Interpolation var :: Types.Text text :: revSegments)
+                            , P.succeed (\var -> P.Loop <| Segment.Interpolation var :: Segment.Text text :: revSegments)
                                 |. P.token "{"
                                 |= (P.chompUntil "}" |> P.getChompedString)
                                 |. P.token "}"
-                            , P.succeed (\moreText -> P.Loop <| Types.Text (text ++ moreText) :: revSegments)
+                            , P.succeed (\moreText -> P.Loop <| Segment.Text (text ++ moreText) :: revSegments)
                                 |. P.token "\""
                                 |= (P.chompUntil "\"" |> P.getChompedString)
                                 |. P.token "\""
-                            , P.succeed (\moreText -> P.Loop <| Types.Text (text ++ moreText) :: revSegments)
+                            , P.succeed (\moreText -> P.Loop <| Segment.Text (text ++ moreText) :: revSegments)
                                 |. P.token "'"
                                 |= (P.chompUntil "'" |> P.getChompedString)
                                 |. P.token "'"
@@ -97,10 +98,10 @@ parsePlaceholderString =
             (\segments ->
                 case List.NonEmpty.fromList segments of
                     Just nonEmpty ->
-                        P.succeed <| Types.concatenateTextSegments nonEmpty
+                        P.succeed <| Segment.concatenateTextSegments nonEmpty
 
                     Nothing ->
-                        P.succeed ( Types.Text "", [] )
+                        P.succeed ( Segment.Text "", [] )
             )
 
 
@@ -126,7 +127,7 @@ propertiesParser =
         )
 
 
-propertiesToInternalRep : Properties -> Result String Types.Translations
+propertiesToInternalRep : Properties -> Result String Translations
 propertiesToInternalRep =
     List.map
         (\( k, v ) ->

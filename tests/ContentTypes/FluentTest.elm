@@ -4,7 +4,7 @@ import ContentTypes.Fluent as F
 import Expect
 import Parser
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..))
+import Types.Segment exposing (TSegment(..))
 import Util exposing (emptyIntl)
 
 

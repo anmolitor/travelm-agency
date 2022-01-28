@@ -21,12 +21,15 @@ compileTimeDatesAndNumbers = Beispiel 7: DATETIME und NUMBER Funktion mit bekann
    {-datetime(date: 100000)}
    {-number(num: 500000)}
 
-matchOnStrings = {$gender ->
-  [male] He wants his break now
-  *[female] She wants her break now
+matchOnGender = {$gender ->
+  [male] Er will jetzt seine Pause
+  *[female] Sie will jetzt ihre Pause
   }
 
-matchOnNumbers = { NUMBER($amount) ->
-  [one] I drank a single beer
-  *[other] I drank many beers
-  }
+displayGender = {$gender ->
+  [male] Männlich
+  [female] Weiblich
+  *[other] {$gender}
+  }  
+
+matchOnNumbers = Ich trank {$amount} Bier

@@ -217,7 +217,7 @@ message = {$userName} {$photoCount ->
 generates the JSON code
 [language,json]
 ----
-["{1} {P0|\"one\":\"added a new photo\",\"*\":\"added {0} new photos\"}"]
+["{1} {P0|\"added {0} new photos\"|\"one\":\"added a new photo\"}"]
 ----
 
 which is then parsed by Elm:
@@ -225,8 +225,9 @@ which is then parsed by Elm:
 * {1} is a simple string interpolation of the second given value
 * `P` signals us to use the `PluralRules` API, 0 means to pass the first given value
 * `|` ends the arguments and starts the cases
-* The arguments are given in JSON style
-* If the Intl API responds with "one", we use the value of the key "one", in any other case we default to the value of the key "*"
+* The default case is just given as its value
+* The other cases are given in JSON style
+* If the Intl API responds with "one", we use the value of the key "one", in any other case we use the default
 
 ## Other matching scenarios
 
@@ -260,7 +261,7 @@ Still, this package offers a way to do this.
 
 [language,json]
 ----
-["{1} {S0|\"male\":\"His book\",\"*\":\"Her book\"]
+["{1} {S0|\"Her book\"|\"male\":\"His book\"]
 ----
 
 The `S` marker means use direct String matching. Otherwise, it works exactly as the PluralRules equivalent above.

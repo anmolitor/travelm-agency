@@ -6,9 +6,9 @@ import Elm.Pretty
 import Expect
 import Generators.Inline as Inline
 import Generators.Names exposing (defaultNames)
-import State exposing (NonEmptyState)
+import State exposing (NonEmptyState, Translations)
 import Test exposing (Test, describe, test)
-import Types exposing (TSegment(..), Translations)
+import Types.Segment as Segment
 import Util exposing (emptyIntl)
 
 
@@ -29,9 +29,9 @@ suite =
         [ test "single language" <|
             \_ ->
                 simpleState
-                    [ ( "key3", ( Text "value3 ", [ Interpolation "bla", Interpolation "blub" ] ) )
-                    , ( "key1", ( Text "value1", [] ) )
-                    , ( "key2", ( Text "value2 ", [ Interpolation "bla" ] ) )
+                    [ ( "key3", ( Segment.Text "value3 ", [ Segment.Interpolation "bla", Segment.Interpolation "blub" ] ) )
+                    , ( "key1", ( Segment.Text "value1", [] ) )
+                    , ( "key2", ( Segment.Text "value2 ", [ Segment.Interpolation "bla" ] ) )
                     ]
                     |> Inline.toFile context
                     |> Elm.Pretty.pretty 120
@@ -141,8 +141,8 @@ key3 i18n_ =
                         ( ( "de"
                           , { pairs =
                                 [ ( "key"
-                                  , ( Text "value "
-                                    , [ Interpolation "bla", Interpolation "blub" ]
+                                  , ( Segment.Text "value "
+                                    , [ Segment.Interpolation "bla", Segment.Interpolation "blub" ]
                                     )
                                   )
                                 ]
@@ -152,8 +152,8 @@ key3 i18n_ =
                         , [ ( "en"
                             , { pairs =
                                     [ ( "key"
-                                      , ( Interpolation "howdy"
-                                        , [ Text "text", Interpolation "blub" ]
+                                      , ( Segment.Interpolation "howdy"
+                                        , [ Segment.Text "text", Segment.Interpolation "blub" ]
                                         )
                                       )
                                     ]

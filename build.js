@@ -14,23 +14,27 @@ const fixedElmDts = elmDts
 
 fs.writeFileSync("lib/elm.min.d.ts", fixedElmDts);
 
-const elmCode = ElmCompiler.compileToStringSync("src/Main.elm", {
-  optimize: true,
+const isRelease = process.env.NODE_ENV === "production";
+
+let elmCode = ElmCompiler.compileToStringSync("src/Main.elm", {
+  optimize: isRelease,
 });
 
-const minifiedElmCode = minify(elmCode, {
-  compress: {
-    pure_funcs: "F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",
-    pure_getters: true,
-    keep_fargs: false,
-    unsafe_comps: true,
-    unsafe: true,
-  },
-  mangle: true,
-});
-
-if (minifiedElmCode.error) {
-  throw minifiedElmCode.error;
+if (isRelease) {
+  const minifiedResult = minify(elmCode, {
+    compress: {
+      pure_funcs: "F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",
+      pure_getters: true,
+      keep_fargs: false,
+      unsafe_comps: true,
+      unsafe: true,
+    },
+    mangle: true,
+  });
+  if (minifiedResult.error) {
+    throw minifiedResult.error;
+  }
+  elmCode = minifiedResult.code;
 }
 
-fs.writeFileSync("lib/elm.min.js", minifiedElmCode.code);
+fs.writeFileSync("lib/elm.min.js", elmCode);

@@ -5,7 +5,8 @@
   "main": "./lib/main.js",
   "bin": "index.js",
   "scripts": {
-    "build": "tsc && node build.js",
+    "build": "tsc && cross-env NODE_ENV=production node build.js",
+    "build:dev": "node build.js",
     "test": "elm-test && npm run test:integration",
     "test:integration": "mocha tests --timeout 10000",
     "coverage": "elm-coverage"
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^17.0.0",
+    "cross-env": "^7.0.3",
     "elm-coverage": "^0.4.0",
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.1.2",

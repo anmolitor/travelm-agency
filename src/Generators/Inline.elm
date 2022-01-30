@@ -1,6 +1,5 @@
 module Generators.Inline exposing (..)
 
-import CodeGen.Utils
 import CodeGen.Shared as Shared exposing (Context, endoAnn, intlAnn)
 import Dict
 import Dict.NonEmpty
@@ -223,7 +222,7 @@ addAccessorDeclarations =
 addI18nInstances : Unique.UniqueNameContext (WithAccessors (WithCtx ctx)) -> Unique.UniqueNameContext (WithAccessors (WithCtx ctx))
 addI18nInstances =
     Unique.andThen3 "data" "intl" "n" <|
-        \unCtx ctx dataName intlName numName ->
+        \lookup ctx dataName intlName numName ->
             let
                 languages =
                     State.getLanguages ctx.state
@@ -262,7 +261,7 @@ addI18nInstances =
 
                         accessParam =
                             if Dict.size placeholders == 1 then
-                                CG.val << Util.safeName
+                                CG.val << lookup
 
                             else
                                 CG.access (CG.val dataName)
@@ -369,7 +368,7 @@ addI18nInstances =
                                     identity
 
                                 [ ( single, _ ) ] ->
-                                    CG.lambda <| addIntlIfNeeded [ CG.varPattern <| Util.safeName single ]
+                                    CG.lambda <| addIntlIfNeeded [ CG.varPattern <| lookup single ]
 
                                 _ ->
                                     CG.lambda <|

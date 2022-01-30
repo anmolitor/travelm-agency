@@ -20,7 +20,7 @@ compileTimeDatesAndNumbers = Exemple 7 : les fonctions DATETIME et NUMBER avec d
    {-datetime(date: 100000)}
    {-number(num: 500000)}
 
-matchOnGender = {$gender ->
+matchOnGender = Exemple 8 : {$gender ->
   [male] Il veut sa pause maintenant
   *[female] Elle veut sa pause maintenant
   }
@@ -31,7 +31,7 @@ displayGender = {$gender ->
   *[other] {$gender}
   }
 
-matchOnNumbers = { NUMBER($amount) ->
+matchOnNumbers = Exemple 9 : { NUMBER($amount) ->
   [one] j'ai bu une bière
   *[other] J'ai bu {$amount} bières
   }

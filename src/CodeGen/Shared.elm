@@ -92,8 +92,8 @@ addExposings newExposes file =
 
 
 addLanguageRelatedDeclsUnique :
-    Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState (), file : CG.File }
-    -> Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState (), file : CG.File }
+    Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState any, file : CG.File }
+    -> Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState any, file : CG.File }
 addLanguageRelatedDeclsUnique =
     Unique.map <|
         \ctx ->

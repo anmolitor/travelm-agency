@@ -52,26 +52,26 @@ getLanguages =
         >> List.sort
 
 
-collectiveTranslationSet : NonEmptyState () -> TranslationSet ()
+collectiveTranslationSet : NonEmptyState any -> TranslationSet any
 collectiveTranslationSet =
     Dict.NonEmpty.toNonEmptyList
         >> List.NonEmpty.map Tuple.second
         >> List.NonEmpty.foldl1 combineTranslationSets
 
 
-combineTranslationSets : TranslationSet () -> TranslationSet () -> TranslationSet ()
+combineTranslationSets : TranslationSet any -> TranslationSet any -> TranslationSet any
 combineTranslationSets t =
     Dict.NonEmpty.toList
         >> List.foldl
-            (\( lang, { pairs } ) acc ->
+            (\( lang, { pairs, resources } ) acc ->
                 let
                     merge val =
                         case val of
                             Just existing ->
-                                { pairs = pairs ++ existing.pairs, resources = () }
+                                { pairs = pairs ++ existing.pairs, resources = existing.resources }
 
                             Nothing ->
-                                { pairs = pairs, resources = () }
+                                { pairs = pairs, resources = resources }
                 in
                 Dict.NonEmpty.update lang merge acc
             )
@@ -138,6 +138,6 @@ isIntlNeededForKey key =
         >> List.any (Tuple.second >> InterpolationKind.isIntlInterpolation)
 
 
-allTranslationKeys : NonEmptyState () -> List TKey
+allTranslationKeys : NonEmptyState any -> List TKey
 allTranslationKeys =
     collectiveTranslationSet >> interpolationMap >> Dict.keys

@@ -36,7 +36,7 @@ withUniqueNames identifiers names doWithNames =
     let
         newNameList =
             List.map ((<|) names.loadName) identifiers
-                ++ List.map ((<|) names.loadName) identifiers
+                ++ List.map ((<|) names.decoderName) identifiers
                 ++ [ names.languageTypeName
                    , names.languagesName
                    , names.i18nTypeName

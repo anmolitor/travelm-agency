@@ -36,6 +36,11 @@ const { hideBin } = require("yargs/helpers");
             type: "boolean",
             default: false,
           })
+          .option("devMode", {
+            description: "Disable completeness check for i18n keys",
+            type: "boolean",
+            default: false,
+          })
           .positional("translation_directory", {
             description:
               "The directory containing translation files (.json/.properties).",
@@ -52,6 +57,7 @@ const { hideBin } = require("yargs/helpers");
     elmJson: args.elm_json,
     generatorMode: args.inline ? "inline" : "dynamic",
     addContentHash: args.hash,
+    devMode: args.devMode,
   });
 })();
 

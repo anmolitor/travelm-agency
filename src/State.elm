@@ -3,6 +3,7 @@ module State exposing (..)
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import List.NonEmpty
+import Set
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
 import Types.Segment as Segment exposing (TKey, TValue)
@@ -141,3 +142,54 @@ isIntlNeededForKey key =
 allTranslationKeys : NonEmptyState any -> List TKey
 allTranslationKeys =
     collectiveTranslationSet >> interpolationMap >> Dict.keys
+
+
+addTranslations : Bool -> Identifier -> Language -> Translations -> State () -> Result String (State ())
+addTranslations devMode identifier language translations state =
+    let
+        insert tset =
+            Dict.insert identifier tset state
+    in
+    case Dict.get identifier state of
+        Just translationSet ->
+            case (devMode, hasSameSignatureAsExistingTranslations translations translationSet) of
+                (False, Just err) ->
+                    Err err
+
+                _ ->
+                    insert (Dict.NonEmpty.insert language { pairs = translations, resources = () } translationSet)
+                        |> Ok
+
+        Nothing ->
+            insert
+                (Dict.NonEmpty.singleton language { pairs = translations, resources = () })
+                |> Ok
+
+
+hasSameSignatureAsExistingTranslations : Translations -> TranslationSet () -> Maybe String
+hasSameSignatureAsExistingTranslations pairs translationSet =
+    let
+        ( _, v ) =
+            Dict.NonEmpty.getFirstEntry translationSet
+
+        existingKeys =
+            List.map Tuple.first v.pairs |> Set.fromList
+
+        keysOfNewLanguage =
+            List.map Tuple.first pairs |> Set.fromList
+
+        missingKeysInNewLanguage =
+            Set.diff existingKeys keysOfNewLanguage
+
+        extraKeysInNewLanguage =
+            Set.diff keysOfNewLanguage existingKeys
+    in
+    if Set.isEmpty missingKeysInNewLanguage then
+        if Set.isEmpty extraKeysInNewLanguage then
+            Nothing
+
+        else
+            Just <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInNewLanguage) ++ "."
+
+    else
+        Just <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInNewLanguage) ++ "."

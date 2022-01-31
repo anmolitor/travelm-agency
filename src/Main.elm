@@ -12,26 +12,28 @@ import Platform
 import Ports exposing (GeneratorMode(..))
 import Set
 import State exposing (State, TranslationSet, Translations)
-import Util
 import Types.UniqueName as UniqueName
+import Util
 
 
 type alias Flags =
-    { version : String, intl : Intl }
+    { version : String, intl : Intl, devMode : Bool }
 
 
 type alias Model =
     { version : String
     , state : State ()
     , intl : Intl
+    , devMode : Bool
     }
 
 
-init : String -> Intl -> Model
-init version intl =
+init : String -> Intl -> Bool -> Model
+init version intl devMode =
     { version = version
     , state = Dict.empty
     , intl = intl
+    , devMode = devMode
     }
 
 
@@ -44,75 +46,29 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotRequest (Ports.AddTranslation req) ->
-            case Dict.get req.identifier model.state of
-                Just state ->
-                    case hasSameSignatureAsExistingTranslations req.content state of
-                        Nothing ->
-                            ( { model
-                                | state =
-                                    Dict.insert req.identifier (Dict.NonEmpty.insert req.language { pairs = req.content, resources = () } state) model.state
-                              }
-                            , Cmd.none
-                            )
+            case State.addTranslations model.devMode req.identifier req.language req.content model.state of
+                Ok newState ->
+                    ( { model | state = newState }, Cmd.none )
 
-                        Just errMessage ->
-                            ( model
-                            , Ports.respond <|
-                                Err <|
-                                    "Inconsistent keys in translations of identifier '"
-                                        ++ req.identifier
-                                        ++ "' at language '"
-                                        ++ req.language
-                                        ++ ". "
-                                        ++ errMessage
-                            )
-
-                Nothing ->
-                    ( { model
-                        | state =
-                            Dict.insert req.identifier
-                                (Dict.NonEmpty.singleton req.language { pairs = req.content, resources = () })
-                                model.state
-                      }
-                    , Cmd.none
+                Err errMessage ->
+                    ( model
+                    , Ports.respond <|
+                        Err <|
+                            "Inconsistent keys in translations of identifier '"
+                                ++ req.identifier
+                                ++ "' at language '"
+                                ++ req.language
+                                ++ ". "
+                                ++ errMessage
                     )
 
         GotRequest (Ports.FinishModule req) ->
-            ( init model.version model.intl
+            ( model
             , onFinishModule model req
             )
 
         UnexpectedRequest err ->
             ( model, Ports.respond <| Err <| D.errorToString err )
-
-
-hasSameSignatureAsExistingTranslations : Translations -> TranslationSet () -> Maybe String
-hasSameSignatureAsExistingTranslations pairs translationSet =
-    let
-        ( _, v ) =
-            Dict.NonEmpty.getFirstEntry translationSet
-
-        existingKeys =
-            List.map Tuple.first v.pairs |> Set.fromList
-
-        keysOfNewLanguage =
-            List.map Tuple.first pairs |> Set.fromList
-
-        missingKeysInNewLanguage =
-            Set.diff existingKeys keysOfNewLanguage
-
-        extraKeysInNewLanguage =
-            Set.diff keysOfNewLanguage existingKeys
-    in
-    if Set.isEmpty missingKeysInNewLanguage then
-        if Set.isEmpty extraKeysInNewLanguage then
-            Nothing
-
-        else
-            Just <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInNewLanguage) ++ "."
-
-    else
-        Just <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInNewLanguage) ++ "."
 
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
@@ -162,7 +118,7 @@ subscriptions model =
 main : Program Flags Model Msg
 main =
     Platform.worker
-        { init = \flags -> ( init flags.version flags.intl, Cmd.none )
+        { init = \flags -> ( init flags.version flags.intl flags.devMode, Cmd.none )
         , update = update
         , subscriptions = subscriptions
         }

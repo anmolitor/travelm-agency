@@ -29,12 +29,15 @@ const getPluginVersion = (): string => {
 let ports: Ports | undefined;
 
 export const withElmApp = async <T>(
-  consumer: (ports: Ports) => Promise<T>
+  consumer: (ports: Ports) => Promise<T>,
+  devMode = false
 ): Promise<T> => {
   let error: string | undefined;
   if (!ports) {
     const version = getPluginVersion();
-    ({ ports } = Elm.Main.init({ flags: { version, intl: intl_proxy } }));
+    ({ ports } = Elm.Main.init({
+      flags: { version, intl: intl_proxy, devMode },
+    }));
     const throwOnError: ResponseHandler = (response) => {
       if (response.error) {
         error = response.error;
@@ -60,13 +63,17 @@ interface InlineOptions {
   elmPath: string;
   translationDir: string;
   addContentHash: boolean;
+  devMode: boolean;
 }
 
 interface DynamicOptions extends InlineOptions {
   jsonPath: string;
 }
 
-export const sendTranslations = (filePaths: string[]): Promise<void> =>
+export const sendTranslations = (
+  filePaths: string[],
+  devMode = false
+): Promise<void> =>
   withElmApp(async (ports) => {
     await Promise.all(
       filePaths.map(async (filePath) => {
@@ -79,16 +86,18 @@ export const sendTranslations = (filePaths: string[]): Promise<void> =>
         });
       })
     );
-  });
+  }, devMode);
 
 export const finishModule = ({
   elmPath,
   generatorMode = null,
   addContentHash,
+  devMode = false,
 }: {
   elmPath: string;
   generatorMode?: GeneratorMode | null;
   addContentHash: boolean;
+  devMode?: boolean;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
@@ -112,11 +121,13 @@ export const finishModule = ({
           generatorMode,
           addContentHash,
         });
-      })
+      }),
+    devMode
   );
 
 export const run = async (options: Options) => {
-  const { elmPath, translationDir, generatorMode, addContentHash } = options;
+  const { elmPath, translationDir, generatorMode, addContentHash, devMode } =
+    options;
   const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
     path.resolve(translationDir, fileName)
   );
@@ -125,11 +136,12 @@ export const run = async (options: Options) => {
       `Given translation directory ${translationDir} does not contain any files`
     );
   }
-  await sendTranslations(translationFilePaths);
+  await sendTranslations(translationFilePaths, devMode);
   const { elmFile, optimizedJson } = await finishModule({
     elmPath,
     generatorMode,
     addContentHash,
+    devMode,
   });
 
   const elmPromise = writeFile(elmPath, elmFile);

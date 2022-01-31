@@ -88,7 +88,7 @@ view ({ i18n } as model) =
         , div [ class "row string_match" ] (text (I18n.matchOnGender i18n model.gender) :: List.map (switchGenderButton i18n) [ "male", "female" ])
         , div [ class "row number_match" ]
             [ text <| I18n.matchOnNumbers i18n <| toFloat model.number
-            , button [ onClick <| ChangedNumber (model.number + 1) ] [ text "+1" ]
+            , button [ class <| "add_number", onClick <| ChangedNumber (model.number + 1) ] [ text "+1" ]
             ]
         ]
     }
@@ -96,7 +96,7 @@ view ({ i18n } as model) =
 
 switchGenderButton : I18n -> String -> Html Msg
 switchGenderButton i18n gender =
-    button [ onClick <| ChangedGender gender ] [ text <| I18n.displayGender i18n gender ]
+    button [ class <| "gender_" ++ gender, onClick <| ChangedGender gender ] [ text <| I18n.displayGender i18n gender ]
 
 
 type alias Flags =

@@ -14,12 +14,14 @@ type Msg
     = ChangedName String
     | ChangeLanguage I18n.Language
     | ChangedGender String
+    | ChangedNumber Int
 
 
 type alias Model =
     { i18n : I18n
     , name : String
     , gender : String
+    , number : Int
     , language : I18n.Language
     }
 
@@ -29,6 +31,7 @@ init { language, intl } =
     ( { i18n = I18n.init intl I18n.En
       , name = ""
       , gender = "Unknown"
+      , number = 0
       , language = I18n.languageFromString language |> Maybe.withDefault I18n.En
       }
     , Cmd.none
@@ -43,6 +46,9 @@ update msg model =
 
         ChangedGender gender ->
             ( { model | gender = gender }, Cmd.none )
+
+        ChangedNumber number ->
+            ( { model | number = number }, Cmd.none )
 
         ChangeLanguage language ->
             ( { model | language = language, i18n = I18n.load language model.i18n }, Cmd.none )
@@ -72,13 +78,17 @@ view ({ i18n } as model) =
         , div [ class "row number_example" ] [ text <| I18n.numberFun i18n 0.42526 ]
         , div [ class "row compile_time_functions" ] [ text <| I18n.compileTimeDatesAndNumbers i18n ]
         , div [ class "row string_match" ] (text (I18n.matchOnGender i18n model.gender) :: List.map (switchGenderButton i18n) [ "male", "female" ])
+        , div [ class "row number_match" ]
+            [ text <| I18n.matchOnNumbers i18n <| toFloat model.number
+            , button [ class <| "add_number", onClick <| ChangedNumber (model.number + 1) ] [ text "+1" ]
+            ]
         ]
     }
 
 
 switchGenderButton : I18n -> String -> Html Msg
 switchGenderButton i18n gender =
-    button [ onClick <| ChangedGender gender ] [ text <| I18n.displayGender i18n gender ]
+    button [ class <| "gender_" ++ gender, onClick <| ChangedGender gender ] [ text <| I18n.displayGender i18n gender ]
 
 
 main : Program { language : String, intl : Intl } Model Msg

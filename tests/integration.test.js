@@ -31,7 +31,7 @@ describe("integration-test", () => {
       });
 
       after(() => {
-        document.body.innerHTML = "";
+        //document.body.innerHTML = "";
         cleanDom();
         // needed because for some reason this particular part is not restored by JSDOM global.
         global.URL = global_URL;
@@ -98,7 +98,6 @@ describe("integration-test", () => {
       });
 
       after(() => {
-        document.body.innerHTML = "";
         cleanDom();
         // needed because for some reason this particular part is not restored by JSDOM global.
         global.URL = global_URL;
@@ -151,6 +150,32 @@ describe("integration-test", () => {
           getContentByClass("compile_time_functions"),
           /DATETIME und NUMBER functions with known values are evaluated at compile time:\n1\/18\/2022\n1\/1\/1970\n500,000/
         );
+      });
+
+      it("displays the expected text using string matching", async () => {
+        assert.match(
+          getContentByClass("string_match"),
+          /She wants her break now/
+        );
+        document.querySelector(".gender_male").click();
+        await waitMs(50);
+        assert.match(
+          getContentByClass("string_match"),
+          /He wants his break now/
+        );
+      });
+
+      it("displays the expected text using number matching", async () => {
+        assert.match(getContentByClass("number_match"), /I drank 0 beers/);
+        document.querySelector(".add_number").click();
+        await waitMs(50);
+        assert.match(
+          getContentByClass("number_match"),
+          /I drank a single beer/
+        );
+        document.querySelector(".add_number").click();
+        await waitMs(50);
+        assert.match(getContentByClass("number_match"), /I drank 2 beers/);
       });
     });
   });

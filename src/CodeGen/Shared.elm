@@ -137,10 +137,10 @@ languageTypeDecl names languages =
 
 languagesDecl : Names -> List String -> CG.Declaration
 languagesDecl names languages =
-    CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "A list containing all `Language`s"))
+    CG.valDecl (Just (CG.emptyDocComment |> CG.markdown "A list containing all `Language`s. The list is sorted alphabetically."))
         (Just <| CG.listAnn <| CG.typed names.languageTypeName [])
         names.languagesName
-        (CG.list <| List.map (String.Extra.classify >> CG.val) languages)
+        (CG.list <| List.map (String.Extra.classify >> CG.val) <| List.sort languages)
 
 
 languageToStringDecl : Names -> List String -> CG.Declaration
@@ -157,12 +157,28 @@ languageToStringDecl names languages =
 languageFromStringDecl : Names -> List String -> CG.Declaration
 languageFromStringDecl names languages =
     CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Maybe parse a `Language` from a `String`. 
-This only considers the keys given during compile time, if you need something like 'en-US' to map to the correct `Language`,
-you should write your own parsing function."""))
+This will map languages based on the prefix i.e. 'en-US' and 'en' will both map to 'En' unless you provided a 'en-US' translation file."""))
         (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed names.languageTypeName []))
         names.languageFromStringFunName
-        [ CG.varPattern "lang_" ]
-        (CG.caseExpr (CG.val "lang_") <|
-            List.map (\lang -> ( CG.stringPattern lang, CG.apply [ CG.fun "Just", CG.val <| String.Extra.classify lang ] )) languages
-                ++ [ ( CG.allPattern, CG.val "Nothing" ) ]
-        )
+        [ CG.varPattern "lang" ]
+    <|
+        CG.letExpr
+            [ CG.letFunction "helper" [ CG.varPattern "langs" ] <|
+                CG.caseExpr
+                    (CG.val "langs")
+                    [ ( CG.listPattern [], CG.fqVal [ "Maybe" ] "Nothing" )
+                    , ( CG.unConsPattern (CG.varPattern "l") (CG.varPattern "ls")
+                      , CG.ifExpr
+                            (CG.apply
+                                [ CG.fqFun [ "String" ] "startsWith"
+                                , CG.parens <| CG.apply [ CG.val names.languageToStringFunName, CG.val "l" ]
+                                , CG.val "lang"
+                                ]
+                            )
+                            (CG.apply [ CG.fqVal [ "Maybe" ] "Just", CG.val "l" ])
+                            (CG.apply [ CG.val "helper", CG.val "ls" ])
+                      )
+                    ]
+            ]
+        <|
+            CG.apply [ CG.val "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]

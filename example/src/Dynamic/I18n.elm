@@ -9,6 +9,7 @@ import Array
 import Http
 import Json.Decode
 import List
+import Maybe
 import String
 import Tuple
 
@@ -36,7 +37,7 @@ type Language
     | Fr
 
 
-{-| A list containing all `Language`s
+{-| A list containing all `Language`s. The list is sorted alphabetically.
 
 
 -}
@@ -63,25 +64,26 @@ languageToString lang_ =
 
 
 {-| Maybe parse a `Language` from a `String`. 
-This only considers the keys given during compile time, if you need something like 'en-US' to map to the correct `Language`,
-you should write your own parsing function.
+This will map languages based on the prefix i.e. 'en-US' and 'en' will both map to 'En' unless you provided a 'en-US' translation file.
 
 
 -}
 languageFromString : String -> Maybe Language
-languageFromString lang_ =
-    case lang_ of
-        "de" ->
-            Just De
+languageFromString lang =
+    let
+        helper langs =
+            case langs of
+                [] ->
+                    Maybe.Nothing
 
-        "en" ->
-            Just En
+                l :: ls ->
+                    if String.startsWith (languageToString l) lang then
+                        Maybe.Just l
 
-        "fr" ->
-            Just Fr
-
-        _ ->
-            Nothing
+                    else
+                        helper ls
+    in
+    helper (List.reverse languages)
 
 
 {-| 

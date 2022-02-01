@@ -18,7 +18,7 @@ suite =
             \_ ->
                 Dict.NonEmpty.singleton
                     "de"
-                    { pairs = [ ( "key", ( Segment.Interpolation "a", [] ) ) ], resources = () }
+                    { pairs = Dict.fromList [ ( "key", ( Segment.Interpolation "a", [] ) ) ], resources = () }
                     |> State.interpolationMap
                     |> Dict.get "key"
                     |> Expect.equal (Just <| Dict.singleton "a" InterpolationKind.Simple)
@@ -27,9 +27,10 @@ suite =
                 Dict.NonEmpty.singleton
                     "de"
                     { pairs =
-                        [ ( "key", ( Segment.Text "some text", [] ) )
-                        , ( "key2", ( Segment.Interpolation "b", [] ) )
-                        ]
+                        Dict.fromList
+                            [ ( "key", ( Segment.Text "some text", [] ) )
+                            , ( "key2", ( Segment.Interpolation "b", [] ) )
+                            ]
                     , resources = ()
                     }
                     |> State.interpolationMap
@@ -44,15 +45,17 @@ suite =
                 Dict.NonEmpty.fromList
                     ( ( "de"
                       , { pairs =
-                            [ ( "key", ( Segment.Interpolation "a", [] ) )
-                            ]
+                            Dict.fromList
+                                [ ( "key", ( Segment.Interpolation "a", [] ) )
+                                ]
                         , resources = ()
                         }
                       )
                     , [ ( "en"
                         , { pairs =
-                                [ ( "key", ( Segment.Text "no interpolation", [] ) )
-                                ]
+                                Dict.fromList
+                                    [ ( "key", ( Segment.Text "no interpolation", [] ) )
+                                    ]
                           , resources = ()
                           }
                         )
@@ -69,15 +72,17 @@ suite =
                 Dict.NonEmpty.fromList
                     ( ( "de"
                       , { pairs =
-                            [ ( "key", ( Segment.Interpolation "a", [ Segment.Interpolation "b" ] ) )
-                            ]
+                            Dict.fromList
+                                [ ( "key", ( Segment.Interpolation "a", [ Segment.Interpolation "b" ] ) )
+                                ]
                         , resources = ()
                         }
                       )
                     , [ ( "en"
                         , { pairs =
-                                [ ( "key", ( Segment.Interpolation "c", [ Segment.Interpolation "b" ] ) )
-                                ]
+                                Dict.fromList
+                                    [ ( "key", ( Segment.Interpolation "c", [ Segment.Interpolation "b" ] ) )
+                                    ]
                           , resources = ()
                           }
                         )
@@ -105,15 +110,17 @@ suite =
                 Dict.NonEmpty.fromList
                     ( ( "de"
                       , { pairs =
-                            [ ( "key", ( Segment.Interpolation "a", [ Segment.PluralCase "b" [] ( Segment.Text "text", [] ) Dict.empty ] ) )
-                            ]
+                            Dict.fromList
+                                [ ( "key", ( Segment.Interpolation "a", [ Segment.PluralCase "b" [] ( Segment.Text "text", [] ) Dict.empty ] ) )
+                                ]
                         , resources = ()
                         }
                       )
                     , [ ( "en"
                         , { pairs =
-                                [ ( "key", ( Segment.PluralCase "a" [] ( Segment.Text "text", [] ) Dict.empty, [ Segment.Interpolation "b" ] ) )
-                                ]
+                                Dict.fromList
+                                    [ ( "key", ( Segment.PluralCase "a" [] ( Segment.Text "text", [] ) Dict.empty, [ Segment.Interpolation "b" ] ) )
+                                    ]
                           , resources = ()
                           }
                         )

@@ -257,8 +257,10 @@ addAccessorDeclarations =
                         Dict.NonEmpty.toList ctx.state
                             |> List.concatMap
                                 (\( identifier, translationSet ) ->
-                                    List.indexedMap (accessorDeclaration identifier)
-                                        (Dict.NonEmpty.getFirstEntry translationSet |> Tuple.second).pairs
+                                    (Dict.NonEmpty.getFirstEntry translationSet |> Tuple.second).pairs
+                                        |> Dict.toList
+                                        |> List.sortBy Tuple.first
+                                        |> List.indexedMap (accessorDeclaration identifier)
                                 )
                 in
                 { ctx
@@ -484,6 +486,8 @@ optimizeJson translations =
             indicifyInterpolations >> encodeSegments
     in
     translations
+        |> Dict.toList
+        |> List.sortBy Tuple.first
         |> List.map (Tuple.second >> optimizeSegments)
         |> Array.fromList
         |> E.array E.string

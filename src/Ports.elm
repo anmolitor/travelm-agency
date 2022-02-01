@@ -111,7 +111,6 @@ contentDecoder intl language extension =
         _ ->
             always <| Err <| "Unsupported content type '" ++ extension ++ "'"
     )
-        >> Result.map (List.sortBy Tuple.first)
         >> Util.resultToDecoder
 
 

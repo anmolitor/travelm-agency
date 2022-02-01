@@ -18,7 +18,7 @@ type alias Language =
 
 
 type alias Translations =
-    List ( TKey, TValue )
+    Dict TKey TValue
 
 
 type alias Translation resources =
@@ -69,7 +69,7 @@ combineTranslationSets t =
                     merge val =
                         case val of
                             Just existing ->
-                                { pairs = pairs ++ existing.pairs, resources = existing.resources }
+                                { pairs = Dict.union existing.pairs pairs, resources = existing.resources }
 
                             Nothing ->
                                 { pairs = pairs, resources = resources }
@@ -86,7 +86,7 @@ getAllResources =
 
 interpolationMap : TranslationSet any -> Dict TKey (Dict String InterpolationKind)
 interpolationMap =
-    Dict.NonEmpty.map (\_ ts -> List.map (Tuple.mapSecond Segment.interpolationVars) ts.pairs |> Dict.fromList)
+    Dict.NonEmpty.map (\_ ts -> Dict.map (\_ -> Segment.interpolationVars) ts.pairs)
         >> Dict.NonEmpty.foldl1
             (mergeDictIntoDict <|
                 \key s1 s2 -> Dict.insert key <| mergeInterpolationKinds s1 s2
@@ -126,7 +126,7 @@ inferFeaturesTranslationSet =
 
 inferFeaturesTranslations : Translations -> Features
 inferFeaturesTranslations =
-    Features.combineMap (Tuple.second >> Segment.inferFeatures)
+    Dict.values >> Features.combineMap Segment.inferFeatures
 
 
 isIntlNeededForKey : TKey -> NonEmptyState () -> Bool
@@ -152,8 +152,8 @@ addTranslations devMode identifier language translations state =
     in
     case Dict.get identifier state of
         Just translationSet ->
-            case (devMode, hasSameSignatureAsExistingTranslations translations translationSet) of
-                (False, Just err) ->
+            case ( devMode, hasSameSignatureAsExistingTranslations translations translationSet ) of
+                ( False, Just err ) ->
                     Err err
 
                 _ ->
@@ -173,10 +173,10 @@ hasSameSignatureAsExistingTranslations pairs translationSet =
             Dict.NonEmpty.getFirstEntry translationSet
 
         existingKeys =
-            List.map Tuple.first v.pairs |> Set.fromList
+            Dict.keys v.pairs |> Set.fromList
 
         keysOfNewLanguage =
-            List.map Tuple.first pairs |> Set.fromList
+            Dict.keys pairs |> Set.fromList
 
         missingKeysInNewLanguage =
             Set.diff existingKeys keysOfNewLanguage

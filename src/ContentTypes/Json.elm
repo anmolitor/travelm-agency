@@ -1,13 +1,14 @@
 module ContentTypes.Json exposing (Json, NestedJson(..), jsonToInternalRep, parseJson)
 
+import Dict
 import Json.Decode as D
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
+import State exposing (Translations)
 import Types.Segment as Segment
 import Util
-import State exposing (Translations)
 
 
 type alias Json =
@@ -35,6 +36,7 @@ jsonToInternalRep =
                     Err err ->
                         Err <| Parser.DeadEnds.deadEndsToString err
             )
+        >> Result.map Dict.fromList
 
 
 parsePlaceholderString : Parser Segment.TValue

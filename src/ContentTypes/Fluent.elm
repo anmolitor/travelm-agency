@@ -285,7 +285,7 @@ fluentToInternalRep intl language ast_ =
     in
     List.filter termFilter ast_
         |> Result.Extra.combineMap resourceToInternalRep
-        |> Result.map List.concat
+        |> Result.map (List.concat >> Dict.fromList)
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)

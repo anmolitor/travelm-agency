@@ -7,6 +7,7 @@ import Result.Extra
 import Types.Segment as Segment
 import Util
 import State exposing (Translations)
+import Dict
 
 
 type alias Properties =
@@ -139,3 +140,4 @@ propertiesToInternalRep =
                     Ok ( Util.keyToName k, val )
         )
         >> Result.Extra.combine
+        >> Result.map Dict.fromList

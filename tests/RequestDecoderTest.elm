@@ -1,5 +1,6 @@
 module RequestDecoderTest exposing (..)
 
+import Dict
 import Expect
 import Json.Decode as D
 import Ports exposing (GeneratorMode(..), Request(..), requestDecoder)
@@ -21,7 +22,7 @@ suite =
                     |> Expect.equal
                         (Ok <|
                             AddTranslation
-                                { content = [ ( "demoKey", ( Segment.Text "demoValue", [] ) ) ]
+                                { content = Dict.fromList [ ( "demoKey", ( Segment.Text "demoValue", [] ) ) ]
                                 , identifier = "demo"
                                 , language = "en"
                                 }

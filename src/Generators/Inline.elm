@@ -248,7 +248,22 @@ addI18nInstances =
                         lang
                         []
                     <|
-                        CG.record (List.map (\( k, v ) -> ( ctx.lookupAccessorProxy k, inlineTemplate lang k v )) <| List.sortBy Tuple.first translation.pairs)
+                        CG.record
+                            (List.map
+                                (\k ->
+                                    ( ctx.lookupAccessorProxy k
+                                    , case Dict.get k translation.pairs of
+                                        Just v ->
+                                            inlineTemplate lang k v
+
+                                        Nothing ->
+                                            inlineTemplate lang k ( Segment.Text <| "Missing key: '" ++ k ++ "'", [] )
+                                    )
+                                )
+                             <|
+                                List.sort <|
+                                    Dict.keys interpolationMap
+                            )
 
                 inlineTemplate : String -> TKey -> TValue -> CG.Expression
                 inlineTemplate lang key value =

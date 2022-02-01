@@ -1,6 +1,7 @@
 module ContentTypes.PropertiesTest exposing (..)
 
 import ContentTypes.Properties as Properties
+import Dict
 import Expect
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
@@ -65,25 +66,25 @@ converterTests =
         [ test "single key value pair" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop", "name" ], "value" ) ]
-                    |> Expect.equal (Ok [ ( "propName", ( Text "value", [] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "propName", ( Text "value", [] ) ) ])
         , test "empty value" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop", "name" ], "" ) ]
-                    |> Expect.equal (Ok [ ( "propName", ( Text "", [] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "propName", ( Text "", [] ) ) ])
         , test "single placeholder" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop" ], "hi {name}" ) ]
-                    |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
         , test "multiple placeholders" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop" ], "hi {name} {abc}." ) ]
-                    |> Expect.equal (Ok [ ( "prop", ( Text "hi ", [ Interpolation "name", Text " ", Interpolation "abc", Text "." ] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "prop", ( Text "hi ", [ Interpolation "name", Text " ", Interpolation "abc", Text "." ] ) ) ])
         , test "multiple pairs" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop1" ], "val1" ), ( [ "prop2" ], "val2" ) ]
-                    |> Expect.equal (Ok [ ( "prop1", ( Text "val1", [] ) ), ( "prop2", ( Text "val2", [] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "prop1", ( Text "val1", [] ) ), ( "prop2", ( Text "val2", [] ) ) ])
         , test "escaping { with double quote or single quote" <|
             \_ ->
                 Properties.propertiesToInternalRep [ ( [ "prop1" ], "\"{\" '{'" ) ]
-                    |> Expect.equal (Ok [ ( "prop1", ( Text "{ {", [] ) ) ])
+                    |> Expect.equal (Ok <| Dict.fromList [ ( "prop1", ( Text "{ {", [] ) ) ])
         ]

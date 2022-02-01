@@ -95,11 +95,11 @@ addLanguageRelatedDeclsUnique :
     Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState any, file : CG.File }
     -> Unique.UniqueNameContext { ctx | names : Names, state : NonEmptyState any, file : CG.File }
 addLanguageRelatedDeclsUnique =
-    Unique.map <|
-        \ctx ->
+    Unique.mapWithScope <|
+        \lookup ctx ->
             let
                 ( decls, exposes ) =
-                    languageRelatedDecls ctx.names (State.getLanguages ctx.state)
+                    languageRelatedDecls lookup ctx.names (State.getLanguages ctx.state)
             in
             { ctx | file = ctx.file |> addDeclarations decls |> addExposings exposes }
 
@@ -114,12 +114,12 @@ finishFile file =
     }
 
 
-languageRelatedDecls : Names -> List String -> ( List CG.Declaration, List CG.TopLevelExpose )
-languageRelatedDecls names languages =
+languageRelatedDecls : (String -> String) -> Names -> List String -> ( List CG.Declaration, List CG.TopLevelExpose )
+languageRelatedDecls lookup names languages =
     ( [ languageTypeDecl names languages
       , languagesDecl names languages
-      , languageToStringDecl names languages
-      , languageFromStringDecl names languages
+      , languageToStringDecl lookup names languages
+      , languageFromStringDecl lookup names languages
       ]
     , [ CG.openTypeExpose names.languageTypeName
       , CG.funExpose names.languagesName
@@ -143,42 +143,42 @@ languagesDecl names languages =
         (CG.list <| List.map (String.Extra.classify >> CG.val) <| List.sort languages)
 
 
-languageToStringDecl : Names -> List String -> CG.Declaration
-languageToStringDecl names languages =
+languageToStringDecl : (String -> String) -> Names -> List String -> CG.Declaration
+languageToStringDecl lookup names languages =
     CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Convert a `Language` to its `String` representation."))
         (Just <| CG.funAnn (CG.typed names.languageTypeName []) CG.stringAnn)
         names.languageToStringFunName
-        [ CG.varPattern "lang_" ]
-        (CG.caseExpr (CG.val "lang_") <|
+        [ CG.varPattern <| lookup "lang" ]
+        (CG.caseExpr (CG.val <| lookup "lang") <|
             List.map (\lang -> ( CG.namedPattern (String.Extra.classify lang) [], CG.string lang )) languages
         )
 
 
-languageFromStringDecl : Names -> List String -> CG.Declaration
-languageFromStringDecl names languages =
+languageFromStringDecl : (String -> String) -> Names -> List String -> CG.Declaration
+languageFromStringDecl lookup names languages =
     CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Maybe parse a `Language` from a `String`. 
 This will map languages based on the prefix i.e. 'en-US' and 'en' will both map to 'En' unless you provided a 'en-US' translation file."""))
         (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed names.languageTypeName []))
         names.languageFromStringFunName
-        [ CG.varPattern "lang" ]
+        [ CG.varPattern <| lookup "lang" ]
     <|
         CG.letExpr
-            [ CG.letFunction "helper" [ CG.varPattern "langs" ] <|
+            [ CG.letFunction (lookup "helper") [ CG.varPattern <| lookup "langs" ] <|
                 CG.caseExpr
-                    (CG.val "langs")
+                    (CG.val <| lookup "langs")
                     [ ( CG.listPattern [], CG.fqVal [ "Maybe" ] "Nothing" )
-                    , ( CG.unConsPattern (CG.varPattern "l") (CG.varPattern "ls")
+                    , ( CG.unConsPattern (CG.varPattern <| lookup "l") (CG.varPattern <| lookup "ls")
                       , CG.ifExpr
                             (CG.apply
                                 [ CG.fqFun [ "String" ] "startsWith"
-                                , CG.parens <| CG.apply [ CG.val names.languageToStringFunName, CG.val "l" ]
-                                , CG.val "lang"
+                                , CG.parens <| CG.apply [ CG.val names.languageToStringFunName, CG.val <| lookup "l" ]
+                                , CG.val <| lookup "lang"
                                 ]
                             )
-                            (CG.apply [ CG.fqVal [ "Maybe" ] "Just", CG.val "l" ])
-                            (CG.apply [ CG.val "helper", CG.val "ls" ])
+                            (CG.apply [ CG.fqVal [ "Maybe" ] "Just", CG.val <| lookup "l" ])
+                            (CG.apply [ CG.val "helper", CG.val <| lookup "ls" ])
                       )
                     ]
             ]
         <|
-            CG.apply [ CG.val "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]
+            CG.apply [ CG.val <| lookup "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]

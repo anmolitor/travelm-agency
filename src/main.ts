@@ -1,3 +1,4 @@
+import cp from "child_process";
 import fs from "fs";
 import intl_proxy from "intl-proxy";
 import path from "path";
@@ -125,6 +126,32 @@ export const finishModule = ({
     devMode
   );
 
+// This function should not be necessary once https://github.com/the-sett/elm-syntax-dsl/issues/42 is fixed.
+const runElmFormat = async (code: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const elmFormatProcess = cp.spawn(
+      "npm",
+      ["exec", "elm-format", "--", "--stdin"],
+      { shell: true, stdio: "pipe" }
+    );
+    elmFormatProcess.stderr.pipe(process.stderr);
+
+    let formattedCode = "";
+    elmFormatProcess.stdout.on("data", (chunk) => {
+      formattedCode += chunk;
+    });
+    elmFormatProcess.stdout.on("end", () => {
+      elmFormatProcess.kill();
+      resolve(formattedCode);
+    });
+    elmFormatProcess.on("error", (err) => {
+      reject(err);
+    });
+
+    elmFormatProcess.stdin.write(code);
+    elmFormatProcess.stdin.end();
+  });
+
 export const run = async (options: Options) => {
   const { elmPath, translationDir, generatorMode, addContentHash, devMode } =
     options;
@@ -144,7 +171,7 @@ export const run = async (options: Options) => {
     devMode,
   });
 
-  const elmPromise = writeFile(elmPath, elmFile);
+  const elmPromise = writeFile(elmPath, await runElmFormat(elmFile));
   let jsonPromises: Promise<void>[] = [];
   if (options.generatorMode === "dynamic") {
     jsonPromises = optimizedJson.map(({ filename, content }) =>

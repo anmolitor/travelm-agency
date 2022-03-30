@@ -17,7 +17,7 @@
       "elm-community/string-extra": "4.0.1",
       "robinheghan/fnv1a": "1.0.0",
       "rtfeldman/elm-iso8601-date-strings": "1.1.4",
-      "stil4m/elm-syntax": "7.2.8",
+      "stil4m/elm-syntax": "7.2.9",
       "the-sett/elm-syntax-dsl": "5.3.0",
       "turboMaCk/non-empty-list-alias": "1.2.0"
     },

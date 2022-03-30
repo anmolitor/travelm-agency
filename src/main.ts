@@ -124,7 +124,10 @@ export const finishModule = ({
         });
       }),
     devMode
-  );
+  ).then(async ({ elmFile, optimizedJson }) => ({
+    elmFile: await runElmFormat(elmFile),
+    optimizedJson,
+  }));
 
 // This function should not be necessary once https://github.com/the-sett/elm-syntax-dsl/issues/42 is fixed.
 const runElmFormat = async (code: string): Promise<string> =>
@@ -171,7 +174,7 @@ export const run = async (options: Options) => {
     devMode,
   });
 
-  const elmPromise = writeFile(elmPath, await runElmFormat(elmFile));
+  const elmPromise = writeFile(elmPath, elmFile);
   let jsonPromises: Promise<void>[] = [];
   if (options.generatorMode === "dynamic") {
     jsonPromises = optimizedJson.map(({ filename, content }) =>

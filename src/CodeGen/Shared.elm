@@ -2,7 +2,6 @@ module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExp
 
 import CodeGen.Utils
 import Elm.CodeGen as CG
-import Elm.Syntax.Declaration exposing (Declaration)
 import Elm.Syntax.Exposing as Exposing
 import Elm.Syntax.Module exposing (Module(..))
 import Elm.Syntax.Node as Node
@@ -119,7 +118,7 @@ languageRelatedDecls lookup names languages =
     ( [ languageTypeDecl names languages
       , languagesDecl names languages
       , languageToStringDecl lookup names languages
-      , languageFromStringDecl lookup names languages
+      , languageFromStringDecl lookup names
       ]
     , [ CG.openTypeExpose names.languageTypeName
       , CG.funExpose names.languagesName
@@ -154,8 +153,8 @@ languageToStringDecl lookup names languages =
         )
 
 
-languageFromStringDecl : (String -> String) -> Names -> List String -> CG.Declaration
-languageFromStringDecl lookup names languages =
+languageFromStringDecl : (String -> String) -> Names -> CG.Declaration
+languageFromStringDecl lookup names =
     CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Maybe parse a `Language` from a `String`. 
 This will map languages based on the prefix i.e. 'en-US' and 'en' will both map to 'En' unless you provided a 'en-US' translation file."""))
         (Just <| CG.funAnn CG.stringAnn (CG.maybeAnn <| CG.typed names.languageTypeName []))

@@ -10,9 +10,7 @@ import Intl exposing (Intl)
 import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
-import Set
-import State exposing (State, TranslationSet, Translations)
-import Types.UniqueName as UniqueName
+import State exposing (State)
 import Util
 
 

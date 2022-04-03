@@ -23,7 +23,6 @@ import Types.Features as Features
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Types.UniqueName as Unique
-import Util
 
 
 type alias WithCtx ctx =
@@ -557,7 +556,7 @@ encodeSegment segment =
                     ++ "|"
                     ++ encodeCaseOptions otherOptions
 
-        Segment.PluralCase var opts default otherOptions ->
+        Segment.PluralCase var _ default otherOptions ->
             wrapVar <|
                 "P"
                     ++ var

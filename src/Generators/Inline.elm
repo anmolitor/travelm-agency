@@ -224,9 +224,6 @@ addI18nInstances =
     Unique.andThen3 "data" "intl" "n" <|
         \lookup ctx dataName intlName numName ->
             let
-                languages =
-                    State.getLanguages ctx.state
-
                 interpolationMap =
                     State.interpolationMap translationSet
 

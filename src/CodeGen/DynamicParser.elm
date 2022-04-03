@@ -7,7 +7,6 @@ import Elm.Syntax.Expression as Expr
 import Elm.Syntax.Infix as Infix
 import Elm.Syntax.Node exposing (Node(..))
 import Elm.Syntax.Range exposing (emptyRange)
-import Generators.Inline exposing (WithCtx)
 import Generators.Names exposing (Names)
 import Parser exposing (..)
 import State

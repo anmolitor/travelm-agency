@@ -8,7 +8,7 @@ This package is a library and an executable to generate Elm Modules from differe
 
 [none]
 * ✔️ Supports .json, .ftl (with access to the Browsers Intl API with Elm 0.19!) and .properties files as input
-* 🕵️‍♂️ Errors out if i18n keys are inconsistent across languages
+* 🕵️‍♂️ Errors out if i18n keys are inconsistent across languages (unless you explicitely specify a fallback language)
 * 🚀 Key length and placeholder length do not impact resource size 
 * ✨ Generates Elm functions for values with placeholders
 * 🔑 Generated Elm module exposes functions based on keys
@@ -132,6 +132,9 @@ xref:docs/Optimization.adoc[here].
 Comments are not allowed. Placeholders use {curly-bracket} syntax, 
 if you want a literal "{" use "\{" to escape it. No multiline support.
 
+To disable missing key detection and default missing keys to some other of your languages,
+you can use { "--fallback-language": "{your language key, i.e. 'en'}" } as a top-level key.
+
 | Properties a| Needs to be a newline seperated list of key value pairs (seperated by "="). Whitespace before and after the "=" is ignored. You may break your value into multiple lines by ending every line but the last with "\". Example:
 
 [source, properties]
@@ -147,9 +150,18 @@ if you want a literal "{" use "\{" to escape it. No multiline support.
 ----
 
 Lines leading with "#" are treated as comments.
+
 Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use "{" or '{', similarily use "'" for the literal single quote and '"' for the literal double quote.
 
-| Fluent a| See https://projectfluent.org[Fluent Homepage] for documentation. At the moment, only a subset of the syntax is supported:
+To disable missing key detection and default missing keys to some other of your languages, you can add a comment to the respective file:
+
+[source, properties]
+----
+# fallback-language: en
+----
+^ this will use the key value pairs of your .en.properties file if any of the current file are missing. 
+
+| Fluent a| See https://projectfluent.org[Fluent Homepage] for documentation. Most of the syntax should be supported:
 
 - Straight up texts
 - Interpolation ({$var}) of runtime variables (also referred to as placeholders in this README)
@@ -161,6 +173,13 @@ Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use 
 - Comments
 - NUMBER and DATETIME function (only with explicit usage)
 - Runtime matching on variables (numbers, gender)
+
+To disable missing key detection and default missing keys to some other of your languages, use the same approach as
+for .properties files: 
+[source, ftl]
+----
+# fallback-language: en
+----
 |===
 
 == 🙄 Why another i18n solution

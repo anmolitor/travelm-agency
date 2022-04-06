@@ -29,15 +29,17 @@ jsonToInternalRep =
     flattenJson
         >> Result.Extra.combineMap
             (\( k, v ) ->
-                case P.run parsePlaceholderString v of
-                    Ok tValue ->
-                        Ok ( Util.keyToName k, tValue )
+                case ( k, P.run parsePlaceholderString v ) of
+                    ( [ "--fallback-language" ], _ ) ->
+                        Ok { pairs = Dict.empty, resources = (), fallback = Just v }
 
-                    Err err ->
+                    ( _, Ok tValue ) ->
+                        Ok { pairs = Dict.singleton (Util.keyToName k) tValue, resources = (), fallback = Nothing }
+
+                    ( _, Err err ) ->
                         Err <| Parser.DeadEnds.deadEndsToString err
             )
-        >> Result.map Dict.fromList
-        >> Result.map fromTranslations
+        >> Result.map State.foldTranslations
 
 
 parsePlaceholderString : Parser Segment.TValue

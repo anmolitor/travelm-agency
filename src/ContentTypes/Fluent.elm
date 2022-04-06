@@ -27,7 +27,7 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, keyword, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translation, Translations)
+import State exposing (Translation)
 import String.Extra
 import Time
 import Types.ArgValue as ArgValue exposing (ArgValue)
@@ -253,7 +253,7 @@ fluentToInternalRep intl language ast_ =
                             True
 
                 CommentResource _ ->
-                    False
+                    True
 
         attrToInternalRep : Attribute -> Result String ( TKey, TValue )
         attrToInternalRep attr =

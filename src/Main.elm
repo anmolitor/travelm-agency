@@ -45,21 +45,9 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotRequest (Ports.AddTranslation req) ->
-            case State.addTranslations model.devMode req.identifier req.language req.content model.state of
-                Ok newState ->
-                    ( { model | state = newState }, Cmd.none )
-
-                Err errMessage ->
-                    ( model
-                    , Ports.respond <|
-                        Err <|
-                            "Inconsistent keys in translations of identifier '"
-                                ++ req.identifier
-                                ++ "' at language '"
-                                ++ req.language
-                                ++ ". "
-                                ++ errMessage
-                    )
+            ( { model | state = State.addTranslations req.identifier req.language req.content model.state }
+            , Cmd.none
+            )
 
         GotRequest (Ports.FinishModule req) ->
             ( model

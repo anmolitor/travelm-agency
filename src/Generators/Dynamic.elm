@@ -16,7 +16,7 @@ import Intl exposing (Intl)
 import Json.Encode as E
 import List.NonEmpty
 import Set
-import State exposing (Identifier, NonEmptyState, OptimizedJson, TranslationSet, Translations)
+import State exposing (Identifier, NonEmptyState, OptimizedJson, Translation, TranslationSet, Translations)
 import String.Extra
 import Types.ArgValue as ArgValue exposing (ArgValue)
 import Types.Features as Features
@@ -284,7 +284,7 @@ addAccessorDeclarations =
                         Dict.NonEmpty.toList ctx.state
                             |> List.concatMap
                                 (\( identifier, translationSet ) ->
-                                    (Dict.NonEmpty.getFirstEntry translationSet |> Tuple.second).pairs
+                                    (Dict.NonEmpty.foldl1 State.combineTranslations translationSet).pairs
                                         |> Dict.toList
                                         |> List.sortBy Tuple.first
                                         |> List.indexedMap (accessorDeclaration identifier)
@@ -484,15 +484,15 @@ toFile context state =
 
 
 optimizeJsonAllLanguages : Bool -> Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
-optimizeJsonAllLanguages addContentHash identifier =
-    Dict.NonEmpty.map <|
-        \language { pairs, fallback } ->
+optimizeJsonAllLanguages addContentHash identifier translationSet =
+    Dict.NonEmpty.map
+        (\language ({ pairs, fallback } as translation) ->
             { pairs = pairs
             , fallback = fallback
             , resources =
                 let
                     content =
-                        optimizeJson pairs |> E.encode 0
+                        completeFallback translationSet translation |> .pairs |> optimizeJson |> E.encode 0
                 in
                 { content = content
                 , filename =
@@ -509,6 +509,32 @@ optimizeJsonAllLanguages addContentHash identifier =
                             ]
                 }
             }
+        )
+        translationSet
+
+
+completeFallback : TranslationSet resources -> Translation resources -> Translation resources
+completeFallback translationSet =
+    let
+        go seenLanguages translation =
+            case translation.fallback of
+                Just lang ->
+                    case ( Dict.NonEmpty.get lang translationSet, Set.member lang seenLanguages ) of
+                        ( Just fallbackTranslation, False ) ->
+                            let
+                                recursiveResult =
+                                    go (Set.insert lang seenLanguages) fallbackTranslation
+                            in
+                            { translation | pairs = Dict.union translation.pairs recursiveResult.pairs }
+
+                        -- Either there was no fallback translation or the fallbacks are mutually recursive
+                        _ ->
+                            translation
+
+                Nothing ->
+                    translation
+    in
+    go Set.empty
 
 
 optimizeJson : Translations -> E.Value

@@ -13,7 +13,7 @@ module Dict.NonEmpty exposing
     , toList
     , toNonEmptyList
     , update
-    , values
+    , values, get
     )
 
 import Dict exposing (Dict)
@@ -32,6 +32,15 @@ singleton k v =
 fromDict : Dict comparable v -> Maybe (NonEmpty comparable v)
 fromDict =
     Dict.toList >> List.NonEmpty.fromList >> Maybe.map fromList
+
+
+get : comparable -> NonEmpty comparable v -> Maybe v
+get k (NonEmpty ( ( firstKey, firstValue ), rest )) =
+    if k == firstKey then
+        Just firstValue
+
+    else
+        Dict.get k rest
 
 
 getFirstEntry : NonEmpty comparable v -> ( comparable, v )

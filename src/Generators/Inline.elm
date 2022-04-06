@@ -286,7 +286,12 @@ addI18nInstances =
                                             inlineTemplate lang k v
 
                                         Nothing ->
-                                            inlineTemplate lang k ( Segment.Text <| "Missing key: '" ++ k ++ "'", [] )
+                                            case translation.fallback of
+                                                Just fallbackLang ->
+                                                    CG.access (CG.val fallbackLang) k
+
+                                                Nothing ->
+                                                    inlineTemplate lang k ( Segment.Text <| "Missing key: '" ++ k ++ "'", [] )
                                     )
                                 )
                              <|

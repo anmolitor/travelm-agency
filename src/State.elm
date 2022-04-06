@@ -164,32 +164,18 @@ allTranslationKeys =
     collectiveTranslationSet >> interpolationMap >> Dict.keys
 
 
-addTranslations : Bool -> Identifier -> Language -> Translation () -> State () -> Result String (State ())
-addTranslations devMode identifier language translations state =
+addTranslations : Identifier -> Language -> Translation () -> State () -> State ()
+addTranslations identifier language translations state =
     let
         insert tset =
             Dict.insert identifier tset state
     in
     case Dict.get identifier state of
         Just translationSet ->
-            case translations.fallback of
-                Just _ ->
-                    insert (Dict.NonEmpty.insert language translations translationSet)
-                        |> Ok
-
-                Nothing ->
-                    case ( devMode, hasSameSignatureAsExistingTranslations translations.pairs translationSet ) of
-                        ( False, Just err ) ->
-                            Err err
-
-                        _ ->
-                            insert (Dict.NonEmpty.insert language translations translationSet)
-                                |> Ok
+            insert (Dict.NonEmpty.insert language translations translationSet)
 
         Nothing ->
-            insert
-                (Dict.NonEmpty.singleton language translations)
-                |> Ok
+            insert (Dict.NonEmpty.singleton language translations)
 
 
 hasSameSignatureAsExistingTranslations : Translations -> TranslationSet () -> Maybe String

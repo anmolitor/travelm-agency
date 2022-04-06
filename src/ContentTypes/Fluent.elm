@@ -817,7 +817,9 @@ commentParser =
         |. spaces
         |= oneOf
             [ succeed FallbackDirective
-                |. keyword "fallback-language:"
+                |. keyword "fallback-language"
+                |. spaces
+                |. token ":"
                 |. spaces
                 |= (getChompedString <| chompWhile (not << (\c -> c == ' ' || c == '\n' || c == '\u{000D}' || c == '\t')))
                 |. chompUntilEndOr "\n"

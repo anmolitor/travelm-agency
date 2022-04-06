@@ -5,13 +5,23 @@ import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translation, Translations)
+import State exposing (Translation)
 import Types.Segment as Segment
 import Util
 
 
 type alias Properties =
-    List ( List String, String )
+    List (Resource ( List String, String ))
+
+
+type Resource a
+    = PropertyResource a
+    | CommentResource Comment
+
+
+type Comment
+    = FallbackDirective String
+    | OtherComment String
 
 
 parseProperties : String -> Result String Properties
@@ -113,6 +123,23 @@ keyValueParser =
         |= valueParser
 
 
+commentParser : Parser Comment
+commentParser =
+    P.succeed identity
+        |. P.spaces
+        |= P.oneOf
+            [ P.succeed FallbackDirective
+                |. P.keyword "fallback-language"
+                |. P.spaces
+                |. P.token ":"
+                |. P.spaces
+                |= (P.getChompedString <| P.chompWhile (not << (\c -> c == ' ' || c == '\n' || c == '\u{000D}' || c == '\t')))
+                |. P.chompUntilEndOr "\n"
+            , P.succeed OtherComment
+                |= (P.getChompedString <| P.chompUntilEndOr "\n")
+            ]
+
+
 propertiesParser : Parser Properties
 propertiesParser =
     P.loop []
@@ -121,8 +148,8 @@ propertiesParser =
                 |. P.spaces
                 |= P.oneOf
                     [ P.succeed (P.Done <| List.reverse st) |. P.end
-                    , P.succeed (P.Loop st) |. P.token "#" |. P.chompWhile ((/=) '\n')
-                    , P.succeed (\kv -> P.Loop <| kv :: st)
+                    , P.succeed (\comment -> P.Loop <| CommentResource comment :: st) |. P.token "#" |= commentParser
+                    , P.succeed (\kv -> P.Loop <| PropertyResource kv :: st)
                         |= keyValueParser
                     ]
         )
@@ -131,14 +158,21 @@ propertiesParser =
 propertiesToInternalRep : Properties -> Result String (Translation ())
 propertiesToInternalRep =
     List.map
-        (\( k, v ) ->
-            case P.run parsePlaceholderString v of
-                Err err ->
-                    Err <| Parser.DeadEnds.deadEndsToString err
+        (\resource ->
+            case resource of
+                PropertyResource ( k, v ) ->
+                    case P.run parsePlaceholderString v of
+                        Err err ->
+                            Err <| Parser.DeadEnds.deadEndsToString err
 
-                Ok val ->
-                    Ok ( Util.keyToName k, val )
+                        Ok val ->
+                            Ok { pairs = Dict.singleton (Util.keyToName k) val, resources = (), fallback = Nothing }
+
+                CommentResource (FallbackDirective fallback) ->
+                    Ok { pairs = Dict.empty, resources = (), fallback = Just fallback }
+
+                _ ->
+                    Ok { pairs = Dict.empty, resources = (), fallback = Nothing }
         )
         >> Result.Extra.combine
-        >> Result.map Dict.fromList
-        >> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })
+        >> Result.map State.foldTranslations

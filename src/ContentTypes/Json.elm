@@ -6,7 +6,7 @@ import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translation, Translations)
+import State exposing (Translation, fromTranslations)
 import Types.Segment as Segment
 import Util
 
@@ -37,7 +37,7 @@ jsonToInternalRep =
                         Err <| Parser.DeadEnds.deadEndsToString err
             )
         >> Result.map Dict.fromList
-        >> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })
+        >> Result.map fromTranslations
 
 
 parsePlaceholderString : Parser Segment.TValue

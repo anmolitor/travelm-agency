@@ -3,6 +3,7 @@ module State exposing (..)
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import List.NonEmpty
+import Maybe.Extra
 import Set
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
@@ -26,6 +27,11 @@ type alias Translation resources =
     , resources : resources
     , fallback : Maybe Language
     }
+
+
+fromTranslations : Translations -> Translation ()
+fromTranslations pairs =
+    { pairs = pairs, resources = (), fallback = Nothing }
 
 
 type alias OptimizedJson =
@@ -61,6 +67,19 @@ collectiveTranslationSet =
         >> List.NonEmpty.foldl1 combineTranslationSets
 
 
+combineTranslations : Translation any -> Translation any -> Translation any
+combineTranslations first second =
+    { pairs = Dict.union first.pairs second.pairs
+    , fallback = Maybe.Extra.or first.fallback second.fallback
+    , resources = first.resources
+    }
+
+
+foldTranslations : List (Translation ()) -> Translation ()
+foldTranslations =
+    List.foldl combineTranslations { pairs = Dict.empty, fallback = Nothing, resources = () }
+
+
 combineTranslationSets : TranslationSet any -> TranslationSet any -> TranslationSet any
 combineTranslationSets t =
     Dict.NonEmpty.toList
@@ -70,10 +89,7 @@ combineTranslationSets t =
                     merge val =
                         case val of
                             Just existing ->
-                                { pairs = Dict.union existing.pairs new.pairs
-                                , resources = existing.resources
-                                , fallback = existing.fallback
-                                }
+                                combineTranslations existing new
 
                             Nothing ->
                                 new

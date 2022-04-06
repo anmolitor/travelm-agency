@@ -24,7 +24,7 @@ import Intl exposing (Intl)
 import Iso8601
 import List.Extra as List
 import List.NonEmpty exposing (NonEmpty)
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, keyword, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
 import State exposing (Translation, Translations)
@@ -41,7 +41,12 @@ type alias AST =
 
 type Resource
     = MessageResource Message
-    | CommentResource String
+    | CommentResource Comment
+
+
+type Comment
+    = FallbackDirective String
+    | OtherComment String
 
 
 noAttrs : { identifier : Identifier, content : NonEmpty Content } -> Resource
@@ -271,22 +276,25 @@ fluentToInternalRep intl language ast_ =
                     (\attr -> { attr | identifier = Util.keyToName [ key, attr.identifier ] })
                     msg.attrs
 
-        resourceToInternalRep : Resource -> Result String (List ( TKey, TValue ))
+        resourceToInternalRep : Resource -> Result String (Translation ())
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
                     msgToAttrs msg
                         |> List.NonEmpty.map attrToInternalRep
                         |> combineMapResultNonEmpty
-                        |> Result.map List.NonEmpty.toList
+                        |> Result.map (List.NonEmpty.toList >> Dict.fromList)
+                        |> Result.map State.fromTranslations
+
+                CommentResource (FallbackDirective fallback) ->
+                    Ok { pairs = Dict.empty, resources = (), fallback = Just fallback }
 
                 CommentResource _ ->
-                    Ok []
+                    Ok { pairs = Dict.empty, resources = (), fallback = Nothing }
     in
     List.filter termFilter ast_
         |> Result.Extra.combineMap resourceToInternalRep
-        |> Result.map (List.concat >> Dict.fromList)
-        |> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })
+        |> Result.map State.foldTranslations
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)
@@ -309,7 +317,7 @@ ast =
                 |> andThen
                     (\_ ->
                         oneOf
-                            [ succeed (\comment -> Loop <| comment :: st) |. token "#" |= map CommentResource (chompUntilEndOr "\n" |> getChompedString)
+                            [ succeed (\comment -> Loop <| comment :: st) |. token "#" |= map CommentResource commentParser
                             , succeed (\msg -> Loop <| msg :: st) |= map MessageResource message
                             , succeed (Done st) |. end
                             ]
@@ -801,6 +809,21 @@ stringLit =
         |= loop [] stringHelp
     )
         |> andThen resultToParser
+
+
+commentParser : Parser Comment
+commentParser =
+    succeed identity
+        |. spaces
+        |= oneOf
+            [ succeed FallbackDirective
+                |. keyword "fallback-language:"
+                |. spaces
+                |= (getChompedString <| chompWhile (not << (\c -> c == ' ' || c == '\n' || c == '\u{000D}' || c == '\t')))
+                |. chompUntilEndOr "\n"
+            , succeed OtherComment
+                |= (getChompedString <| chompUntilEndOr "\n")
+            ]
 
 
 resultToParser : Result String a -> Parser a

@@ -65,7 +65,7 @@ interface InlineOptions {
   translationDir: string;
   addContentHash: boolean;
   devMode: boolean;
-  i18nArgPosition: "first" | "last";
+  i18nArgLast: boolean;
 }
 
 interface DynamicOptions extends InlineOptions {
@@ -95,13 +95,13 @@ export const finishModule = ({
   generatorMode = null,
   addContentHash,
   devMode = false,
-  i18nArgPosition,
+  i18nArgLast = false,
 }: {
   elmPath: string;
   generatorMode?: GeneratorMode | null;
   addContentHash: boolean;
   devMode?: boolean;
-  i18nArgPosition: "first" | "last";
+  i18nArgLast?: boolean;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
@@ -124,7 +124,7 @@ export const finishModule = ({
           elmModuleName,
           generatorMode,
           addContentHash,
-          i18nArgPosition,
+          i18nArgLast,
         });
       }),
     devMode
@@ -166,7 +166,7 @@ export const run = async (options: Options) => {
     generatorMode,
     addContentHash,
     devMode,
-    i18nArgPosition,
+    i18nArgLast,
   } = options;
   const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
     path.resolve(translationDir, fileName)
@@ -182,7 +182,7 @@ export const run = async (options: Options) => {
     generatorMode,
     addContentHash,
     devMode,
-    i18nArgPosition,
+    i18nArgLast,
   });
 
   const elmPromise = writeFile(elmPath, elmFile);

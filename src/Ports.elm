@@ -143,21 +143,7 @@ finishRequestDecoder =
         |> D.required "elmModuleName" D.string
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
         |> D.optional "addContentHash" D.bool False
-        |> D.required "i18nArgPosition" i18nArgPositionDecoder
-
-
-i18nArgPositionDecoder : D.Decoder Bool
-i18nArgPositionDecoder =
-    D.string
-        |> D.map
-            (\str ->
-                case str of
-                    "last" ->
-                        True
-
-                    _ ->
-                        False
-            )
+        |> D.optional "i18nArgLast" D.bool False
 
 
 type alias InternalRequest =

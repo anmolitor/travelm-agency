@@ -36,12 +36,11 @@ const { hideBin } = require("yargs/helpers");
             type: "boolean",
             default: false,
           })
-          .option("i18n_arg_position", {
+          .option("i18n_arg_last", {
             description:
-              "Where the i18n parameter in the generated functions is",
-            type: "string",
-            choices: ["first", "last"],
-            default: "first",
+              "Pass the i18n instance as the last parameter to the generated function (opposed to it being the first)",
+            type: "boolean",
+            default: false,
           })
           .option("devMode", {
             description: "Disable completeness check for i18n keys",
@@ -65,7 +64,7 @@ const { hideBin } = require("yargs/helpers");
     generatorMode: args.inline ? "inline" : "dynamic",
     addContentHash: args.hash,
     devMode: args.devMode,
-    i18nArgPosition: args.i18n_arg_position,
+    i18nArgLast: args.i18n_arg_last,
   });
 })();
 

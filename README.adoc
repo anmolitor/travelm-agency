@@ -52,7 +52,6 @@ and then run that script with `npm run [scriptname]`.
 
 For more information on command line options, run `npx travelm-agency --help`.
 
-
 === 📦 Usage as a node module
 
 If you need more customizable behaviour, or need to embed this inside a more complex script or plugin, you can import this module 
@@ -161,8 +160,7 @@ Placeholders use {curly-bracket} syntax, if you want a literal "{", you can use 
 - Attributes
 - Comments
 - NUMBER and DATETIME function (only with explicit usage)
-
-Runtime matching on variables (numbers, gender) is not supported yet.
+- Runtime matching on variables (numbers, gender)
 |===
 
 == 🙄 Why another i18n solution

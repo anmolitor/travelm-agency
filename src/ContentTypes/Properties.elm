@@ -1,4 +1,4 @@
-module ContentTypes.Properties exposing (keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser)
+module ContentTypes.Properties exposing (Comment(..), Resource(..), keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser)
 
 import Dict
 import List.NonEmpty

@@ -18,7 +18,7 @@ suite =
             \_ ->
                 Dict.NonEmpty.singleton
                     "de"
-                    { pairs = Dict.fromList [ ( "key", ( Segment.Interpolation "a", [] ) ) ], resources = () }
+                    { pairs = Dict.fromList [ ( "key", ( Segment.Interpolation "a", [] ) ) ], resources = (), fallback = Nothing }
                     |> State.interpolationMap
                     |> Dict.get "key"
                     |> Expect.equal (Just <| Dict.singleton "a" InterpolationKind.Simple)
@@ -32,6 +32,7 @@ suite =
                             , ( "key2", ( Segment.Interpolation "b", [] ) )
                             ]
                     , resources = ()
+                    , fallback = Nothing
                     }
                     |> State.interpolationMap
                     |> Expect.equalDicts
@@ -49,6 +50,7 @@ suite =
                                 [ ( "key", ( Segment.Interpolation "a", [] ) )
                                 ]
                         , resources = ()
+                        , fallback = Nothing
                         }
                       )
                     , [ ( "en"
@@ -57,6 +59,7 @@ suite =
                                     [ ( "key", ( Segment.Text "no interpolation", [] ) )
                                     ]
                           , resources = ()
+                          , fallback = Nothing
                           }
                         )
                       ]
@@ -76,6 +79,7 @@ suite =
                                 [ ( "key", ( Segment.Interpolation "a", [ Segment.Interpolation "b" ] ) )
                                 ]
                         , resources = ()
+                        , fallback = Nothing
                         }
                       )
                     , [ ( "en"
@@ -84,6 +88,7 @@ suite =
                                     [ ( "key", ( Segment.Interpolation "c", [ Segment.Interpolation "b" ] ) )
                                     ]
                           , resources = ()
+                          , fallback = Nothing
                           }
                         )
                       ]
@@ -114,6 +119,7 @@ suite =
                                 [ ( "key", ( Segment.Interpolation "a", [ Segment.PluralCase "b" [] ( Segment.Text "text", [] ) Dict.empty ] ) )
                                 ]
                         , resources = ()
+                        , fallback = Nothing
                         }
                       )
                     , [ ( "en"
@@ -122,6 +128,7 @@ suite =
                                     [ ( "key", ( Segment.PluralCase "a" [] ( Segment.Text "text", [] ) Dict.empty, [ Segment.Interpolation "b" ] ) )
                                     ]
                           , resources = ()
+                          , fallback = Nothing
                           }
                         )
                       ]

@@ -4,6 +4,7 @@ import ContentTypes.Fluent as F
 import Dict
 import Expect
 import Parser
+import State
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
 import Util exposing (emptyIntl)
@@ -241,19 +242,19 @@ toInternalRepConverterTests =
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some text", [] ) } ]
                     |> F.fluentToInternalRep emptyIntl "en"
-                    |> Expect.equal (Ok <| Dict.fromList [ ( "msg", ( Text "some text", [] ) ) ])
+                    |> Expect.equal (Ok <| State.fromTranslations <| Dict.fromList [ ( "msg", ( Text "some text", [] ) ) ])
         , test "single message with interpolation" <|
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some ", [ F.PlaceableContent (F.VarRef "name") ] ) } ]
                     |> F.fluentToInternalRep emptyIntl "en"
-                    |> Expect.equal (Ok <| Dict.fromList [ ( "msg", ( Text "some ", [ Interpolation "name" ] ) ) ])
+                    |> Expect.equal (Ok <| State.fromTranslations <| Dict.fromList [ ( "msg", ( Text "some ", [ Interpolation "name" ] ) ) ])
         , test "single message with term reference" <|
             \_ ->
                 [ F.noAttrs { identifier = F.TermIdentifier "term", content = ( F.TextContent "World", [] ) }
                 , F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "Hello ", [ F.PlaceableContent (F.TermRef "term" []) ] ) }
                 ]
                     |> F.fluentToInternalRep emptyIntl "en"
-                    |> Expect.equal (Ok <| Dict.fromList [ ( "msg", ( Text "Hello World", [] ) ) ])
+                    |> Expect.equal (Ok <| State.fromTranslations <| Dict.fromList [ ( "msg", ( Text "Hello World", [] ) ) ])
         , test "errors out on term recursion" <|
             \_ ->
                 [ F.noAttrs { identifier = F.TermIdentifier "term1", content = ( F.PlaceableContent (F.TermRef "term2" []), [] ) }
@@ -290,7 +291,7 @@ toInternalRepConverterTests =
                     }
                 ]
                     |> F.fluentToInternalRep emptyIntl "en"
-                    |> Expect.equal (Ok <| Dict.fromList [ ( "msg", ( Text "text: hi worldCost: 420.69", [] ) ) ])
+                    |> Expect.equal (Ok <| State.fromTranslations <| Dict.fromList [ ( "msg", ( Text "text: hi worldCost: 420.69", [] ) ) ])
         , test "attributes get converted to extra keys" <|
             \_ ->
                 [ F.MessageResource
@@ -305,10 +306,11 @@ toInternalRepConverterTests =
                     |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal
                         (Ok <|
-                            Dict.fromList
-                                [ ( "msg", ( Text "some text", [] ) )
-                                , ( "msgTitle", ( Text "multiline\ntitle", [] ) )
-                                , ( "msgBody", ( Text "somebody\n   once\ntold ", [ Interpolation "person" ] ) )
-                                ]
+                            State.fromTranslations <|
+                                Dict.fromList
+                                    [ ( "msg", ( Text "some text", [] ) )
+                                    , ( "msgTitle", ( Text "multiline\ntitle", [] ) )
+                                    , ( "msgBody", ( Text "somebody\n   once\ntold ", [ Interpolation "person" ] ) )
+                                    ]
                         )
         ]

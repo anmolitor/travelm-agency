@@ -22,7 +22,11 @@ suite =
                     |> Expect.equal
                         (Ok <|
                             AddTranslation
-                                { content = Dict.fromList [ ( "demoKey", ( Segment.Text "demoValue", [] ) ) ]
+                                { content =
+                                    { pairs = Dict.fromList [ ( "demoKey", ( Segment.Text "demoValue", [] ) ) ]
+                                    , fallback = Nothing
+                                    , resources = ()
+                                    }
                                 , identifier = "demo"
                                 , language = "en"
                                 }
@@ -34,7 +38,7 @@ suite =
   "elmModuleName": "Test.elm",
   "generatorMode": "inline",
   "addContentHash": true,
-  "i18nArgPosition": "last"
+  "i18nArgLast": true
 }"""
                     |> Expect.equal
                         (Ok <|

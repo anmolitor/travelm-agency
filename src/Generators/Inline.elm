@@ -1,6 +1,7 @@
 module Generators.Inline exposing (..)
 
 import CodeGen.Shared as Shared exposing (Context, endoAnn, intlAnn)
+import CodeGen.Utils
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
@@ -24,6 +25,7 @@ type alias WithCtx ctx =
         , intl : Intl
         , state : NonEmptyState ()
         , file : CG.File
+        , i18nArgLast : Bool
     }
 
 
@@ -51,6 +53,7 @@ toFileUnique =
             , intl = ctx.intl
             , state = ctx.state
             , file = ctx.file
+            , i18nArgLast = ctx.i18nArgLast
             , lookupAccessor = lookupAccessor
             , lookupAccessorProxy = lookupAccessorProxy
             }
@@ -176,6 +179,7 @@ addI18nTypeDeclarations unCtx =
             , intl = ctx.intl
             , names = ctx.names
             , state = ctx.state
+            , i18nArgLast = ctx.i18nArgLast
             , lookupAccessor = ctx.lookupAccessor
             , lookupAccessorProxy = ctx.lookupAccessorProxy
             , i18nProxyName = wrappedI18nTypeName
@@ -187,26 +191,54 @@ addI18nTypeDeclarations unCtx =
 addAccessorDeclarations : Unique.UniqueNameContext (WithAccessors (WithCtx ctx)) -> Unique.UniqueNameContext (WithAccessors (WithCtx ctx))
 addAccessorDeclarations =
     Unique.scoped <|
-        Unique.andThen2 "i18n" "intl" <|
-            \_ ctx i18nName intlName ->
+        Unique.andThen3 "i18n" "intl" "data" <|
+            \_ ctx i18nName intlName dataName ->
                 let
                     accessorDeclForKey : TKey -> CG.Declaration
                     accessorDeclForKey key =
+                        let
+                            i18nPattern =
+                                if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                                    CG.tuplePattern [ CG.varPattern i18nName, CG.varPattern intlName ]
+
+                                else
+                                    CG.varPattern i18nName
+
+                            patterns =
+                                if ctx.i18nArgLast then
+                                    [ CG.varPattern dataName, i18nPattern ]
+
+                                else
+                                    [ i18nPattern ]
+
+                            declarationWithoutArgs =
+                                if State.isIntlNeededForKey key ctx.state then
+                                    CG.apply [ CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key), CG.val intlName ]
+
+                                else
+                                    CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key)
+
+                            declaration =
+                                if ctx.i18nArgLast then
+                                    CG.apply [ declarationWithoutArgs, CG.val dataName ]
+
+                                else
+                                    declarationWithoutArgs
+                        in
                         CG.funDecl Nothing
-                            (Just <| CG.funAnn (CG.typed ctx.names.i18nTypeName []) (translationToRecordTypeAnn ctx.state key))
-                            (ctx.lookupAccessor key)
-                            [ if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
-                                CG.tuplePattern [ CG.varPattern i18nName, CG.varPattern intlName ]
+                            (Just <|
+                                (if ctx.i18nArgLast then
+                                    CodeGen.Utils.funAnnArgLast
 
-                              else
-                                CG.varPattern i18nName
-                            ]
-                            (if State.isIntlNeededForKey key ctx.state then
-                                CG.apply [ CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key), CG.val intlName ]
-
-                             else
-                                CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key)
+                                 else
+                                    CG.funAnn
+                                )
+                                    (CG.typed ctx.names.i18nTypeName [])
+                                    (translationToRecordTypeAnn ctx.state key)
                             )
+                            (ctx.lookupAccessor key)
+                            patterns
+                            declaration
 
                     accessorDecls =
                         State.allTranslationKeys ctx.state
@@ -408,7 +440,12 @@ toFile context state =
         |> Names.withUniqueNames (Dict.NonEmpty.keys state)
             context.names
             (\names _ ->
-                { intl = context.intl, state = state, file = Shared.emptyFile context, names = names }
+                { intl = context.intl
+                , state = state
+                , file = Shared.emptyFile context
+                , names = names
+                , i18nArgLast = context.i18nArgLast
+                }
             )
         |> toFileUnique
 

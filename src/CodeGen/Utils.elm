@@ -1,4 +1,4 @@
-module CodeGen.Utils exposing (dictToImports, extractImports, declName)
+module CodeGen.Utils exposing (declName, dictToImports, extractImports, funAnnArgLast)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -44,6 +44,24 @@ declName decl =
         Destructuring _ _ ->
             -- Cannot be top level
             Nothing
+
+
+{-| Put an argument as the last argument to a function (or return value).
+
+    For example:
+    funArgLast [Bool] [String] === [Bool -> String] === funAnn [Bool] [String]
+    funArgLast [Bool] [Int -> String] === [Int -> Bool -> String]
+    funArgLast [Bool] [Int -> () -> String] === [Int -> () -> Bool -> String]
+
+-}
+funAnnArgLast : CG.TypeAnnotation -> CG.TypeAnnotation -> CG.TypeAnnotation
+funAnnArgLast toPlaceLast funType =
+    case funType of
+        Ann.FunctionTypeAnnotation arg ret ->
+            CG.funAnn (Node.value arg) <| funAnnArgLast toPlaceLast (Node.value ret)
+
+        _ ->
+            CG.funAnn toPlaceLast funType
 
 
 dictToImports : Dict CG.ModuleName (Set String) -> List CG.Import

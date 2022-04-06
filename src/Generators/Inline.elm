@@ -288,7 +288,7 @@ addI18nInstances =
                                         Nothing ->
                                             case translation.fallback of
                                                 Just fallbackLang ->
-                                                    CG.access (CG.val fallbackLang) k
+                                                    CG.access (CG.val fallbackLang) (ctx.lookupAccessorProxy k)
 
                                                 Nothing ->
                                                     inlineTemplate lang k ( Segment.Text <| "Missing key: '" ++ k ++ "'", [] )

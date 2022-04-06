@@ -35,4 +35,5 @@ matchOnNumbers = Example 9: { NUMBER($amount) ->
   [one] I drank a single beer
   *[other] I drank {$amount} beers
   }
-  
+
+fallback = Example 10: The #fallback-language comment makes other languages show this text  

@@ -1,3 +1,5 @@
+# fallback-language: de
+
 -static-terms = termes statiques
 staticTermKey = Exemple 1 : {-static-terms} sont pris en charge.
 -dynamic-terms = termes {$adjective} dynamique

@@ -1,3 +1,4 @@
+# fallback-language: en
 
 -static-terms = Statische Terme
 staticTermKey = Beispiel 1: {-static-terms} sind unterstützt.

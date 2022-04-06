@@ -82,6 +82,7 @@ view ({ i18n } as model) =
             [ text <| I18n.matchOnNumbers i18n <| toFloat model.number
             , button [ class <| "add_number", onClick <| ChangedNumber (model.number + 1) ] [ text "+1" ]
             ]
+        , div [class "row fallback" ] [ text <| I18n.fallback i18n ]
         ]
     }
 

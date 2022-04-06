@@ -14,6 +14,7 @@ declare module "*elm.min.js" {
     elmModuleName: string;
     generatorMode: GeneratorMode | null;
     addContentHash: boolean | null;
+    i18nArgPosition: "first" | "last";
   }
 
   export interface Response {

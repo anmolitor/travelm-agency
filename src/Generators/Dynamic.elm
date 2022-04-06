@@ -31,6 +31,7 @@ type alias WithCtx ctx =
         , intl : Intl
         , state : NonEmptyState OptimizedJson
         , file : CG.File
+        , i18nArgLast : Bool
     }
 
 
@@ -53,7 +54,13 @@ toFileUnique =
     in
     Unique.combineAndThen getKeySet
         (\_ ctx lookup ->
-            { names = ctx.names, intl = ctx.intl, state = ctx.state, file = ctx.file, lookupAccessor = lookup }
+            { names = ctx.names
+            , intl = ctx.intl
+            , state = ctx.state
+            , i18nArgLast = ctx.i18nArgLast
+            , file = ctx.file
+            , lookupAccessor = lookup
+            }
         )
         >> Unique.combineAndThen (getIdentifierSet >> Set.map ((++) "languageToFileName_"))
             (\_ ctx lookup ->
@@ -61,6 +68,7 @@ toFileUnique =
                 , intl = ctx.intl
                 , state = ctx.state
                 , file = ctx.file
+                , i18nArgLast = ctx.i18nArgLast
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = (++) "languageToFileName_" >> lookup
                 }
@@ -72,6 +80,7 @@ toFileUnique =
                 , intl = ctx.intl
                 , state = ctx.state
                 , file = ctx.file
+                , i18nArgLast = ctx.i18nArgLast
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
                 , fallbackValueName = fallbackValueName
@@ -203,18 +212,30 @@ addAccessorDeclarations =
                                     many ->
                                         List.map (\( name, _ ) -> CG.access (CG.val dataName) name) many
 
+                            orderTypeSignature templateArgsType =
+                                if ctx.i18nArgLast then
+                                    CG.stringAnn
+                                        |> CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+                                        |> CG.funAnn templateArgsType
+
+                                else
+                                    CG.stringAnn
+                                        |> CG.funAnn templateArgsType
+                                        |> CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+
                             typeAnn =
                                 case placeholders of
                                     [] ->
-                                        CG.stringAnn
+                                        CG.funAnn (CG.typed ctx.names.i18nTypeName []) CG.stringAnn
 
                                     [ ( _, kind ) ] ->
-                                        CG.funAnn (InterpolationKind.toTypeAnn kind) CG.stringAnn
+                                        orderTypeSignature (InterpolationKind.toTypeAnn kind)
 
                                     many ->
                                         many
                                             |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
-                                            |> (\fields -> CG.funAnn (CG.extRecordAnn "a" fields) CG.stringAnn)
+                                            |> CG.extRecordAnn "a"
+                                            |> orderTypeSignature
 
                             aliasPatternIfNotEmptyPlaceholders =
                                 if List.isEmpty placeholders then
@@ -222,18 +243,25 @@ addAccessorDeclarations =
 
                                 else
                                     \pat -> CG.asPattern pat i18nName
+
+                            i18nPattern =
+                                if needsIntl then
+                                    aliasPatternIfNotEmptyPlaceholders (CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ], CG.allPattern, CG.allPattern ])
+
+                                else
+                                    CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ] ]
+
+                            patterns =
+                                if ctx.i18nArgLast then
+                                    placeholderPatterns ++ [ i18nPattern ]
+
+                                else
+                                    i18nPattern :: placeholderPatterns
                         in
                         CG.funDecl Nothing
-                            (Just <| CG.funAnn (CG.typed ctx.names.i18nTypeName []) typeAnn)
+                            (Just typeAnn)
                             key
-                            ((if needsIntl then
-                                aliasPatternIfNotEmptyPlaceholders (CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ], CG.allPattern, CG.allPattern ])
-
-                              else
-                                CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ] ]
-                             )
-                                :: placeholderPatterns
-                            )
+                            patterns
                             (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]
                                   , if List.isEmpty placeholderFunctionArguments then
@@ -441,7 +469,12 @@ toFile context state =
         |> Names.withUniqueNames (Dict.NonEmpty.keys state)
             context.names
             (\names _ ->
-                { intl = context.intl, state = state, file = Shared.emptyFile context, names = names }
+                { intl = context.intl
+                , state = state
+                , file = Shared.emptyFile context
+                , names = names
+                , i18nArgLast = context.i18nArgLast
+                }
             )
         |> toFileUnique
 

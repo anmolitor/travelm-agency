@@ -18,6 +18,7 @@ type alias Context =
     , moduleName : CG.ModuleName
     , names : Names
     , intl : Intl
+    , i18nArgLast : Bool
     }
 
 

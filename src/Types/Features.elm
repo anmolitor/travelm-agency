@@ -1,10 +1,10 @@
-module Types.Features exposing (Feature(..), Features, addFeature, default, isActive, combineMap, combine)
+module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, isActive)
 
-{-| Conditionals that change the output of the code generator
+{-| Conditionals that change the output of the code generator that are inferred by the given translation files
 
     Intl : Need dependency on the intl-proxy package. Allows for usage of the Browsers Intl API in generated code.
 
-    Debug : Change default values to show errors when they happen.
+    Debug : Change default values to show errors when they happen. (TODO)
 
 -}
 

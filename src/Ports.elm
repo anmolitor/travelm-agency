@@ -70,7 +70,7 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool }
+    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool, i18nArgLast : Bool }
 
 
 subToRequests : Intl -> (Result D.Error Request -> msg) -> Sub msg
@@ -143,6 +143,21 @@ finishRequestDecoder =
         |> D.required "elmModuleName" D.string
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
         |> D.optional "addContentHash" D.bool False
+        |> D.required "i18nArgPosition" i18nArgPositionDecoder
+
+
+i18nArgPositionDecoder : D.Decoder Bool
+i18nArgPositionDecoder =
+    D.string
+        |> D.map
+            (\str ->
+                case str of
+                    "last" ->
+                        True
+
+                    _ ->
+                        False
+            )
 
 
 type alias InternalRequest =

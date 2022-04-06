@@ -12,6 +12,7 @@ import Platform
 import Ports exposing (GeneratorMode(..))
 import State exposing (State)
 import Util
+import Types.Features exposing (Feature(..))
 
 
 type alias Flags =
@@ -70,7 +71,7 @@ update msg model =
 
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
-onFinishModule model { generatorMode, elmModuleName, addContentHash } =
+onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast } =
     case Dict.NonEmpty.fromDict model.state of
         Nothing ->
             Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
@@ -83,6 +84,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash } =
                         , version = model.version
                         , names = defaultNames
                         , intl = model.intl
+                        , i18nArgLast = i18nArgLast
                         }
                 in
                 case generatorMode of

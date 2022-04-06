@@ -27,7 +27,7 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translations)
+import State exposing (Translation, Translations)
 import String.Extra
 import Time
 import Types.ArgValue as ArgValue exposing (ArgValue)
@@ -67,7 +67,7 @@ type Content
     | PlaceableContent Placeable
 
 
-fluentToInternalRep : Intl -> String -> AST -> Result String Translations
+fluentToInternalRep : Intl -> String -> AST -> Result String (Translation ())
 fluentToInternalRep intl language ast_ =
     let
         identifierToKey : Identifier -> TKey
@@ -286,6 +286,7 @@ fluentToInternalRep intl language ast_ =
     List.filter termFilter ast_
         |> Result.Extra.combineMap resourceToInternalRep
         |> Result.map (List.concat >> Dict.fromList)
+        |> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)

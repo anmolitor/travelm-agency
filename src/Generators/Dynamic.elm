@@ -486,8 +486,9 @@ toFile context state =
 optimizeJsonAllLanguages : Bool -> Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
 optimizeJsonAllLanguages addContentHash identifier =
     Dict.NonEmpty.map <|
-        \language { pairs } ->
+        \language { pairs, fallback } ->
             { pairs = pairs
+            , fallback = fallback
             , resources =
                 let
                     content =

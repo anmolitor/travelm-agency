@@ -11,8 +11,8 @@ import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
 import State exposing (State)
-import Util
 import Types.Features exposing (Feature(..))
+import Util
 
 
 type alias Flags =

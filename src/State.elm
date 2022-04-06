@@ -24,6 +24,7 @@ type alias Translations =
 type alias Translation resources =
     { pairs : Translations
     , resources : resources
+    , fallback : Maybe Language
     }
 
 
@@ -64,15 +65,18 @@ combineTranslationSets : TranslationSet any -> TranslationSet any -> Translation
 combineTranslationSets t =
     Dict.NonEmpty.toList
         >> List.foldl
-            (\( lang, { pairs, resources } ) acc ->
+            (\( lang, new ) acc ->
                 let
                     merge val =
                         case val of
                             Just existing ->
-                                { pairs = Dict.union existing.pairs pairs, resources = existing.resources }
+                                { pairs = Dict.union existing.pairs new.pairs
+                                , resources = existing.resources
+                                , fallback = existing.fallback
+                                }
 
                             Nothing ->
-                                { pairs = pairs, resources = resources }
+                                new
                 in
                 Dict.NonEmpty.update lang merge acc
             )
@@ -144,7 +148,7 @@ allTranslationKeys =
     collectiveTranslationSet >> interpolationMap >> Dict.keys
 
 
-addTranslations : Bool -> Identifier -> Language -> Translations -> State () -> Result String (State ())
+addTranslations : Bool -> Identifier -> Language -> Translation () -> State () -> Result String (State ())
 addTranslations devMode identifier language translations state =
     let
         insert tset =
@@ -152,17 +156,23 @@ addTranslations devMode identifier language translations state =
     in
     case Dict.get identifier state of
         Just translationSet ->
-            case ( devMode, hasSameSignatureAsExistingTranslations translations translationSet ) of
-                ( False, Just err ) ->
-                    Err err
-
-                _ ->
-                    insert (Dict.NonEmpty.insert language { pairs = translations, resources = () } translationSet)
+            case translations.fallback of
+                Just _ ->
+                    insert (Dict.NonEmpty.insert language translations translationSet)
                         |> Ok
+
+                Nothing ->
+                    case ( devMode, hasSameSignatureAsExistingTranslations translations.pairs translationSet ) of
+                        ( False, Just err ) ->
+                            Err err
+
+                        _ ->
+                            insert (Dict.NonEmpty.insert language translations translationSet)
+                                |> Ok
 
         Nothing ->
             insert
-                (Dict.NonEmpty.singleton language { pairs = translations, resources = () })
+                (Dict.NonEmpty.singleton language translations)
                 |> Ok
 
 

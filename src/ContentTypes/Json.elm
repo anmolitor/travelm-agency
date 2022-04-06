@@ -6,7 +6,7 @@ import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translations)
+import State exposing (Translation, Translations)
 import Types.Segment as Segment
 import Util
 
@@ -24,7 +24,7 @@ type alias FlattenedJson =
     List ( List String, String )
 
 
-jsonToInternalRep : Json -> Result String Translations
+jsonToInternalRep : Json -> Result String (Translation ())
 jsonToInternalRep =
     flattenJson
         >> Result.Extra.combineMap
@@ -37,6 +37,7 @@ jsonToInternalRep =
                         Err <| Parser.DeadEnds.deadEndsToString err
             )
         >> Result.map Dict.fromList
+        >> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })
 
 
 parsePlaceholderString : Parser Segment.TValue

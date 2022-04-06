@@ -1,13 +1,13 @@
 module ContentTypes.Properties exposing (keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser)
 
+import Dict
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
+import State exposing (Translation, Translations)
 import Types.Segment as Segment
 import Util
-import State exposing (Translations)
-import Dict
 
 
 type alias Properties =
@@ -128,7 +128,7 @@ propertiesParser =
         )
 
 
-propertiesToInternalRep : Properties -> Result String Translations
+propertiesToInternalRep : Properties -> Result String (Translation ())
 propertiesToInternalRep =
     List.map
         (\( k, v ) ->
@@ -141,3 +141,4 @@ propertiesToInternalRep =
         )
         >> Result.Extra.combine
         >> Result.map Dict.fromList
+        >> Result.map (\pairs -> { pairs = pairs, resources = (), fallback = Nothing })

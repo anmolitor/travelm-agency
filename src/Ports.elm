@@ -8,6 +8,7 @@ import Json.Decode as D
 import Json.Decode.Pipeline as D
 import State exposing (OptimizedJson, Translations)
 import Util
+import State exposing (Translation)
 
 
 port sendResponse : Response -> Cmd msg
@@ -41,7 +42,7 @@ type Request
 
 
 type alias TranslationRequest =
-    { content : Translations
+    { content : Translation ()
     , identifier : String
     , language : String
     }
@@ -96,7 +97,7 @@ requestDecoder intl =
             )
 
 
-contentDecoder : Intl -> String -> String -> String -> D.Decoder Translations
+contentDecoder : Intl -> String -> String -> String -> D.Decoder (Translation ())
 contentDecoder intl language extension =
     (case extension of
         "json" ->

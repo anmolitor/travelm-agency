@@ -15,7 +15,7 @@
             "elm/parser": "1.1.0",
             "elm/time": "1.0.0",
             "elm-community/list-extra": "8.5.2",
-            "elm-community/maybe-extra": "5.2.1",
+            "elm-community/maybe-extra": "5.3.0",
             "elm-community/result-extra": "2.4.0",
             "elm-community/string-extra": "4.0.1",
             "robinheghan/fnv1a": "1.0.0",

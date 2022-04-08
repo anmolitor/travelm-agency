@@ -434,6 +434,7 @@ addI18nInstances =
                 i18nDecls =
                     Dict.NonEmpty.map i18nDeclForLang translationSet
                         |> Dict.NonEmpty.toList
+                        |> List.sortBy Tuple.first
                         |> List.map Tuple.second
             in
             { ctx | file = ctx.file |> Shared.addDeclarations i18nDecls }

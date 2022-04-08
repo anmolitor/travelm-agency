@@ -6,9 +6,8 @@ import ContentTypes.Properties
 import Intl exposing (Intl)
 import Json.Decode as D
 import Json.Decode.Pipeline as D
-import State exposing (OptimizedJson, Translations)
+import State exposing (OptimizedJson, Translation)
 import Util
-import State exposing (Translation)
 
 
 port sendResponse : Response -> Cmd msg

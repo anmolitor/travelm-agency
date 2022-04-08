@@ -4,10 +4,12 @@ import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import List.NonEmpty
 import Maybe.Extra
+import Result.Extra
 import Set
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
 import Types.Segment as Segment exposing (TKey, TValue)
+import Util exposing (combineErrors)
 
 
 type alias Identifier =
@@ -178,30 +180,85 @@ addTranslations identifier language translations state =
             insert (Dict.NonEmpty.singleton language translations)
 
 
-hasSameSignatureAsExistingTranslations : Translations -> TranslationSet () -> Maybe String
-hasSameSignatureAsExistingTranslations pairs translationSet =
+validateState : NonEmptyState any -> Result String ()
+validateState =
+    Dict.NonEmpty.toList
+        >> List.map (\( key, value ) -> validateTranslationSet value |> Result.mapError (\error -> key ++ ": " ++ error))
+        >> Util.combineErrors
+        >> Result.mapError (String.join "\n")
+        >> Result.map (always ())
+
+
+validateTranslationSet : TranslationSet any -> Result String ()
+validateTranslationSet translationSet =
+    Dict.NonEmpty.map (completeFallback translationSet) translationSet
+        |> Dict.NonEmpty.toList
+        |> List.map Result.Extra.combineSecond
+        |> Util.combineErrors
+        |> Result.mapError (String.join "\n")
+        |> Result.map (.pairs |> Tuple.mapSecond |> List.map)
+        |> Result.andThen
+            (\translations ->
+                List.map2 checkTranslationsForConsistency translations (List.drop 1 translations)
+                    |> Util.combineErrors
+                    |> Result.mapError (String.join "\n")
+                    |> Result.map (always ())
+            )
+
+
+completeFallback : TranslationSet resources -> Language -> Translation resources -> Result String (Translation resources)
+completeFallback translationSet language =
     let
-        ( _, v ) =
-            Dict.NonEmpty.getFirstEntry translationSet
+        go seenLanguages translation =
+            case translation.fallback of
+                Just lang ->
+                    case ( Dict.NonEmpty.get lang translationSet, List.member lang seenLanguages ) of
+                        ( Just fallbackTranslation, False ) ->
+                            let
+                                recursiveResult =
+                                    go (lang :: seenLanguages) fallbackTranslation
+                            in
+                            recursiveResult
+                                |> Result.map
+                                    (\{ pairs } ->
+                                        { translation | pairs = Dict.union translation.pairs pairs }
+                                    )
 
-        existingKeys =
-            Dict.keys v.pairs |> Set.fromList
+                        ( _, True ) ->
+                            Err <|
+                                "Detected mutually recursive fallbacks. This is not allowed. Trace: "
+                                    ++ String.join " --> " (List.reverse <| lang :: seenLanguages)
 
-        keysOfNewLanguage =
-            Dict.keys pairs |> Set.fromList
+                        ( Nothing, False ) ->
+                            Ok translation
 
-        missingKeysInNewLanguage =
-            Set.diff existingKeys keysOfNewLanguage
-
-        extraKeysInNewLanguage =
-            Set.diff keysOfNewLanguage existingKeys
+                Nothing ->
+                    Ok translation
     in
-    if Set.isEmpty missingKeysInNewLanguage then
-        if Set.isEmpty extraKeysInNewLanguage then
-            Nothing
+    go [ language ]
+
+
+checkTranslationsForConsistency : ( Language, Translations ) -> ( Language, Translations ) -> Result String ()
+checkTranslationsForConsistency ( lang1, pairs1 ) ( lang2, pairs2 ) =
+    let
+        keys1 =
+            Dict.keys pairs1 |> Set.fromList
+
+        keys2 =
+            Dict.keys pairs2 |> Set.fromList
+
+        missingKeysInLang2 =
+            Set.diff keys1 keys2
+
+        extraKeysInLang2 =
+            Set.diff keys2 keys1
+    in
+    if Set.isEmpty missingKeysInLang2 then
+        if Set.isEmpty extraKeysInLang2 then
+            Ok ()
 
         else
-            Just <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInNewLanguage) ++ "."
+            Err <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInLang2) ++ "."
 
     else
-        Just <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInNewLanguage) ++ "."
+        Err <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInLang2) ++ "."

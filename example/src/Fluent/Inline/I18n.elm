@@ -126,55 +126,51 @@ staticTermKey ( i18n, intl ) =
 -}
 de : I18n_
 de =
-    { attributes_ = "Beispiel 4: Attribute sind unterstützt\u{000D}"
-    , attributesTitle_ = "Attribute\u{000D}"
-    , attributesWithVarAndTerm_ = \var -> var ++ " Statische Terme\u{000D}\u{000D}"
+    { attributes_ = "Beispiel 4: Attribute sind unterstützt"
+    , attributesTitle_ = "Attribute"
+    , attributesWithVarAndTerm_ = \var -> var ++ " Statische Terme"
     , compileTimeDatesAndNumbers_ =
-        "Beispiel 7: DATETIME und NUMBER Funktion mit bekanntem Werten werden zur Compilezeit ausgewertet:\u{000D}\n18.1.2022\u{000D}\u{000D}\n1.1.1970\u{000D}\u{000D}\n500.000\u{000D}\u{000D}"
+        "Beispiel 7: DATETIME und NUMBER Funktion mit bekanntem Werten werden zur Compilezeit ausgewertet:\n18.1.2022\n1.1.1970\n500.000"
     , dateTimeFun_ =
         \intl date ->
             "Beispiel 5: DATETIME Funktion wird unterstützt: "
                 ++ Intl.formatDateTime
                     intl
                     { time = date, language = "de", args = [ ( "dateStyle", Json.Encode.string "full" ) ] }
-                ++ "\u{000D}"
     , displayGender_ =
         \gender ->
             (case gender of
                 "female" ->
-                    "Weiblich\u{000D}"
+                    "Weiblich"
 
                 "male" ->
-                    "Männlich\u{000D}"
+                    "Männlich"
 
                 _ ->
-                    gender ++ "\u{000D}"
+                    gender
             )
-                ++ "  \u{000D}"
-    , dynamicTermKey_ = \adjective -> "Beispiel 2: Dynamische, " ++ adjective ++ " Terme\u{000D} sind unterstützt.\u{000D}"
+                ++ "  "
+    , dynamicTermKey_ = \adjective -> "Beispiel 2: Dynamische, " ++ adjective ++ " Terme sind unterstützt."
     , fallback_ = en.fallback_
     , matchOnGender_ =
         \gender ->
             "Beispiel 8: "
                 ++ (case gender of
                         "male" ->
-                            "Er will jetzt seine Pause\u{000D}"
+                            "Er will jetzt seine Pause"
 
                         _ ->
-                            "Sie will jetzt ihre Pause\u{000D}"
+                            "Sie will jetzt ihre Pause"
                    )
-                ++ "\u{000D}"
     , matchOnNumbers_ = \intl amount -> "Beispiel 9: Ich trank " ++ String.fromFloat amount ++ " Bier"
-    , nestedTermKey_ =
-        "Beispiel 3: Verschachtelte Terme\u{000D}\u{000D} sind unterstützt solange es keine zirkuläre Abhängigkeit gibt.\u{000D}"
+    , nestedTermKey_ = "Beispiel 3: Verschachtelte Terme sind unterstützt solange es keine zirkuläre Abhängigkeit gibt."
     , numberFun_ =
         \intl num ->
             "Beispiel 6: NUMBER Funktion wird unterstützt: "
                 ++ Intl.formatFloat
                     intl
                     { number = num, language = "de", args = [ ( "style", Json.Encode.string "percent" ) ] }
-                ++ "\u{000D}"
-    , staticTermKey_ = "Beispiel 1: Statische Terme\u{000D} sind unterstützt.\u{000D}"
+    , staticTermKey_ = "Beispiel 1: Statische Terme sind unterstützt."
     }
 
 

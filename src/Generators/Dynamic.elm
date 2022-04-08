@@ -15,6 +15,7 @@ import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import Json.Encode as E
 import List.NonEmpty
+import Result.Extra
 import Set
 import State exposing (Identifier, NonEmptyState, OptimizedJson, Translation, TranslationSet, Translations)
 import String.Extra
@@ -492,7 +493,11 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
             , resources =
                 let
                     content =
-                        completeFallback translationSet translation |> .pairs |> optimizeJson |> E.encode 0
+                        State.completeFallback translationSet language translation
+                            |> Result.withDefault translation
+                            |> .pairs
+                            |> optimizeJson
+                            |> E.encode 0
                 in
                 { content = content
                 , filename =
@@ -511,30 +516,6 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
             }
         )
         translationSet
-
-
-completeFallback : TranslationSet resources -> Translation resources -> Translation resources
-completeFallback translationSet =
-    let
-        go seenLanguages translation =
-            case translation.fallback of
-                Just lang ->
-                    case ( Dict.NonEmpty.get lang translationSet, Set.member lang seenLanguages ) of
-                        ( Just fallbackTranslation, False ) ->
-                            let
-                                recursiveResult =
-                                    go (Set.insert lang seenLanguages) fallbackTranslation
-                            in
-                            { translation | pairs = Dict.union translation.pairs recursiveResult.pairs }
-
-                        -- Either there was no fallback translation or the fallbacks are mutually recursive
-                        _ ->
-                            translation
-
-                Nothing ->
-                    translation
-    in
-    go Set.empty
 
 
 optimizeJson : Translations -> E.Value

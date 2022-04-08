@@ -1,10 +1,9 @@
-module Util exposing (emptyIntl, keyToName, moduleName, quoteString, resultToDecoder, safeName, combineErrors)
+module Util exposing (emptyIntl, keyToName, moduleName, quoteString, resultToDecoder, safeName)
 
 import Elm.CodeGen exposing (ModuleName)
 import Intl exposing (Intl)
 import Json.Decode as D
 import Json.Encode
-import Result.Extra
 import String.Extra
 
 
@@ -42,16 +41,3 @@ resultToDecoder result =
 
         Err err ->
             D.fail err
-
-
-combineErrors : List (Result x a) -> Result (List x) (List a)
-combineErrors =
-    Result.Extra.partition
-        >> (\( successes, errors ) ->
-                case errors of
-                    [] ->
-                        Ok successes
-
-                    _ ->
-                        Err errors
-           )

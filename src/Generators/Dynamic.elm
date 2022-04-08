@@ -15,11 +15,11 @@ import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import Json.Encode as E
 import List.NonEmpty
-import Result.Extra
 import Set
-import State exposing (Identifier, NonEmptyState, OptimizedJson, Translation, TranslationSet, Translations)
+import State exposing (NonEmptyState, OptimizedJson, TranslationSet, Translations)
 import String.Extra
 import Types.ArgValue as ArgValue exposing (ArgValue)
+import Types.Basic exposing (Identifier)
 import Types.Features as Features
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)

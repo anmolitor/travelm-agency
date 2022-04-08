@@ -126,9 +126,6 @@ translationRequestDecoder intl =
                             |> D.hardcoded identifier
                             |> D.hardcoded language
 
-                    [ _, _ ] ->
-                        D.fail "Default syntax not supported yet."
-
                     [ single ] ->
                         D.fail <| "Cannot determine extension from file name '" ++ single ++ "'."
 

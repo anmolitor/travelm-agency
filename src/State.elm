@@ -6,18 +6,11 @@ import List.NonEmpty
 import Maybe.Extra
 import Result.Extra
 import Set
+import Types.Basic exposing (Identifier, Language)
+import Types.Error as Error exposing (Failable)
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
 import Types.Segment as Segment exposing (TKey, TValue)
-import Util exposing (combineErrors)
-
-
-type alias Identifier =
-    String
-
-
-type alias Language =
-    String
 
 
 type alias Translations =
@@ -180,33 +173,35 @@ addTranslations identifier language translations state =
             insert (Dict.NonEmpty.singleton language translations)
 
 
-validateState : NonEmptyState any -> Result String ()
+validateState : State any -> Failable (NonEmptyState any)
 validateState =
-    Dict.NonEmpty.toList
-        >> List.map (\( key, value ) -> validateTranslationSet value |> Result.mapError (\error -> key ++ ": " ++ error))
-        >> Util.combineErrors
-        >> Result.mapError (String.join "\n")
-        >> Result.map (always ())
+    Dict.NonEmpty.fromDict
+        >> Maybe.map
+            (\nonEmptyState ->
+                Dict.NonEmpty.toList nonEmptyState
+                    |> List.map (\( key, value ) -> validateTranslationSet value |> Error.addTranslationFileNameCtx key)
+                    |> Error.combineList
+                    |> Result.map (always nonEmptyState)
+            )
+        >> Maybe.withDefault Error.noTranslationFiles
 
 
-validateTranslationSet : TranslationSet any -> Result String ()
+validateTranslationSet : TranslationSet any -> Failable ()
 validateTranslationSet translationSet =
     Dict.NonEmpty.map (completeFallback translationSet) translationSet
         |> Dict.NonEmpty.toList
         |> List.map Result.Extra.combineSecond
-        |> Util.combineErrors
-        |> Result.mapError (String.join "\n")
+        |> Error.combineList
         |> Result.map (.pairs |> Tuple.mapSecond |> List.map)
         |> Result.andThen
             (\translations ->
                 List.map2 checkTranslationsForConsistency translations (List.drop 1 translations)
-                    |> Util.combineErrors
-                    |> Result.mapError (String.join "\n")
+                    |> Error.combineList
                     |> Result.map (always ())
             )
 
 
-completeFallback : TranslationSet resources -> Language -> Translation resources -> Result String (Translation resources)
+completeFallback : TranslationSet resources -> Language -> Translation resources -> Failable (Translation resources)
 completeFallback translationSet language =
     let
         go seenLanguages translation =
@@ -225,9 +220,7 @@ completeFallback translationSet language =
                                     )
 
                         ( _, True ) ->
-                            Err <|
-                                "Detected mutually recursive fallbacks. This is not allowed. Trace: "
-                                    ++ String.join " --> " (List.reverse <| lang :: seenLanguages)
+                            Error.cyclicFallback (List.reverse <| lang :: seenLanguages)
 
                         ( Nothing, False ) ->
                             Ok translation
@@ -238,7 +231,7 @@ completeFallback translationSet language =
     go [ language ]
 
 
-checkTranslationsForConsistency : ( Language, Translations ) -> ( Language, Translations ) -> Result String ()
+checkTranslationsForConsistency : ( Language, Translations ) -> ( Language, Translations ) -> Failable ()
 checkTranslationsForConsistency ( lang1, pairs1 ) ( lang2, pairs2 ) =
     let
         keys1 =
@@ -258,7 +251,7 @@ checkTranslationsForConsistency ( lang1, pairs1 ) ( lang2, pairs2 ) =
             Ok ()
 
         else
-            Err <| "Found extra keys: " ++ (String.join ", " <| Set.toList extraKeysInLang2) ++ "."
+            Error.inconsistentKeys { keys = Set.toList extraKeysInLang2, missesKeys = lang1, hasKeys = lang2 }
 
     else
-        Err <| "Missing keys: " ++ (String.join ", " <| Set.toList missingKeysInLang2) ++ "."
+        Error.inconsistentKeys { keys = Set.toList missingKeysInLang2, missesKeys = lang2, hasKeys = lang1 }

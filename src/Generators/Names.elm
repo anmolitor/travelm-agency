@@ -1,8 +1,8 @@
 module Generators.Names exposing (Names, defaultNames, withUniqueNames)
 
 import Set
-import State exposing (Identifier)
 import String.Extra
+import Types.Basic exposing (Identifier)
 import Types.UniqueName as Unique
 
 

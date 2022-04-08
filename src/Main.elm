@@ -11,6 +11,7 @@ import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
 import State exposing (State)
+import Types.Error as Error
 import Types.Features exposing (Feature(..))
 import Util
 
@@ -60,39 +61,32 @@ update msg model =
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
 onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast } =
-    case Dict.NonEmpty.fromDict model.state of
-        Nothing ->
-            Ports.respond <| Err "Did not receive any translation files yet, cannot finish Elm module."
+    let
+        context =
+            { moduleName = Util.moduleName elmModuleName
+            , version = model.version
+            , names = defaultNames
+            , intl = model.intl
+            , i18nArgLast = i18nArgLast
+            }
 
-        Just nonEmptyState ->
-            State.validateState nonEmptyState
-                |> Result.map
-                    (\_ ->
-                        let
-                            context =
-                                { moduleName = Util.moduleName elmModuleName
-                                , version = model.version
-                                , names = defaultNames
-                                , intl = model.intl
-                                , i18nArgLast = i18nArgLast
-                                }
-                        in
-                        case generatorMode of
-                            Inline ->
-                                { elmFile = Generators.Inline.toFile context nonEmptyState |> Pretty.pretty 120
-                                , optimizedJson = []
-                                }
+        generate validatedState =
+            case generatorMode of
+                Inline ->
+                    { elmFile = Generators.Inline.toFile context validatedState |> Pretty.pretty 120
+                    , optimizedJson = []
+                    }
 
-                            Dynamic ->
-                                let
-                                    stateWithResources =
-                                        Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages addContentHash) nonEmptyState
-                                in
-                                { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty 120
-                                , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
-                                }
-                    )
-                |> Ports.respond
+                Dynamic ->
+                    let
+                        stateWithResources =
+                            Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages addContentHash) validatedState
+                    in
+                    { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty 120
+                    , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
+                    }
+    in
+    State.validateState model.state |> Error.formatFail |> Result.map generate |> Ports.respond
 
 
 subscriptions : Model -> Sub Msg

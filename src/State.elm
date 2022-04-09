@@ -140,15 +140,19 @@ addTranslations identifier language translations state =
             insert (Dict.NonEmpty.singleton language translations)
 
 
-validateState : State any -> Failable (NonEmptyState any)
-validateState =
+validateState : Bool -> State any -> Failable (NonEmptyState any)
+validateState devMode =
     Dict.NonEmpty.fromDict
         >> Maybe.map
             (\nonEmptyState ->
-                Dict.NonEmpty.toList nonEmptyState
-                    |> List.map (\( key, value ) -> validateTranslationSet value |> Error.addTranslationFileNameCtx key)
-                    |> Error.combineList
-                    |> Result.map (always nonEmptyState)
+                if devMode then
+                    Ok nonEmptyState
+
+                else
+                    Dict.NonEmpty.toList nonEmptyState
+                        |> List.map (\( key, value ) -> validateTranslationSet value |> Error.addTranslationFileNameCtx key)
+                        |> Error.combineList
+                        |> Result.map (always nonEmptyState)
             )
         >> Maybe.withDefault Error.noTranslationFiles
 

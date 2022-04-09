@@ -100,7 +100,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast
                     , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                     }
     in
-    State.validateState model.state |> Result.map generate |> Ports.respond
+    State.validateState model.devMode model.state |> Result.map generate |> Ports.respond
 
 
 parseTranslationContent : Intl -> Ports.TranslationRequest -> Failable (Translation ())

@@ -1,6 +1,6 @@
 {
   "name": "travelm-agency",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "Generate type-safe accessors and decoders for your i18n files",
   "main": "./lib/main.js",
   "bin": "index.js",

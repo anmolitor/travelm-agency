@@ -38,7 +38,9 @@ jobs:
           cd example
           npm run build
           npm run build:parcel || true
+          rm -rf elm-stuff
           npm run build:parcel || true
+          rm -rf elm-stuff
           npm run build:parcel || true
       - name: test
         run: npm test

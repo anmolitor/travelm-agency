@@ -1,11 +1,9 @@
 module RequestDecoderTest exposing (..)
 
-import Dict
 import Expect
 import Json.Decode as D
 import Ports exposing (GeneratorMode(..), Request(..), requestDecoder)
 import Test exposing (Test, describe, test)
-import Types.Segment as Segment
 
 
 suite : Test

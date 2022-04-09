@@ -1,9 +1,7 @@
 module ContentTypes.PropertiesTest exposing (..)
 
 import ContentTypes.Properties as Properties exposing (Comment(..), Resource(..))
-import Dict
 import Expect
-import State
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
 import Types.Translation

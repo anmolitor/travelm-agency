@@ -1,10 +1,8 @@
 module ContentTypes.FluentTest exposing (..)
 
 import ContentTypes.Fluent as F
-import Dict
 import Expect
 import Parser
-import State
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
 import Types.Translation

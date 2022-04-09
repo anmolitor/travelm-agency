@@ -3,10 +3,9 @@ module StateTest exposing (..)
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
-import Expect exposing (Expectation)
-import Fuzz
+import Expect
 import State
-import Test exposing (Test, describe, fuzz, fuzz2, test)
+import Test exposing (..)
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment
 

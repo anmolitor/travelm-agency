@@ -1,9 +1,7 @@
 module ContentTypes.JsonTest exposing (..)
 
 import ContentTypes.Json as Json exposing (NestedJson(..))
-import Dict
 import Expect
-import State
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
 import Types.Translation

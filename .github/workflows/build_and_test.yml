@@ -33,7 +33,10 @@ jobs:
           ls -la
           rm -rf elm-stuff example/elm-stuff example/.parcel-cache
           npm run build
-          (cd example && npm run build && elm make src/Inline/Main.elm && npm run build:parcel)
+          cd example
+          npm run build
+          elm make src/Inline/Main.elm
+          npm run build:parcel
       - name: test
         run: npm test
       - name: npm publish

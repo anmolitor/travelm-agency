@@ -31,6 +31,7 @@ import State exposing (Translation)
 import String.Extra
 import Time
 import Types.ArgValue as ArgValue exposing (ArgValue)
+import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Util
 
@@ -72,7 +73,7 @@ type Content
     | PlaceableContent Placeable
 
 
-fluentToInternalRep : Intl -> String -> AST -> Result String (Translation ())
+fluentToInternalRep : Intl -> String -> AST -> Failable (Translation ())
 fluentToInternalRep intl language ast_ =
     let
         identifierToKey : Identifier -> TKey
@@ -84,15 +85,16 @@ fluentToInternalRep intl language ast_ =
                 MessageIdentifier m ->
                     m
 
-        contentsToValue : Content -> Result String (NonEmpty TSegment)
+        contentsToValue : Content -> Failable (NonEmpty TSegment)
         contentsToValue =
             contentsToValueHelper [] []
 
-        formatNumberLit : Literal -> ExtraArguments -> Result String String
+        formatNumberLit : Literal -> ExtraArguments -> Failable String
         formatNumberLit lit args =
             case lit of
                 StringLiteral str ->
-                    Err <| "Cannot format the string literal '" ++ str ++ "' as a number"
+                    Error.failedToFormatStringAsNumber str
+                        |> Error.addAdditionalCtx "Error occured when trying to format a string wrapped into the NUMBER function at compile-time"
 
                 NumberLiteral n ->
                     Ok <|
@@ -102,7 +104,7 @@ fluentToInternalRep intl language ast_ =
                             , args = List.map (Tuple.mapSecond ArgValue.encode) args
                             }
 
-        formatDateLit : Literal -> ExtraArguments -> Result String String
+        formatDateLit : Literal -> ExtraArguments -> Failable String
         formatDateLit lit args =
             case lit of
                 StringLiteral str ->
@@ -114,12 +116,22 @@ fluentToInternalRep intl language ast_ =
                                 , args = List.map (Tuple.mapSecond ArgValue.encode) args
                                 }
                         )
-                        (Iso8601.toTime str |> Result.mapError (\err -> "Error while parsing the iso8601 date literal: '" ++ str ++ "': " ++ Parser.DeadEnds.deadEndsToString err))
+                        (Iso8601.toTime str
+                            |> Result.mapError
+                                (\err ->
+                                    Error.failedToParseStringAsDate str
+                                        |> Error.addAdditionalCtx
+                                            ("Error occured while parsing an iso8601 date literal for compile-time date formatting. Parser output: "
+                                                ++ Parser.DeadEnds.deadEndsToString err
+                                            )
+                                )
+                            |> Error.joinErr
+                        )
 
                 NumberLiteral n ->
                     Ok <| Intl.formatDateTime intl { time = Time.millisToPosix <| floor n, language = language, args = [] }
 
-        getPluralRule : String -> Result String String
+        getPluralRule : String -> Failable String
         getPluralRule str =
             case String.toFloat str of
                 Just num ->
@@ -128,17 +140,18 @@ fluentToInternalRep intl language ast_ =
                         |> Ok
 
                 Nothing ->
-                    Err <| "Cannot determine plural rule for '" ++ str ++ "'"
+                    Error.failedToParseStringAsNumber str
+                        |> Error.addAdditionalCtx "Error occured trying to do compile-time plural-rule matching"
 
         -- Limits recursion by keeping track of terms
         -- Inlines arguments known at compile time
-        contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Result String (NonEmpty TSegment)
+        contentsToValueHelper : List String -> List ( String, Literal ) -> Content -> Failable (NonEmpty TSegment)
         contentsToValueHelper previousTerms accumulatedArgs cnt =
             let
-                recurseOnContentList : NonEmpty Content -> Result String (NonEmpty TSegment)
+                recurseOnContentList : NonEmpty Content -> Failable (NonEmpty TSegment)
                 recurseOnContentList =
                     List.NonEmpty.map (contentsToValueHelper previousTerms accumulatedArgs)
-                        >> combineMapResultNonEmpty
+                        >> Error.combineNonEmpty
                         >> Result.map List.NonEmpty.concat
             in
             case cnt of
@@ -161,7 +174,7 @@ fluentToInternalRep intl language ast_ =
                 PlaceableContent (TermRef term args) ->
                     case ( List.member term previousTerms, Dict.get term termDict ) of
                         ( True, _ ) ->
-                            Err <| "Recursive term reference " ++ (String.join " <- " <| term :: previousTerms)
+                            Error.cyclicTermReference <| List.reverse (term :: previousTerms)
 
                         ( False, Just contents ) ->
                             List.NonEmpty.map (contentsToValueHelper (term :: previousTerms) (args ++ accumulatedArgs)) contents
@@ -169,7 +182,7 @@ fluentToInternalRep intl language ast_ =
                                 |> Result.map List.NonEmpty.concat
 
                         ( False, Nothing ) ->
-                            Err <| "Could not resolve term reference: '" ++ term ++ "'"
+                            Error.unresolvableTermReference term
 
                 PlaceableContent (StringLit lit) ->
                     Ok <| List.NonEmpty.singleton <| Segment.Text lit
@@ -255,10 +268,10 @@ fluentToInternalRep intl language ast_ =
                 CommentResource _ ->
                     True
 
-        attrToInternalRep : Attribute -> Result String ( TKey, TValue )
+        attrToInternalRep : Attribute -> Failable ( TKey, TValue )
         attrToInternalRep attr =
             List.NonEmpty.map contentsToValue attr.content
-                |> combineMapResultNonEmpty
+                |> Error.combineNonEmpty
                 |> Result.map
                     (List.NonEmpty.concat
                         >> Segment.concatenateTextSegments
@@ -276,7 +289,7 @@ fluentToInternalRep intl language ast_ =
                     (\attr -> { attr | identifier = Util.keyToName [ key, attr.identifier ] })
                     msg.attrs
 
-        resourceToInternalRep : Resource -> Result String (Translation ())
+        resourceToInternalRep : Resource -> Failable (Translation ())
         resourceToInternalRep res =
             case res of
                 MessageResource msg ->
@@ -303,10 +316,9 @@ combineMapResultNonEmpty =
         >> List.NonEmpty.foldr1 (Result.map2 List.NonEmpty.append)
 
 
-runFluentParser : String -> Result String AST
+runFluentParser : String -> Failable AST
 runFluentParser =
-    Parser.run ast
-        >> Result.mapError Parser.DeadEnds.deadEndsToString
+    Error.runParser ast
 
 
 ast : Parser AST

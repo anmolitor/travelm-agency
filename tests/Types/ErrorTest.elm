@@ -1,6 +1,7 @@
 module Types.ErrorTest exposing (..)
 
 import Expect
+import Parser
 import Test exposing (..)
 import Types.Error
 
@@ -71,4 +72,10 @@ Failed to resolve reference to unknown term 'not-found' in translation file.
   "fileExtension": ".ftl",
   "language": "de"
 }""")
+        , test "format runParser error" <|
+            \_ ->
+                Types.Error.runParser (Parser.problem "Expected x but was y.") "bla"
+                    |> Types.Error.formatFail
+                    |> Expect.equal (Err """Failed to parse translation file: Problem: Expected x but was y. at row:1 col:1
+\tContext: {}""")
         ]

@@ -3,9 +3,8 @@ module ContentTypes.Properties exposing (Comment(..), Resource(..), keyValuePars
 import Dict
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
-import Parser.DeadEnds
-import Result.Extra
 import State exposing (Translation)
+import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment
 import Util
 
@@ -24,9 +23,9 @@ type Comment
     | OtherComment String
 
 
-parseProperties : String -> Result String Properties
+parseProperties : String -> Failable Properties
 parseProperties =
-    P.run propertiesParser >> Result.mapError Parser.DeadEnds.deadEndsToString
+    Error.runParser propertiesParser
 
 
 keyParser : Parser (List String)
@@ -155,18 +154,20 @@ propertiesParser =
         )
 
 
-propertiesToInternalRep : Properties -> Result String (Translation ())
+propertiesToInternalRep : Properties -> Failable (Translation ())
 propertiesToInternalRep =
     List.map
         (\resource ->
             case resource of
                 PropertyResource ( k, v ) ->
-                    case P.run parsePlaceholderString v of
-                        Err err ->
-                            Err <| Parser.DeadEnds.deadEndsToString err
-
-                        Ok val ->
-                            Ok { pairs = Dict.singleton (Util.keyToName k) val, resources = (), fallback = Nothing }
+                    Error.runParser parsePlaceholderString v
+                        |> Result.map
+                            (\val ->
+                                { pairs = Dict.singleton (Util.keyToName k) val
+                                , resources = ()
+                                , fallback = Nothing
+                                }
+                            )
 
                 CommentResource (FallbackDirective fallback) ->
                     Ok { pairs = Dict.empty, resources = (), fallback = Just fallback }
@@ -174,5 +175,5 @@ propertiesToInternalRep =
                 _ ->
                     Ok { pairs = Dict.empty, resources = (), fallback = Nothing }
         )
-        >> Result.Extra.combine
+        >> Error.combineList
         >> Result.map State.foldTranslations

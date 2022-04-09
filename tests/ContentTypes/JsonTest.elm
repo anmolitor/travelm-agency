@@ -69,7 +69,7 @@ converterTests =
             \_ ->
                 [ ( "prop", StringValue "\\idk" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Err "Problem: Invalid escaped char at row:1 col:2; Expecting \\ at row:1 col:2; Expecting { at row:1 col:2")
+                    |> Expect.err
         , test "empty json string" <|
             \_ ->
                 [ ( "prop", StringValue "" ) ]

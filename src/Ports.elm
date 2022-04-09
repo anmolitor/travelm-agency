@@ -7,6 +7,7 @@ import Intl exposing (Intl)
 import Json.Decode as D
 import Json.Decode.Pipeline as D
 import State exposing (OptimizedJson, Translation)
+import Types.Error as Error exposing (Failable)
 import Util
 
 
@@ -21,10 +22,10 @@ type alias ResponseContent =
     { elmFile : String, optimizedJson : List OptimizedJson }
 
 
-respond : Result String ResponseContent -> Cmd msg
+respond : Failable ResponseContent -> Cmd msg
 respond res =
     sendResponse <|
-        case res of
+        case Error.formatFail res of
             Err err ->
                 { error = Just err, content = Nothing }
 
@@ -41,7 +42,8 @@ type Request
 
 
 type alias TranslationRequest =
-    { content : Translation ()
+    { content : String
+    , extension : String
     , identifier : String
     , language : String
     }
@@ -73,19 +75,19 @@ type alias FinishRequest =
     { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool, i18nArgLast : Bool }
 
 
-subToRequests : Intl -> (Result D.Error Request -> msg) -> Sub msg
-subToRequests intl callback =
-    receiveRequest (D.decodeValue (requestDecoder intl) >> callback)
+subToRequests : (Result D.Error Request -> msg) -> Sub msg
+subToRequests callback =
+    receiveRequest (D.decodeValue requestDecoder >> callback)
 
 
-requestDecoder : Intl -> D.Decoder Request
-requestDecoder intl =
+requestDecoder : D.Decoder Request
+requestDecoder =
     D.field "type" D.string
         |> D.andThen
             (\type_ ->
                 case type_ of
                     "translation" ->
-                        translationRequestDecoder intl |> D.map AddTranslation
+                        translationRequestDecoder |> D.map AddTranslation
 
                     "finish" ->
                         finishRequestDecoder
@@ -96,33 +98,17 @@ requestDecoder intl =
             )
 
 
-contentDecoder : Intl -> String -> String -> String -> D.Decoder (Translation ())
-contentDecoder intl language extension =
-    (case extension of
-        "json" ->
-            ContentTypes.Json.parseJson >> Result.andThen ContentTypes.Json.jsonToInternalRep
 
-        "properties" ->
-            ContentTypes.Properties.parseProperties >> Result.andThen ContentTypes.Properties.propertiesToInternalRep
-
-        "ftl" ->
-            ContentTypes.Fluent.runFluentParser >> Result.andThen (ContentTypes.Fluent.fluentToInternalRep intl language)
-
-        _ ->
-            always <| Err <| "Unsupported content type '" ++ extension ++ "'"
-    )
-        >> Util.resultToDecoder
-
-
-translationRequestDecoder : Intl -> D.Decoder TranslationRequest
-translationRequestDecoder intl =
+translationRequestDecoder : D.Decoder TranslationRequest
+translationRequestDecoder =
     internalRequestDecoder
         |> D.andThen
             (\{ fileContent, fileName } ->
                 case String.split "." fileName of
                     [ identifier, language, extension ] ->
                         D.succeed TranslationRequest
-                            |> D.custom (contentDecoder intl language extension fileContent)
+                            |> D.hardcoded fileContent
+                            |> D.hardcoded extension
                             |> D.hardcoded identifier
                             |> D.hardcoded language
 

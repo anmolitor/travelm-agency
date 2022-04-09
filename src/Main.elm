@@ -1,5 +1,8 @@
 module Main exposing (main)
 
+import ContentTypes.Fluent
+import ContentTypes.Json
+import ContentTypes.Properties
 import Dict
 import Dict.NonEmpty
 import Elm.Pretty as Pretty
@@ -10,8 +13,8 @@ import Intl exposing (Intl)
 import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
-import State exposing (State)
-import Types.Error as Error
+import State exposing (State, Translation)
+import Types.Error as Error exposing (Failable)
 import Types.Features exposing (Feature(..))
 import Util
 
@@ -46,9 +49,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotRequest (Ports.AddTranslation req) ->
-            ( { model | state = State.addTranslations req.identifier req.language req.content model.state }
-            , Cmd.none
-            )
+            onAddTranslation model req
 
         GotRequest (Ports.FinishModule req) ->
             ( model
@@ -56,7 +57,19 @@ update msg model =
             )
 
         UnexpectedRequest err ->
-            ( model, Ports.respond <| Err <| D.errorToString err )
+            ( model, Ports.respond <| Error.requestDecodeError err )
+
+
+onAddTranslation : Model -> Ports.TranslationRequest -> ( Model, Cmd msg )
+onAddTranslation model req =
+    case parseTranslationContent model.intl req of
+        Ok content ->
+            ( { model | state = State.addTranslations req.identifier req.language content model.state }
+            , Cmd.none
+            )
+
+        Err err ->
+            ( model, Ports.respond <| Err err )
 
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
@@ -86,12 +99,32 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast
                     , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                     }
     in
-    State.validateState model.state |> Error.formatFail |> Result.map generate |> Ports.respond
+    State.validateState model.state |> Result.map generate |> Ports.respond
+
+
+parseTranslationContent : Intl -> Ports.TranslationRequest -> Failable (Translation ())
+parseTranslationContent intl { identifier, language, extension, content } =
+    (case extension of
+        "json" ->
+            ContentTypes.Json.parseJson content |> Result.andThen ContentTypes.Json.jsonToInternalRep
+
+        "properties" ->
+            ContentTypes.Properties.parseProperties content |> Result.andThen ContentTypes.Properties.propertiesToInternalRep
+
+        "ftl" ->
+            ContentTypes.Fluent.runFluentParser content |> Result.andThen (ContentTypes.Fluent.fluentToInternalRep intl language)
+
+        _ ->
+            Error.unsupportedContentType extension
+    )
+        |> Error.addTranslationFileNameCtx identifier
+        |> Error.addContentTypeCtx extension
+        |> Error.addLanguageCtx language
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Ports.subToRequests model.intl <|
+subscriptions _ =
+    Ports.subToRequests <|
         \result ->
             case result of
                 Ok req ->

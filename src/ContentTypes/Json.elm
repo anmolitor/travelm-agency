@@ -7,6 +7,7 @@ import Parser as P exposing ((|.), (|=), Parser)
 import Parser.DeadEnds
 import Result.Extra
 import State exposing (Translation, fromTranslations)
+import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment
 import Util
 
@@ -24,12 +25,12 @@ type alias FlattenedJson =
     List ( List String, String )
 
 
-jsonToInternalRep : Json -> Result String (Translation ())
+jsonToInternalRep : Json -> Failable (Translation ())
 jsonToInternalRep =
     flattenJson
         >> Result.Extra.combineMap
             (\( k, v ) ->
-                case ( k, P.run parsePlaceholderString v ) of
+                case ( k, Error.runParser parsePlaceholderString v ) of
                     ( [ "--fallback-language" ], _ ) ->
                         Ok { pairs = Dict.empty, resources = (), fallback = Just v }
 
@@ -37,7 +38,7 @@ jsonToInternalRep =
                         Ok { pairs = Dict.singleton (Util.keyToName k) tValue, resources = (), fallback = Nothing }
 
                     ( _, Err err ) ->
-                        Err <| Parser.DeadEnds.deadEndsToString err
+                        Err err
             )
         >> Result.map State.foldTranslations
 
@@ -104,9 +105,11 @@ parsePlaceholderString =
             )
 
 
-parseJson : String -> Result String Json
+parseJson : String -> Failable Json
 parseJson =
-    D.decodeString decoder >> Result.mapError D.errorToString
+    D.decodeString decoder
+        >> Result.mapError (D.errorToString >> Error.translationFileParsingError)
+        >> Error.joinErr
 
 
 flattenJson : Json -> FlattenedJson

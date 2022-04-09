@@ -16,13 +16,15 @@ jobs:
         run: >
           git config --global url."https://github.com/".insteadOf
           ssh://git@github.com/
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 14.x
           cache: "npm"
           registry-url: https://registry.npmjs.org
       - uses: justgook/setup-elm@1.2.0
+        with:
+          cache: false
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       - name: install

@@ -1,4 +1,4 @@
-module Types.Error exposing (Failable, addAdditionalCtx, addContentTypeCtx, addLanguageCtx, addTranslationFileNameCtx, combineList, combineNonEmpty, cyclicFallback, cyclicTermReference, failedToFormatStringAsNumber, failedToParseStringAsDate, failedToParseStringAsNumber, formatFail, inconsistentKeys, noTranslationFiles, requestDecodeError, runParser, translationFileParsingError, unresolvableTermReference, unsupportedContentType, joinErr)
+module Types.Error exposing (Failable, addAdditionalCtx, addContentTypeCtx, addLanguageCtx, addTranslationFileNameCtx, combineList, combineNonEmpty, cyclicFallback, cyclicTermReference, failedToFormatStringAsNumber, failedToParseStringAsDate, failedToParseStringAsNumber, formatFail, inconsistentKeys, joinErr, noTranslationFiles, requestDecodeError, runParser, translationFileParsingError, unresolvableTermReference, unsupportedContentType)
 
 import Dict exposing (Dict)
 import Json.Decode
@@ -237,61 +237,92 @@ formatFail =
 
 formatErrorWithContext : ( Error, Context ) -> String
 formatErrorWithContext ( error, context ) =
-    formatError error
-        ++ "\n\tContext: "
-        ++ (Json.Encode.dict identity Json.Encode.string context
-                |> Json.Encode.encode 2
-           )
+    let
+        ( firstLine, rest ) =
+            formatError error
+
+        contextLines =
+            if Dict.isEmpty context then
+                []
+
+            else
+                "Context:" :: (List.map indent <| formatContext context)
+    in
+    String.join "\n" <| firstLine :: List.map indent (rest ++ contextLines)
 
 
-formatError : Error -> String
+formatContext : Context -> List String
+formatContext =
+    Dict.toList
+        >> List.map (\( k, v ) -> "- " ++ k ++ ": " ++ v)
+
+
+formatError : Error -> NonEmpty String
 formatError error =
     case error of
         NoTranslationFiles ->
-            "Did not receive any translation files yet, cannot finish Elm module."
+            ( "Did not receive any translation files yet, cannot finish Elm module.", [] )
 
         CyclicFallback trace ->
-            "Detected mutually recursive fallbacks. This is not allowed, because it can lead to indefinite recursion at runtime or unresolved keys.\n\tTrace: "
-                ++ String.join " --> " trace
+            ( "Detected mutually recursive fallbacks. This is not allowed, because it can lead to indefinite recursion at runtime or unresolved keys."
+            , [ "Trace: "
+                    ++ String.join " --> " trace
+              ]
+            )
 
         InconsistentKeys inconsistency ->
-            "Found inconsistent keys in translation files.\n\tLanguage '"
-                ++ inconsistency.hasKeys
-                ++ "' includes the keys ["
-                ++ String.join ", " inconsistency.keys
-                ++ " but language '"
-                ++ inconsistency.missesKeys
-                ++ "' does not.\n\tEither delete the keys in '"
-                ++ inconsistency.hasKeys
-                ++ "', add the keys in '"
-                ++ inconsistency.missesKeys
-                ++ "', or opt into a fallback behaviour by adding '# fallback-language: "
-                ++ inconsistency.hasKeys
-                ++ "' into the '"
-                ++ inconsistency.missesKeys
-                ++ "' translation file."
+            ( "Found inconsistent keys in translation files."
+            , [ "Language '"
+                    ++ inconsistency.hasKeys
+                    ++ "' includes the keys ["
+                    ++ String.join ", " inconsistency.keys
+                    ++ " but language '"
+                    ++ inconsistency.missesKeys
+                    ++ "' does not."
+              , "Either delete the keys in '"
+                    ++ inconsistency.hasKeys
+                    ++ "', add the keys in '"
+                    ++ inconsistency.missesKeys
+                    ++ "', or opt into a fallback behaviour by adding '# fallback-language: "
+                    ++ inconsistency.hasKeys
+                    ++ "' into the '"
+                    ++ inconsistency.missesKeys
+                    ++ "' translation file."
+              ]
+            )
 
         CannotFormatStringAsNumber str ->
-            "Cannot format the given string '" ++ str ++ "' as a number."
+            ( "Cannot format the given string '" ++ str ++ "' as a number.", [] )
 
         CannotParseStringAsNumber str ->
-            "Cannot parse the given string '" ++ str ++ "' as a number."
+            ( "Cannot parse the given string '" ++ str ++ "' as a number.", [] )
 
         CannotParseStringAsDate str ->
-            "Cannot parse the given string '" ++ str ++ "' as a date."
+            ( "Cannot parse the given string '" ++ str ++ "' as a date.", [] )
 
         CyclicTermReference trace ->
-            "Detected mutually recursive term references in translation file.\n\tTrace: "
-                ++ String.join " --> " trace
+            ( "Detected mutually recursive term references in translation file."
+            , [ "Trace: "
+                    ++ String.join " --> " trace
+              ]
+            )
 
         UnresolvableTermReference termName ->
-            "Failed to resolve reference to unknown term '" ++ termName ++ "' in translation file."
+            ( "Failed to resolve reference to unknown term '" ++ termName ++ "' in translation file.", [] )
 
         RequestDecodeError decodeError ->
-            "Failed to decode request: " ++ Json.Decode.errorToString decodeError
+            ( "Failed to decode request: " ++ Json.Decode.errorToString decodeError, [] )
 
         UnsupportedContentType contentType ->
-            "Unsupported content type '" ++ contentType ++ "'. Currently .json, .properties and .ftl formats are supported."
+            ( "Unsupported content type '" ++ contentType ++ "'."
+            , [ "Currently .json, .properties and .ftl formats are supported."
+              ]
+            )
 
         TranslationFileParsingError msg ->
-            "Failed to parse translation file: " ++ msg
+            ( "Failed to parse translation file: " ++ msg, [] )
+
+
+indent : String -> String
+indent =
+    (++) "\t"

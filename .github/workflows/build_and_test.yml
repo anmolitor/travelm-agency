@@ -35,6 +35,7 @@ jobs:
           npm run build
           cd example
           npm run build
+          cat src/Inline/Main.elm
           elm make src/Inline/Main.elm
           npm run build:parcel
       - name: test

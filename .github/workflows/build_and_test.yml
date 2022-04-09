@@ -30,8 +30,8 @@ jobs:
       - name: build
         # need to remove elm-stuff to prevent caching to result in a corrupt elm-stuff error
         run: |
-          rm -rf elm-stuff
-          rm -rf example/elm-stuff
+          ls -la
+          rm -rf elm-stuff example/elm-stuff example/.parcel-cache
           npm run build
           (cd example && npm run build && npm run build:parcel)
       - name: test

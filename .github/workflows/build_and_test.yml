@@ -37,9 +37,9 @@ jobs:
           npm run build
           cd example
           npm run build
-          cat src/Inline/Main.elm
-          elm --version
-          elm make src/Inline/Main.elm || true
+          npm run build:parcel || true
+          npm run build:parcel || true
+          npm run build:parcel || true
       - name: test
         run: npm test
       - name: npm publish

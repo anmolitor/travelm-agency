@@ -3,9 +3,10 @@ module ContentTypes.JsonTest exposing (..)
 import ContentTypes.Json as Json exposing (NestedJson(..))
 import Dict
 import Expect
+import State
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TSegment(..))
-import State
+import Types.Translation
 
 
 parserTests : Test
@@ -39,32 +40,32 @@ converterTests =
             \_ ->
                 [ ( "name", StringValue "test" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "name", ( Text "test", [] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "name", ( Text "test", [] ) ) ])
         , test "single nested property" <|
             \_ ->
                 [ ( "level1", Object [ ( "level2", StringValue "test" ) ] ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "level1Level2", ( Text "test", [] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "level1Level2", ( Text "test", [] ) ) ])
         , test "single property with placeholder" <|
             \_ ->
                 [ ( "prop", StringValue "hi {name}" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
         , test "multiple placeholders" <|
             \_ ->
                 [ ( "prop", StringValue "hi {name}{other}" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "prop", ( Text "hi ", [ Interpolation "name", Interpolation "other" ] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name", Interpolation "other" ] ) ) ])
         , test "escaped {" <|
             \_ ->
                 [ ( "prop", StringValue "escaped \\{ woop" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "prop", ( Text "escaped { woop", [] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "escaped { woop", [] ) ) ])
         , test "escaped \\" <|
             \_ ->
                 [ ( "prop", StringValue "escaped \\\\ woop" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "prop", ( Text "escaped \\ woop", [] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "escaped \\ woop", [] ) ) ])
         , test "trying to escape character that should not be escaped" <|
             \_ ->
                 [ ( "prop", StringValue "\\idk" ) ]
@@ -74,5 +75,5 @@ converterTests =
             \_ ->
                 [ ( "prop", StringValue "" ) ]
                     |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| State.fromTranslations <|  Dict.fromList [ ( "prop", ( Text "", [] ) ) ])
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "", [] ) ) ])
         ]

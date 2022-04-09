@@ -1,4 +1,4 @@
-module Types.Translation exposing (Translation, append, checkTranslationsForConsistency, completeFallback, concat, empty, fromPairs, inferFeaturesTranslations, map)
+module Types.Translation exposing (Translation, append, checkTranslationsForConsistency, completeFallback, concat, empty, fromPairs, inferFeatures, map)
 
 import Dict exposing (Dict)
 import Maybe.Extra
@@ -20,14 +20,14 @@ type alias Translations =
     Dict TKey TValue
 
 
-fromPairs : Translations -> Translation ()
+fromPairs : List ( TKey, TValue ) -> Translation ()
 fromPairs pairs =
-    { pairs = pairs, resources = (), fallback = Nothing }
+    { pairs = Dict.fromList pairs, resources = (), fallback = Nothing }
 
 
 empty : Translation ()
 empty =
-    fromPairs Dict.empty
+    fromPairs []
 
 
 map : (a -> b) -> Translation a -> Translation b
@@ -48,8 +48,8 @@ concat =
     List.foldl append { pairs = Dict.empty, fallback = Nothing, resources = () }
 
 
-inferFeaturesTranslations : Translation () -> Features
-inferFeaturesTranslations =
+inferFeatures : Translation any -> Features
+inferFeatures =
     .pairs >> Dict.values >> Features.combineMap Segment.inferFeatures
 
 
@@ -83,7 +83,7 @@ completeFallback getTranslationForLang language =
     go [ language ]
 
 
-checkTranslationsForConsistency : ( Language, Translation () ) -> ( Language, Translation () ) -> Failable ()
+checkTranslationsForConsistency : ( Language, Translation any ) -> ( Language, Translation any ) -> Failable ()
 checkTranslationsForConsistency ( lang1, t1 ) ( lang2, t2 ) =
     let
         keys1 =

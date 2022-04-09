@@ -27,12 +27,12 @@ import List.NonEmpty exposing (NonEmpty)
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntil, chompUntilEndOr, chompWhile, end, float, getChompedString, keyword, loop, map, oneOf, problem, spaces, succeed, token)
 import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translation)
 import String.Extra
 import Time
 import Types.ArgValue as ArgValue exposing (ArgValue)
 import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
+import Types.Translation exposing (Translation)
 import Util
 
 
@@ -296,8 +296,8 @@ fluentToInternalRep intl language ast_ =
                     msgToAttrs msg
                         |> List.NonEmpty.map attrToInternalRep
                         |> combineMapResultNonEmpty
-                        |> Result.map (List.NonEmpty.toList >> Dict.fromList)
-                        |> Result.map State.fromTranslations
+                        |> Result.map List.NonEmpty.toList
+                        |> Result.map Types.Translation.fromPairs
 
                 CommentResource (FallbackDirective fallback) ->
                     Ok { pairs = Dict.empty, resources = (), fallback = Just fallback }
@@ -307,7 +307,7 @@ fluentToInternalRep intl language ast_ =
     in
     List.filter termFilter ast_
         |> Result.Extra.combineMap resourceToInternalRep
-        |> Result.map State.foldTranslations
+        |> Result.map Types.Translation.concat
 
 
 combineMapResultNonEmpty : NonEmpty (Result x a) -> Result x (NonEmpty a)

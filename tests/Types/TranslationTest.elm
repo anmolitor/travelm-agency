@@ -20,34 +20,30 @@ suite =
         , test "append merges the translation pairs" <|
             \_ ->
                 Types.Translation.append
-                    (Types.Translation.fromPairs <|
-                        Dict.fromList
-                            [ ( "a", ( Text "1", [] ) )
-                            , ( "b", ( Text "2", [] ) )
-                            ]
+                    (Types.Translation.fromPairs
+                        [ ( "a", ( Text "1", [] ) )
+                        , ( "b", ( Text "2", [] ) )
+                        ]
                     )
-                    (Types.Translation.fromPairs <|
-                        Dict.fromList
-                            [ ( "a", ( Text "3", [] ) )
-                            , ( "c", ( Text "4", [] ) )
-                            ]
+                    (Types.Translation.fromPairs
+                        [ ( "a", ( Text "3", [] ) )
+                        , ( "c", ( Text "4", [] ) )
+                        ]
                     )
                     |> Expect.equal
-                        (Types.Translation.fromPairs <|
-                            Dict.fromList
-                                [ ( "a", ( Text "1", [] ) )
-                                , ( "b", ( Text "2", [] ) )
-                                , ( "c", ( Text "4", [] ) )
-                                ]
+                        (Types.Translation.fromPairs
+                            [ ( "a", ( Text "1", [] ) )
+                            , ( "b", ( Text "2", [] ) )
+                            , ( "c", ( Text "4", [] ) )
+                            ]
                         )
         , describe "fallback" <|
             let
                 fallbackLanguage =
-                    Types.Translation.fromPairs <|
-                        Dict.fromList
-                            [ ( "a", ( Text "1", [] ) )
-                            , ( "b", ( Text "2", [] ) )
-                            ]
+                    Types.Translation.fromPairs
+                        [ ( "a", ( Text "1", [] ) )
+                        , ( "b", ( Text "2", [] ) )
+                        ]
 
                 fallbackLanguageName =
                     "fallback-en"
@@ -99,17 +95,15 @@ suite =
         , describe "consistency check" <|
             let
                 missingC =
-                    Types.Translation.fromPairs <|
-                        Dict.fromList
-                            [ ( "a", ( Text "1", [] ) )
-                            , ( "b", ( Text "2", [] ) )
-                            ]
+                    Types.Translation.fromPairs
+                        [ ( "a", ( Text "1", [] ) )
+                        , ( "b", ( Text "2", [] ) )
+                        ]
 
                 missingAB =
-                    Types.Translation.fromPairs <|
-                        Dict.fromList
-                            [ ( "c", ( Text "2", [] ) )
-                            ]
+                    Types.Translation.fromPairs
+                        [ ( "c", ( Text "2", [] ) )
+                        ]
 
                 completeKeys =
                     Types.Translation.append missingC missingAB
@@ -120,7 +114,6 @@ suite =
                         translations =
                             keys
                                 |> List.map (\key -> ( key, ( Text "a", [] ) ))
-                                |> Dict.fromList
                                 |> Types.Translation.fromPairs
                     in
                     checkTranslationsForConsistency ( "langA", translations ) ( "langB", translations )

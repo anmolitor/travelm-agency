@@ -13,9 +13,10 @@ import Intl exposing (Intl)
 import Json.Decode as D
 import Platform
 import Ports exposing (GeneratorMode(..))
-import State exposing (State, Translation)
+import State exposing (State)
 import Types.Error as Error exposing (Failable)
 import Types.Features exposing (Feature(..))
+import Types.Translation exposing (Translation)
 import Util
 
 

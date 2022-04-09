@@ -1,14 +1,9 @@
 port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, requestDecoder, respond, subToRequests)
 
-import ContentTypes.Fluent
-import ContentTypes.Json
-import ContentTypes.Properties
-import Intl exposing (Intl)
 import Json.Decode as D
 import Json.Decode.Pipeline as D
-import State exposing (OptimizedJson, Translation)
+import State exposing (OptimizedJson)
 import Types.Error as Error exposing (Failable)
-import Util
 
 
 port sendResponse : Response -> Cmd msg
@@ -96,7 +91,6 @@ requestDecoder =
                     _ ->
                         D.fail <| "Unknown type of request: '" ++ type_ ++ "'"
             )
-
 
 
 translationRequestDecoder : D.Decoder TranslationRequest

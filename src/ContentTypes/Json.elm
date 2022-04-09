@@ -4,11 +4,10 @@ import Dict
 import Json.Decode as D
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
-import Parser.DeadEnds
 import Result.Extra
-import State exposing (Translation, fromTranslations)
 import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment
+import Types.Translation exposing (Translation)
 import Util
 
 
@@ -40,7 +39,7 @@ jsonToInternalRep =
                     ( _, Err err ) ->
                         Err err
             )
-        >> Result.map State.foldTranslations
+        >> Result.map Types.Translation.concat
 
 
 parsePlaceholderString : Parser Segment.TValue

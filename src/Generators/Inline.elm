@@ -9,12 +9,13 @@ import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import List.NonEmpty
 import Set
-import State exposing (NonEmptyState, Translation)
+import State exposing (NonEmptyState)
 import String.Extra
 import Types.ArgValue as ArgValue
 import Types.Features as Features
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
+import Types.Translation exposing (Translation)
 import Types.UniqueName as Unique
 import Util
 

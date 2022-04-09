@@ -3,9 +3,9 @@ module ContentTypes.Properties exposing (Comment(..), Resource(..), keyValuePars
 import Dict
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
-import State exposing (Translation)
 import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment
+import Types.Translation exposing (Translation)
 import Util
 
 
@@ -176,4 +176,4 @@ propertiesToInternalRep =
                     Ok { pairs = Dict.empty, resources = (), fallback = Nothing }
         )
         >> Error.combineList
-        >> Result.map State.foldTranslations
+        >> Result.map Types.Translation.concat

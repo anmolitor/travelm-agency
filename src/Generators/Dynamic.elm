@@ -16,13 +16,14 @@ import Intl exposing (Intl)
 import Json.Encode as E
 import List.NonEmpty
 import Set
-import State exposing (NonEmptyState, OptimizedJson, TranslationSet, Translations)
+import State exposing (NonEmptyState, OptimizedJson, TranslationSet)
 import String.Extra
 import Types.ArgValue as ArgValue exposing (ArgValue)
 import Types.Basic exposing (Identifier)
 import Types.Features as Features
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
+import Types.Translation
 import Types.UniqueName as Unique
 
 
@@ -285,7 +286,7 @@ addAccessorDeclarations =
                         Dict.NonEmpty.toList ctx.state
                             |> List.concatMap
                                 (\( identifier, translationSet ) ->
-                                    (Dict.NonEmpty.foldl1 State.combineTranslations translationSet).pairs
+                                    (Dict.NonEmpty.foldl1 Types.Translation.append translationSet).pairs
                                         |> Dict.toList
                                         |> List.sortBy Tuple.first
                                         |> List.indexedMap (accessorDeclaration identifier)
@@ -487,38 +488,41 @@ toFile context state =
 optimizeJsonAllLanguages : Bool -> Identifier -> TranslationSet resources -> TranslationSet OptimizedJson
 optimizeJsonAllLanguages addContentHash identifier translationSet =
     Dict.NonEmpty.map
-        (\language ({ pairs, fallback } as translation) ->
-            { pairs = pairs
-            , fallback = fallback
-            , resources =
-                let
-                    content =
-                        State.completeFallback translationSet language translation
-                            |> Result.withDefault translation
-                            |> .pairs
-                            |> optimizeJson
-                            |> E.encode 0
-                in
-                { content = content
-                , filename =
-                    String.join "." <|
-                        List.filter (not << String.isEmpty)
-                            [ identifier
-                            , language
-                            , if addContentHash then
-                                FNV1a.hash content |> String.fromInt
+        (\language translation ->
+            Types.Translation.map
+                (\_ ->
+                    let
+                        getTranslationForLang lang =
+                            Dict.NonEmpty.get lang translationSet
 
-                              else
-                                ""
-                            , "json"
-                            ]
-                }
-            }
+                        content =
+                            Types.Translation.completeFallback getTranslationForLang language translation
+                                |> Result.withDefault translation
+                                |> .pairs
+                                |> optimizeJson
+                                |> E.encode 0
+                    in
+                    { content = content
+                    , filename =
+                        String.join "." <|
+                            List.filter (not << String.isEmpty)
+                                [ identifier
+                                , language
+                                , if addContentHash then
+                                    FNV1a.hash content |> String.fromInt
+
+                                  else
+                                    ""
+                                , "json"
+                                ]
+                    }
+                )
+                translation
         )
         translationSet
 
 
-optimizeJson : Translations -> E.Value
+optimizeJson : Dict TKey TValue -> E.Value
 optimizeJson translations =
     let
         optimizeSegments : TValue -> String

@@ -195,9 +195,17 @@ addAccessorDeclarations =
         Unique.andThen3 "i18n" "intl" "data" <|
             \_ ctx i18nName intlName dataName ->
                 let
+                    interpolationMap =
+                        State.interpolationMap <| State.collectiveTranslationSet ctx.state
+
                     accessorDeclForKey : TKey -> CG.Declaration
                     accessorDeclForKey key =
                         let
+                            hasPlaceholders =
+                                Dict.get key interpolationMap
+                                    |> Maybe.map (not << Dict.isEmpty)
+                                    |> Maybe.withDefault False
+
                             i18nPattern =
                                 if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
                                     CG.tuplePattern [ CG.varPattern i18nName, CG.varPattern intlName ]
@@ -206,7 +214,7 @@ addAccessorDeclarations =
                                     CG.varPattern i18nName
 
                             patterns =
-                                if ctx.i18nArgLast then
+                                if ctx.i18nArgLast && hasPlaceholders then
                                     [ CG.varPattern dataName, i18nPattern ]
 
                                 else
@@ -220,7 +228,7 @@ addAccessorDeclarations =
                                     CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key)
 
                             declaration =
-                                if ctx.i18nArgLast then
+                                if ctx.i18nArgLast && hasPlaceholders then
                                     CG.apply [ declarationWithoutArgs, CG.val dataName ]
 
                                 else

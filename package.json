@@ -32,7 +32,7 @@
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.2.0",
     "http-shutdown": "^1.2.2",
-    "jsdom": "^19.0.0",
+    "jsdom": "^20.0.0",
     "jsdom-global": "^3.0.2",
     "mocha": "^10.0.0",
     "node-elm-compiler": "^5.0.6",

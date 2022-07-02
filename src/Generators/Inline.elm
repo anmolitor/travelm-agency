@@ -416,6 +416,9 @@ addI18nInstances =
                                 Segment.Text text ->
                                     CG.string text
 
+                                Segment.Html html ->
+                                    CG.apply [CG.fqFun ["Html"] "node", CG.string html.tag]     
+
                         concatenateExpressions e1 e2 =
                             CG.applyBinOp e2 CG.append e1
                     in

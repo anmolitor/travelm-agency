@@ -29,32 +29,44 @@ type TSegment
     | FormatNumber String (List ( String, ArgValue ))
       -- {DATE($var, hour12: true)}
     | FormatDate String (List ( String, ArgValue ))
+      -- <a href="attr" value="{$blub}">
+    | Html { tag : String, attrs : List ( String, TValue ), content : TValue }
 
 
 {-| Modify the variables inside of a value with the given function.
 -}
 modifyVars : (String -> String) -> TValue -> TValue
 modifyVars modify =
-    List.NonEmpty.map <|
-        \segment ->
-            case segment of
-                Text text ->
-                    Text text
+    List.NonEmpty.map (modifySegment modify)
 
-                Interpolation var ->
-                    Interpolation (modify var)
 
-                InterpolationCase var default cases ->
-                    InterpolationCase (modify var) (modifyVars modify default) (Dict.map (always <| modifyVars modify) cases)
+modifySegment : (String -> String) -> TSegment -> TSegment
+modifySegment modify segment =
+    case segment of
+        Text text ->
+            Text text
 
-                PluralCase var opts default cases ->
-                    PluralCase (modify var) opts (modifyVars modify default) (Dict.map (always <| modifyVars modify) cases)
+        Interpolation var ->
+            Interpolation (modify var)
 
-                FormatNumber var opts ->
-                    FormatNumber (modify var) opts
+        InterpolationCase var default cases ->
+            InterpolationCase (modify var) (modifyVars modify default) (Dict.map (always <| modifyVars modify) cases)
 
-                FormatDate var opts ->
-                    FormatDate (modify var) opts
+        PluralCase var opts default cases ->
+            PluralCase (modify var) opts (modifyVars modify default) (Dict.map (always <| modifyVars modify) cases)
+
+        FormatNumber var opts ->
+            FormatNumber (modify var) opts
+
+        FormatDate var opts ->
+            FormatDate (modify var) opts
+
+        Html { tag, attrs, content } ->
+            Html
+                { tag = tag
+                , attrs = List.map (Tuple.mapSecond <| modifyVars modify) attrs
+                , content = modifyVars modify content
+                }
 
 
 {-| Concatenate multiple text segments that occur after each other
@@ -66,6 +78,12 @@ concatenateTextSegments ( first, rest ) =
             case ( segment, mostRecentSeg ) of
                 ( Text t1, Text t2 ) ->
                     ( Text (t2 ++ t1), otherSegs )
+
+                ( Text "", _ ) ->
+                    segs
+
+                ( _, Text "" ) ->
+                    ( segment, otherSegs )
 
                 _ ->
                     List.NonEmpty.cons segment segs
@@ -166,3 +184,9 @@ classifyInterpolationSegmentHelper knownInterpolationKinds segment =
 
         Text _ ->
             []
+
+        Html { attrs, content } ->
+            (List.concatMap (Tuple.second >> List.NonEmpty.toList) attrs
+                |> List.concatMap (classifyInterpolationSegmentHelper knownInterpolationKinds)
+            )
+                ++ List.concatMap (classifyInterpolationSegmentHelper knownInterpolationKinds) (List.NonEmpty.toList content)

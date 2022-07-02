@@ -3,9 +3,7 @@ module State exposing (..)
 import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import List.NonEmpty
-import Maybe.Extra
 import Result.Extra
-import Set
 import Types.Basic exposing (Identifier, Language)
 import Types.Error as Error exposing (Failable)
 import Types.Features as Features exposing (Features)

@@ -616,6 +616,9 @@ encodeSegment segment =
         Segment.FormatDate var args ->
             wrapVar <| "D" ++ var ++ encodeArgs args
 
+        Segment.Html html ->
+            wrapVar <| "H" ++ html.tag ++ "|"    
+
 
 encodeArgs : List ( String, ArgValue ) -> String
 encodeArgs =

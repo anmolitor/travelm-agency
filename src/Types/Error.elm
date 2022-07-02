@@ -2,7 +2,6 @@ module Types.Error exposing (Failable, addAdditionalCtx, addContentTypeCtx, addL
 
 import Dict exposing (Dict)
 import Json.Decode
-import Json.Encode
 import List.NonEmpty exposing (NonEmpty)
 import Parser exposing (Parser)
 import Parser.DeadEnds

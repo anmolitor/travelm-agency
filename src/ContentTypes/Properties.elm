@@ -1,4 +1,4 @@
-module ContentTypes.Properties exposing (Comment(..), Resource(..), keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser)
+module ContentTypes.Properties exposing (Comment(..), Resource(..), keyValueParser, parsePlaceholderString, parseProperties, propertiesToInternalRep, valueParser, parse)
 
 import Dict
 import List.NonEmpty
@@ -21,6 +21,11 @@ type Resource a
 type Comment
     = FallbackDirective String
     | OtherComment String
+
+
+parse : String -> Failable (Translation ())
+parse =
+    parseProperties >> Result.andThen propertiesToInternalRep
 
 
 parseProperties : String -> Failable Properties
@@ -67,42 +72,123 @@ valueParser =
 parsePlaceholderString : Parser Segment.TValue
 parsePlaceholderString =
     let
-        specialChars =
-            [ '"', '\'', '{' ]
-
-        untilNextSpecialChar =
+        untilNextSpecialChar specialChars =
             P.chompWhile (\c -> not <| List.member c specialChars) |> P.getChompedString
     in
-    P.loop []
-        (\revSegments ->
-            untilNextSpecialChar
-                |> P.andThen
-                    (\text ->
-                        P.oneOf
-                            [ P.succeed
-                                (P.Done <|
-                                    List.reverse <|
-                                        if String.isEmpty text then
-                                            revSegments
+    P.loop { revSegments = [], htmlTagsOpenForContent = [], revSegmentsHtml = [], htmlTagOpenForAttrs = Nothing }
+        (\({ revSegments, htmlTagsOpenForContent, revSegmentsHtml, htmlTagOpenForAttrs } as state) ->
+            case ( htmlTagsOpenForContent, htmlTagOpenForAttrs ) of
+                ( [], Nothing ) ->
+                    untilNextSpecialChar [ '"', '\'', '{', '<' ]
+                        |> P.andThen
+                            (\text ->
+                                P.oneOf
+                                    [ P.succeed
+                                        (P.Done <|
+                                            List.reverse <|
+                                                Segment.Text text
+                                                    :: revSegments
+                                        )
+                                        |. P.end
+                                    , P.succeed (\var -> P.Loop { state | revSegments = Segment.Interpolation var :: Segment.Text text :: revSegments })
+                                        |. P.token "{"
+                                        |= (P.chompUntil "}" |> P.getChompedString)
+                                        |. P.token "}"
+                                    , P.succeed (\moreText -> P.Loop { state | revSegments = Segment.Text (text ++ moreText) :: revSegments })
+                                        |. P.token "\""
+                                        |= (P.chompUntil "\"" |> P.getChompedString)
+                                        |. P.token "\""
+                                    , P.succeed (\moreText -> P.Loop { state | revSegments = Segment.Text (text ++ moreText) :: revSegments })
+                                        |. P.token "'"
+                                        |= (P.chompUntil "'" |> P.getChompedString)
+                                        |. P.token "'"
+                                    , P.succeed
+                                        (\htmlTag ->
+                                            P.Loop
+                                                { state
+                                                    | htmlTagOpenForAttrs = Just { tag = htmlTag, attrs = [], unfinishedAttrKey = Nothing }
+                                                    , revSegments = Segment.Text text :: revSegments
+                                                }
+                                        )
+                                        |. P.token "<"
+                                        |= (P.chompWhile Char.isAlpha |> P.getChompedString)
+                                        |. P.spaces
+                                    ]
+                            )
 
-                                        else
-                                            Segment.Text text :: revSegments
-                                )
-                                |. P.end
-                            , P.succeed (\var -> P.Loop <| Segment.Interpolation var :: Segment.Text text :: revSegments)
-                                |. P.token "{"
-                                |= (P.chompUntil "}" |> P.getChompedString)
-                                |. P.token "}"
-                            , P.succeed (\moreText -> P.Loop <| Segment.Text (text ++ moreText) :: revSegments)
-                                |. P.token "\""
-                                |= (P.chompUntil "\"" |> P.getChompedString)
-                                |. P.token "\""
-                            , P.succeed (\moreText -> P.Loop <| Segment.Text (text ++ moreText) :: revSegments)
-                                |. P.token "'"
-                                |= (P.chompUntil "'" |> P.getChompedString)
-                                |. P.token "'"
-                            ]
-                    )
+                ( _, Just openTag ) ->
+                    P.oneOf
+                        ((P.problem ("Found unfinished open html tag: " ++ openTag.tag)
+                            |. P.end
+                         )
+                            :: (case openTag.unfinishedAttrKey of
+                                    Just key ->
+                                        [ P.succeed
+                                            (\value ->
+                                                P.Loop
+                                                    { state
+                                                        | htmlTagOpenForAttrs =
+                                                            Just
+                                                                { openTag
+                                                                    | attrs =
+                                                                        ( key, ( Segment.Text value, [] ) )
+                                                                            :: openTag.attrs
+                                                                    , unfinishedAttrKey = Nothing
+                                                                }
+                                                    }
+                                            )
+                                            |. P.token "\""
+                                            |= (P.chompUntil "\"" |> P.getChompedString)
+                                            |. P.token "\""
+                                        ]
+
+                                    Nothing ->
+                                        [ P.succeed
+                                            (P.Loop
+                                                { state
+                                                    | htmlTagsOpenForContent = { tag = openTag.tag, attrs = openTag.attrs } :: htmlTagsOpenForContent
+                                                    , htmlTagOpenForAttrs = Nothing
+                                                }
+                                            )
+                                            |. P.token ">"
+                                        , P.succeed
+                                            (\attrKey ->
+                                                P.Loop
+                                                    { state
+                                                        | htmlTagOpenForAttrs = Just { openTag | unfinishedAttrKey = Just attrKey }
+                                                    }
+                                            )
+                                            |= untilNextSpecialChar [ '=', ' ', '\n' ]
+                                            |. P.spaces
+                                            |. P.token "="
+                                        ]
+                               )
+                        )
+                        |. P.spaces
+
+                ( firstOpenHtmlTag :: otherOpenTags, Nothing ) ->
+                    untilNextSpecialChar [ '"', '\'', '{', '<' ]
+                        |> P.andThen
+                            (\text ->
+                                P.oneOf
+                                    [ P.problem ("Found unclosed html tag: " ++ firstOpenHtmlTag.tag)
+                                        |. P.end
+                                    , P.succeed
+                                        (P.Loop
+                                            { state
+                                                | htmlTagsOpenForContent = otherOpenTags
+                                                , revSegments =
+                                                    Segment.Html
+                                                        { tag = firstOpenHtmlTag.tag
+                                                        , attrs = firstOpenHtmlTag.attrs
+                                                        , content = ( Segment.Text text, [] )
+                                                        }
+                                                        :: revSegments
+                                            }
+                                        )
+                                        |. P.token ("</" ++ firstOpenHtmlTag.tag ++ ">")
+                                    ]
+                            )
         )
         |> P.andThen
             (\segments ->

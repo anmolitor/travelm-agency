@@ -1,9 +1,10 @@
 module ContentTypes.PropertiesTest exposing (..)
 
 import ContentTypes.Properties as Properties exposing (Comment(..), Resource(..))
+import Dict
 import Expect
 import Test exposing (Test, describe, test)
-import Types.Segment exposing (TSegment(..))
+import Types.Segment exposing (TKey, TSegment(..), TValue)
 import Types.Translation
 
 
@@ -12,57 +13,79 @@ parserTests =
     describe "Properties parser"
         [ test "single row" <|
             \_ ->
-                Properties.parseProperties "test.property=Some value"
-                    |> Expect.equal (Ok [ PropertyResource ( [ "test", "property" ], "Some value" ) ])
+                "test.property=Some value"
+                    |> expectParseTo [ ( "testProperty", ( Text "Some value", [] ) ) ]
         , test "empty value" <|
             \_ ->
-                Properties.parseProperties "test.property="
-                    |> Expect.equal (Ok [ PropertyResource ( [ "test", "property" ], "" ) ])
+                "test.property="
+                    |> expectParseTo [ ( "testProperty", ( Text "", [] ) ) ]
         , test "multiple rows" <|
             \_ ->
-                Properties.parseProperties "test.property1=val1\ntest.property2=val2"
-                    |> Expect.equal
-                        (Ok
-                            [ PropertyResource ( [ "test", "property1" ], "val1" )
-                            , PropertyResource ( [ "test", "property2" ], "val2" )
-                            ]
-                        )
+                "test.property1=val1\ntest.property2=val2"
+                    |> expectParseTo
+                        [ ( "testProperty1", ( Text "val1", [] ) )
+                        , ( "testProperty2", ( Text "val2", [] ) )
+                        ]
         , test "empty rows" <|
             \_ ->
-                Properties.parseProperties """
+                """
 prop1=A
 
 prop2=B
-                """ |> Expect.equal (Ok [ PropertyResource ( [ "prop1" ], "A" ), PropertyResource ( [ "prop2" ], "B" ) ])
+                """ |> expectParseTo [ ( "prop1", ( Text "A", [] ) ), ( "prop2", ( Text "B", [] ) ) ]
         , test "single multi-line" <|
             \_ ->
-                Properties.parseProperties """
+                """
 prop1=A \\
     test
 
 prop2=B
-                """ |> Expect.equal (Ok [ PropertyResource ( [ "prop1" ], "A test" ), PropertyResource ( [ "prop2" ], "B" ) ])
+                """ |> expectParseTo [ ( "prop1", ( Text "A test", [] ) ), ( "prop2", ( Text "B", [] ) ) ]
         , test "more multi-lines with vanishing indent" <|
             \_ ->
-                Properties.parseProperties """
+                """
 prop=A \\
     test\\
   for\\
-this
-                """ |> Expect.equal (Ok [ PropertyResource ( [ "prop" ], "A testforthis" ) ])
-        , test "comments are parsed" <|
+ this
+                """ |> expectParseTo [ ( "prop", ( Text "A testforthis", [] ) ) ]
+        , test "single placeholder" <|
             \_ ->
-                Properties.parseProperties """
-# some comment
-msg = abc
-# bla bla
+                "prop = hi {name}"
+                    |> expectParseTo [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ]
+        , test "multiple placeholders" <|
+            \_ ->
+                "prop = hi {name} {abc}"
+                    |> expectParseTo [ ( "prop", ( Text "hi ", [ Interpolation "name", Text " ", Interpolation "abc" ] ) ) ]
+        , test "escaping { with '{' or \"{\"" <|
+            \_ ->
+                "a = needs '{' br } \"{\"ackets"
+                    |> expectParseTo [ ( "a", ( Text "needs { br } {ackets", [] ) ) ]
+        , test "escaping quotes" <|
+            \_ ->
+                "a = \"'\"quotes'\"'"
+                    |> expectParseTo [ ( "a", ( Text "'quotes\"", [] ) ) ]
+        , test "equals sign does not need escaping" <|
+            \_ ->
+                "a = abc=def"
+                    |> expectParseTo [ ( "a", ( Text "abc=def", [] ) ) ]
+        , test "simple html" <|
+            \_ ->
+                "a = <span>Test</span>"
+                    |> expectParseTo [ ( "a", ( Html { tag = "span", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+        , test "fallback directive" <|
+            \_ ->
                 """
+# fallback-language: en
+msg = abc
+                """
+                    |> Properties.parse
                     |> Expect.equal
                         (Ok
-                            [ CommentResource (OtherComment "some comment")
-                            , PropertyResource ( [ "msg" ], "abc" )
-                            , CommentResource (OtherComment "bla bla")
-                            ]
+                            { pairs = Dict.fromList [ ( "msg", ( Text "abc", [] ) ) ]
+                            , fallback = Just "en"
+                            , resources = ()
+                            }
                         )
         ]
 
@@ -95,3 +118,9 @@ converterTests =
                 Properties.propertiesToInternalRep [ PropertyResource ( [ "prop1" ], "\"{\" '{'" ) ]
                     |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop1", ( Text "{ {", [] ) ) ])
         ]
+
+
+expectParseTo : List ( TKey, TValue ) -> String -> Expect.Expectation
+expectParseTo expected stringToParse =
+    Properties.parse stringToParse
+        |> Expect.equal (Ok <| Types.Translation.fromPairs expected)

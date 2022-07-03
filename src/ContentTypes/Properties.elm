@@ -1,5 +1,6 @@
 module ContentTypes.Properties exposing (parse, parser)
 
+import ContentTypes.Shared exposing (HtmlTagState(..), ParsingState, initialParsingState)
 import Dict
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
@@ -67,60 +68,9 @@ keyParser =
         |> P.map Util.keyToName
 
 
-type alias ParsingState =
-    { revSegments : List Segment.TSegment
-    , htmlTagParsingState : HtmlTagState
-    , nesting : List String
-    }
-
-
-initialParsingState : ParsingState
-initialParsingState =
-    { revSegments = [], htmlTagParsingState = NoHtml, nesting = [] }
-
-
-type alias HtmlAttrs =
-    List ( String, List Segment.TSegment )
-
-
-type HtmlTagState
-    = CollectingAttrs String HtmlAttrs
-    | CollectingContent String HtmlAttrs ParsingState
-    | NoHtml
-
-
 valueParser : Parser Segment.TValue
 valueParser =
-    P.loop initialParsingState (applyStepInnermost valueParserHelper)
-
-
-applyStepInnermost : (ParsingState -> P.Parser (P.Step ParsingState Segment.TValue)) -> ParsingState -> P.Parser (P.Step ParsingState Segment.TValue)
-applyStepInnermost step state =
-    case state.htmlTagParsingState of
-        CollectingContent tag attrs innerState ->
-            P.map
-                (\stepResult ->
-                    case stepResult of
-                        P.Done content ->
-                            P.Loop
-                                { state
-                                    | htmlTagParsingState = NoHtml
-                                    , revSegments =
-                                        Segment.Html
-                                            { tag = tag
-                                            , attrs = List.reverse <| List.map (Tuple.mapSecond finalizeRevSegments) attrs
-                                            , content = content
-                                            }
-                                            :: state.revSegments
-                                }
-
-                        P.Loop newInnerState ->
-                            P.Loop { state | htmlTagParsingState = CollectingContent tag attrs newInnerState }
-                )
-                (applyStepInnermost step innerState)
-
-        _ ->
-            step state
+    ContentTypes.Shared.buildValueParser valueParserHelper
 
 
 valueParserHelper : ParsingState -> Parser (P.Step ParsingState Segment.TValue)
@@ -142,22 +92,22 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
         NoHtml ->
             P.oneOf
                 ([ P.map P.Done <|
-                    onEnd state
+                    ContentTypes.Shared.onEnd state
                         |. P.end
                  , P.map P.Done <|
-                    onEnd state
+                    ContentTypes.Shared.onEnd state
                         |. P.token "\n"
                  , P.succeed (P.Loop state) |. P.token "\\\n" |. P.spaces
                  , P.map (\interp -> P.Loop { state | revSegments = interp :: revSegments })
                     interpolationParser
                  , P.map addText
-                    (bracket "\"" "\"")
+                    (ContentTypes.Shared.bracket "\"" "\"")
                  , P.map addText
-                    (bracket "'" "'")
+                    (ContentTypes.Shared.bracket "'" "'")
                  ]
                     ++ (case nesting of
                             firstOpenHtmlTag :: _ ->
-                                [ P.succeed (P.Done <| finalizeRevSegments revSegments)
+                                [ P.succeed (P.Done <| ContentTypes.Shared.finalizeRevSegments revSegments)
                                     |. P.token ("</" ++ firstOpenHtmlTag ++ ">")
                                 ]
 
@@ -171,7 +121,7 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                             |. P.token "<"
                             |= (P.chompWhile Char.isAlpha |> P.getChompedString)
                        , P.map addText <|
-                            chompAllExcept [ '<', '"', '\'', '{', '\n', '\\' ]
+                            ContentTypes.Shared.chompAllExcept [ '<', '"', '\'', '{', '\n', '\\' ]
                        ]
                 )
 
@@ -206,43 +156,9 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                     ]
 
 
-onEnd : ParsingState -> P.Parser Segment.TValue
-onEnd state =
-    case state.nesting of
-        firstOpenHtmlTag :: _ ->
-            P.problem <| "Found unclosed html tag: " ++ firstOpenHtmlTag
-
-        [] ->
-            P.succeed <| finalizeRevSegments state.revSegments
-
-
-finalizeRevSegments : List Segment.TSegment -> Segment.TValue
-finalizeRevSegments revSegs =
-    case List.NonEmpty.fromList revSegs of
-        Nothing ->
-            ( Segment.Text "", [] )
-
-        Just nonEmptySegs ->
-            List.NonEmpty.reverse nonEmptySegs
-
-
-chompAllExcept : List Char -> Parser String
-chompAllExcept chars =
-    P.getChompedString <|
-        P.chompWhile (\char -> not <| List.member char chars)
-
-
-bracket : String -> String -> Parser String
-bracket start end =
-    P.succeed identity
-        |. P.token start
-        |= (P.chompUntil end |> P.getChompedString)
-        |. P.token end
-
-
 interpolationParser : Parser Segment.TSegment
 interpolationParser =
-    bracket "{" "}" |> P.map Segment.Interpolation
+    ContentTypes.Shared.bracket "{" "}" |> P.map Segment.Interpolation
 
 
 commentParser : Parser Comment

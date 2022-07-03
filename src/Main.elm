@@ -110,7 +110,7 @@ parseTranslationContent intl { identifier, language, extension, content } =
             ContentTypes.Json.parseJson content |> Result.andThen ContentTypes.Json.jsonToInternalRep
 
         "properties" ->
-            ContentTypes.Properties.parseProperties content |> Result.andThen ContentTypes.Properties.propertiesToInternalRep
+            ContentTypes.Properties.parse content
 
         "ftl" ->
             ContentTypes.Fluent.runFluentParser content |> Result.andThen (ContentTypes.Fluent.fluentToInternalRep intl language)

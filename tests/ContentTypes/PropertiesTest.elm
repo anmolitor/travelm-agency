@@ -1,6 +1,6 @@
 module ContentTypes.PropertiesTest exposing (..)
 
-import ContentTypes.Properties as Properties exposing (Comment(..), Resource(..))
+import ContentTypes.Properties as Properties
 import Dict
 import Expect
 import Test exposing (Test, describe, test)
@@ -73,6 +73,55 @@ prop=A \\
             \_ ->
                 "a = <span>Test</span>"
                     |> expectParseTo [ ( "a", ( Html { tag = "span", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+        , test "html with attributes" <|
+            \_ ->
+                "a = <span id=\"an id\">Test</span>"
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "span"
+                                , attrs = [ ( "id", ( Text "an id", [] ) ) ]
+                                , content = ( Text "Test", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
+        , test "multiple html attributes" <|
+            \_ ->
+                "a = <span id=\"an id\" data-testid=\"test\">Test</span>"
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "span"
+                                , attrs = [ ( "id", ( Text "an id", [] ) ), ( "data-testid", ( Text "test", [] ) ) ]
+                                , content = ( Text "Test", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
+        , test "escaping html with quotes" <|
+            \_ ->
+                "a = '<'span>\"<\"/span>"
+                    |> expectParseTo [ ( "a", ( Text "<span></span>", [] ) ) ]
+        , test "nested html" <|
+            \_ ->
+                "a = <a href=\"/\"><div id=\"anId\">test</div></a>"
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "a"
+                                , attrs = [ ( "href", ( Text "/", [] ) ) ]
+                                , content =
+                                    ( Html { tag = "div", attrs = [ ( "id", ( Text "anId", [] ) ) ], content = ( Text "test", [] ) }
+                                    , []
+                                    )
+                                }
+                            , []
+                            )
+                          )
+                        ]
         , test "fallback directive" <|
             \_ ->
                 """
@@ -87,36 +136,6 @@ msg = abc
                             , resources = ()
                             }
                         )
-        ]
-
-
-converterTests : Test
-converterTests =
-    describe "Properties to Internal Representation Converter"
-        [ test "single key value pair" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop", "name" ], "value" ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "propName", ( Text "value", [] ) ) ])
-        , test "empty value" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop", "name" ], "" ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "propName", ( Text "", [] ) ) ])
-        , test "single placeholder" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop" ], "hi {name}" ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
-        , test "multiple placeholders" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop" ], "hi {name} {abc}." ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name", Text " ", Interpolation "abc", Text "." ] ) ) ])
-        , test "multiple pairs" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop1" ], "val1" ), PropertyResource ( [ "prop2" ], "val2" ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop1", ( Text "val1", [] ) ), ( "prop2", ( Text "val2", [] ) ) ])
-        , test "escaping { with double quote or single quote" <|
-            \_ ->
-                Properties.propertiesToInternalRep [ PropertyResource ( [ "prop1" ], "\"{\" '{'" ) ]
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop1", ( Text "{ {", [] ) ) ])
         ]
 
 

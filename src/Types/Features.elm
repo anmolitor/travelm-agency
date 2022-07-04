@@ -4,6 +4,8 @@ module Types.Features exposing (Feature(..), Features, addFeature, combine, comb
 
     Intl : Need dependency on the intl-proxy package. Allows for usage of the Browsers Intl API in generated code.
 
+    Html : Will produce Html instead of String as a return value (or Element/Element.WithContext (TODO))
+
     Debug : Change default values to show errors when they happen. (TODO)
 
 -}

@@ -262,8 +262,8 @@ addAccessorDeclarations =
 
 addI18nInstances : Unique.UniqueNameContext (WithAccessors (WithCtx ctx)) -> Unique.UniqueNameContext (WithAccessors (WithCtx ctx))
 addI18nInstances =
-    Unique.andThen3 "data" "intl" "n" <|
-        \lookup ctx dataName intlName numName ->
+    Unique.andThen4 "data" "intl" "n" "extraAttrs" <|
+        \lookup ctx dataName intlName numName extraAttrsName ->
             let
                 interpolationMap =
                     State.interpolationMap translationSet
@@ -314,6 +314,16 @@ addI18nInstances =
                         placeholders =
                             Dict.get key interpolationMap |> Maybe.withDefault Dict.empty
 
+                        htmlIds =
+                            State.getHtmlIdsForKey key ctx.state
+
+                        toHtml text =
+                            if List.isEmpty htmlIds then
+                                text
+
+                            else
+                                CG.apply [ CG.fqFun [ "Html" ] "text", text ]
+
                         specificPlaceholdersForThisLanguage =
                             Segment.interpolationVars value
 
@@ -330,6 +340,17 @@ addI18nInstances =
 
                             else
                                 identity
+
+                        addHtmlAttrsIfNeeded =
+                            case htmlIds of
+                                [] ->
+                                    identity
+
+                                [ single ] ->
+                                    (::) (CG.varPattern <| lookup <| single ++ "Attrs")
+
+                                _ ->
+                                    (::) (CG.varPattern extraAttrsName)
 
                         matchStatement default otherOptions =
                             (Dict.toList otherOptions
@@ -351,10 +372,12 @@ addI18nInstances =
                             case segm of
                                 Segment.Interpolation var ->
                                     (Dict.get var placeholders |> Maybe.map InterpolationKind.interpolatedValueToString |> Maybe.withDefault identity) (accessParam var)
+                                        |> toHtml
 
                                 Segment.InterpolationCase var default otherOptions ->
                                     CG.caseExpr (accessParam var)
                                         (matchStatement default otherOptions)
+                                        |> toHtml
 
                                 Segment.PluralCase var numArgs default otherOptions ->
                                     CG.caseExpr
@@ -390,6 +413,7 @@ addI18nInstances =
                                             ]
                                         )
                                         (matchStatement default otherOptions)
+                                        |> toHtml
 
                                 Segment.FormatDate var args ->
                                     CG.apply
@@ -401,6 +425,7 @@ addI18nInstances =
                                             , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, ArgValue.generateEncoded v ]) |> CG.list )
                                             ]
                                         ]
+                                        |> toHtml
 
                                 Segment.FormatNumber var args ->
                                     CG.apply
@@ -412,34 +437,70 @@ addI18nInstances =
                                             , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, ArgValue.generateEncoded v ]) |> CG.list )
                                             ]
                                         ]
+                                        |> toHtml
 
                                 Segment.Text text ->
-                                    CG.string text
+                                    CG.string text |> toHtml
 
                                 Segment.Html html ->
-                                    CG.apply [CG.fqFun ["Html"] "node", CG.string html.tag]     
+                                    CG.apply
+                                        [ CG.fqFun [ "Html" ] "node"
+                                        , CG.string html.tag
+                                        , generateHtmlAttrs html.attrs
+                                        , generateHtmlContent html.content
+                                        ]
+
+                        generateHtmlAttrs attrs =
+                            List.map
+                                (\( attrKey, attrVal ) ->
+                                    CG.apply
+                                        [ CG.fqFun [ "Html", "Attributes" ] "attribute"
+                                        , CG.string attrKey
+                                        , List.NonEmpty.map segmentToExpression attrVal
+                                            |> List.NonEmpty.foldl1 concatenateExpressions
+                                        ]
+                                )
+                                attrs
+                                |> CG.list
+
+                        generateHtmlContent content =
+                            List.NonEmpty.map segmentToExpression content
+                                |> concatExpressions
 
                         concatenateExpressions e1 e2 =
                             CG.applyBinOp e2 CG.append e1
+
+                        concatExpressions =
+                            if List.isEmpty htmlIds then
+                                List.NonEmpty.foldl1 concatenateExpressions
+
+                            else
+                                List.NonEmpty.toList >> CG.list
                     in
                     List.NonEmpty.map segmentToExpression value
-                        |> List.NonEmpty.foldl1 concatenateExpressions
+                        |> concatExpressions
                         |> (case Dict.toList placeholders of
                                 [] ->
-                                    identity
+                                    case addHtmlAttrsIfNeeded [] of
+                                        [] ->
+                                            identity
+
+                                        nonEmpty ->
+                                            CG.lambda nonEmpty
 
                                 [ ( single, _ ) ] ->
-                                    CG.lambda <| addIntlIfNeeded [ CG.varPattern <| lookup single ]
+                                    CG.lambda <| addIntlIfNeeded <| addHtmlAttrsIfNeeded [ CG.varPattern <| lookup single ]
 
                                 _ ->
                                     CG.lambda <|
-                                        addIntlIfNeeded
-                                            [ if Dict.isEmpty specificPlaceholdersForThisLanguage then
-                                                CG.allPattern
+                                        addIntlIfNeeded <|
+                                            addHtmlAttrsIfNeeded
+                                                [ if Dict.isEmpty specificPlaceholdersForThisLanguage then
+                                                    CG.allPattern
 
-                                              else
-                                                CG.varPattern dataName
-                                            ]
+                                                  else
+                                                    CG.varPattern dataName
+                                                ]
                            )
 
                 i18nDecls : List CG.Declaration
@@ -478,15 +539,41 @@ translationToRecordTypeAnn state key =
                 |> Maybe.withDefault Dict.empty
                 |> Dict.toList
                 |> List.sortBy Tuple.first
+
+        htmlIds =
+            State.getHtmlIdsForKey key state
+
+        htmlReturnType =
+            CG.funAnn (htmlRecordTypeAnn htmlIds)
+                (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
     in
-    case placeholders of
-        [] ->
+    case ( placeholders, htmlIds ) of
+        ( [], [] ) ->
             CG.stringAnn
 
-        [ ( _, kind ) ] ->
+        ( [ ( _, kind ) ], [] ) ->
             CG.funAnn (InterpolationKind.toTypeAnn kind) CG.stringAnn
 
-        many ->
+        ( [ ( _, kind ) ], _ :: _ ) ->
+            CG.funAnn (InterpolationKind.toTypeAnn kind) htmlReturnType
+
+        ( many, [] ) ->
             many
                 |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
                 |> (\fields -> CG.funAnn (CG.recordAnn fields) CG.stringAnn)
+
+        ( many, _ :: _ ) ->
+            many
+                |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
+                |> (\fields -> CG.funAnn (CG.recordAnn fields) htmlReturnType)
+
+
+htmlRecordTypeAnn : List String -> CG.TypeAnnotation
+htmlRecordTypeAnn =
+    CG.recordAnn
+        << List.map
+            (\id ->
+                ( id
+                , CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]
+                )
+            )

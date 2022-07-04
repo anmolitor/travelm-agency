@@ -1,5 +1,6 @@
 module ContentTypes.Shared exposing (..)
 
+import List.Extra
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=))
 import Types.Segment as Segment
@@ -32,28 +33,58 @@ buildValueParser =
     applyStepInnermost >> P.loop initialParsingState
 
 
+isSpecialAttribute : String -> Bool
+isSpecialAttribute =
+    (==) idAttributeName
+
+
+idAttributeName : String
+idAttributeName =
+    "_id"
+
+
 applyStepInnermost : (ParsingState -> P.Parser (P.Step ParsingState Segment.TValue)) -> ParsingState -> P.Parser (P.Step ParsingState Segment.TValue)
 applyStepInnermost step state =
     case state.htmlTagParsingState of
         CollectingContent tag attrs innerState ->
-            P.map
+            P.andThen
                 (\stepResult ->
                     case stepResult of
                         P.Done content ->
-                            P.Loop
-                                { state
-                                    | htmlTagParsingState = NoHtml
-                                    , revSegments =
-                                        Segment.Html
-                                            { tag = tag
-                                            , attrs = List.reverse <| List.map (Tuple.mapSecond finalizeRevSegments) attrs
-                                            , content = content
+                            let
+                                finalizedAttrs =
+                                    List.reverse <| List.map (Tuple.mapSecond finalizeRevSegments) attrs
+
+                                idAttribute =
+                                    List.Extra.find (Tuple.first >> (==) idAttributeName) finalizedAttrs
+                                        |> Maybe.map Tuple.second
+                            in
+                            case idAttribute of
+                                Just ( Segment.Text id, [] ) ->
+                                    P.succeed <|
+                                        P.Loop
+                                            { state
+                                                | htmlTagParsingState = NoHtml
+                                                , revSegments =
+                                                    Segment.Html
+                                                        { tag = tag
+                                                        , id = id
+                                                        , attrs = List.filter (not << isSpecialAttribute << Tuple.first) finalizedAttrs
+                                                        , content = content
+                                                        }
+                                                        :: state.revSegments
                                             }
-                                            :: state.revSegments
-                                }
+
+                                _ ->
+                                    P.problem <|
+                                        """Please define an '_id' attribute on your html elements.
+This makes it easy for you later when you want to style specific parts of your generated html.
+
+Here is the html tag that misses the _id attribute: """
+                                            ++ tag
 
                         P.Loop newInnerState ->
-                            P.Loop { state | htmlTagParsingState = CollectingContent tag attrs newInnerState }
+                            P.succeed <| P.Loop { state | htmlTagParsingState = CollectingContent tag attrs newInnerState }
                 )
                 (applyStepInnermost step innerState)
 

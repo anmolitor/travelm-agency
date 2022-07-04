@@ -109,6 +109,13 @@ inferFeaturesTranslationSet =
     Dict.NonEmpty.values >> Features.combineMap Types.Translation.inferFeatures
 
 
+getHtmlIdsForKey : TKey -> NonEmptyState () -> List String
+getHtmlIdsForKey key =
+    collectiveTranslationSet
+        >> Dict.NonEmpty.values
+        >> List.concatMap (.pairs >> Dict.get key >> Maybe.map Segment.getHtmlIds >> Maybe.withDefault [])
+
+
 isIntlNeededForKey : TKey -> NonEmptyState () -> Bool
 isIntlNeededForKey key =
     collectiveTranslationSet

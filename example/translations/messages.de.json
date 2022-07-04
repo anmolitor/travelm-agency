@@ -6,5 +6,6 @@
   "differentVars": "Beispiel 5: Sprachen können verschiedene Variablen verwenden. In Elm muss dann die {unionGer} aller Variablen übergeben werden.",
   "languageSwitch": {
     "info": "Du kannst hier deine Sprache von {currentLanguage} zu einer anderen ändern."
-  }
+  },
+  "htmlTest": ""
 }

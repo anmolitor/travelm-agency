@@ -71,15 +71,21 @@ prop=A \\
                     |> expectParseTo [ ( "a", ( Text "abc=def", [] ) ) ]
         , test "simple html" <|
             \_ ->
+                "a = <span _id=\"testId\">Test</span>"
+                    |> expectParseTo [ ( "a", ( Html { tag = "span", id = "testId", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+        , test "html without _id attribute fails to parse" <|
+            \_ ->
                 "a = <span>Test</span>"
-                    |> expectParseTo [ ( "a", ( Html { tag = "span", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+                    |> Properties.parse
+                    |> Expect.err
         , test "html with attributes" <|
             \_ ->
-                "a = <span id=\"an id\">Test</span>"
+                "a = <span id=\"an id\" _id=\"spanId\">Test</span>"
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "span"
+                                , id = "spanId"
                                 , attrs = [ ( "id", ( Text "an id", [] ) ) ]
                                 , content = ( Text "Test", [] )
                                 }
@@ -89,11 +95,12 @@ prop=A \\
                         ]
         , test "multiple html attributes" <|
             \_ ->
-                "a = <span id=\"an id\" data-testid=\"test\">Test</span>"
+                "a = <span id=\"an id\" _id=\"spanId\" data-testid=\"test\">Test</span>"
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "span"
+                                , id = "spanId"
                                 , attrs = [ ( "id", ( Text "an id", [] ) ), ( "data-testid", ( Text "test", [] ) ) ]
                                 , content = ( Text "Test", [] )
                                 }
@@ -107,14 +114,20 @@ prop=A \\
                     |> expectParseTo [ ( "a", ( Text "<span></span>", [] ) ) ]
         , test "nested html" <|
             \_ ->
-                "a = <a href=\"/\"><div id=\"anId\">test</div></a>"
+                "a = <a _id=\"spanId\" href=\"/\"><div id=\"anId\" _id=\"divId\">test</div></a>"
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "a"
+                                , id = "spanId"
                                 , attrs = [ ( "href", ( Text "/", [] ) ) ]
                                 , content =
-                                    ( Html { tag = "div", attrs = [ ( "id", ( Text "anId", [] ) ) ], content = ( Text "test", [] ) }
+                                    ( Html
+                                        { tag = "div"
+                                        , id = "divId"
+                                        , attrs = [ ( "id", ( Text "anId", [] ) ) ]
+                                        , content = ( Text "test", [] )
+                                        }
                                     , []
                                     )
                                 }

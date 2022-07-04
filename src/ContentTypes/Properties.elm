@@ -2,7 +2,6 @@ module ContentTypes.Properties exposing (parse, parser)
 
 import ContentTypes.Shared exposing (HtmlTagState(..), ParsingState, initialParsingState)
 import Dict
-import List.NonEmpty
 import Parser as P exposing ((|.), (|=), Parser)
 import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment

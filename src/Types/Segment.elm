@@ -1,4 +1,4 @@
-module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, inferFeatures, interpolationVars, modifyVars)
+module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, inferFeatures, interpolationVars, modifyVars, getHtmlIds)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -30,7 +30,7 @@ type TSegment
       -- {DATE($var, hour12: true)}
     | FormatDate String (List ( String, ArgValue ))
       -- <a href="attr" value="{$blub}">
-    | Html { tag : String, attrs : List ( String, TValue ), content : TValue }
+    | Html { tag : String, id : String, attrs : List ( String, TValue ), content : TValue }
 
 
 {-| Modify the variables inside of a value with the given function.
@@ -61,9 +61,10 @@ modifySegment modify segment =
         FormatDate var opts ->
             FormatDate (modify var) opts
 
-        Html { tag, attrs, content } ->
+        Html { tag, id, attrs, content } ->
             Html
                 { tag = tag
+                , id = id
                 , attrs = List.map (Tuple.mapSecond <| modifyVars modify) attrs
                 , content = modifyVars modify content
                 }
@@ -119,6 +120,20 @@ inferFeatures val =
         identity
     )
         Features.default
+
+
+getHtmlIds : TValue -> List String
+getHtmlIds =
+    let
+        htmlIdsForSegment seg =
+            case seg of
+                Html html ->
+                    html.id :: getHtmlIds html.content
+
+                _ ->
+                    []
+    in
+    List.NonEmpty.toList >> List.concatMap htmlIdsForSegment
 
 
 classifyInterpolationSegment : TSegment -> List ( String, InterpolationKind )

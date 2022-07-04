@@ -107,7 +107,7 @@ parseTranslationContent : Intl -> Ports.TranslationRequest -> Failable (Translat
 parseTranslationContent intl { identifier, language, extension, content } =
     (case extension of
         "json" ->
-            ContentTypes.Json.parseJson content |> Result.andThen ContentTypes.Json.jsonToInternalRep
+            ContentTypes.Json.parse content
 
         "properties" ->
             ContentTypes.Properties.parse content

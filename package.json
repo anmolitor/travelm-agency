@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc && cross-env NODE_ENV=production node build.js",
     "build:dev": "node build.js",
-    "test": "elm-test",
+    "test": "node generate_test_cases.js && elm-test",
     "test:integration": "mocha tests --timeout 10000",
     "coverage": "elm-coverage"
   },

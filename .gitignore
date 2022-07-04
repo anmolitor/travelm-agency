@@ -6,5 +6,7 @@ elm-stuff
 /lib
 /generated/**
 !/generated/.gitkeep
+/gen_test_cases/Inline
+/gen_test_cases/Dynamic
 
 /example/dist

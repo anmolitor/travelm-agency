@@ -1,11 +1,11 @@
 module ContentTypes.JsonTest exposing (..)
 
-import ContentTypes.Json as Json exposing (NestedJson(..))
+import ContentTypes.Json as Json
+import Dict
 import Expect
 import Test exposing (Test, describe, test)
 import Types.Segment exposing (TKey, TSegment(..), TValue)
 import Types.Translation
-import Dict
 
 
 parserTests : Test
@@ -38,12 +38,16 @@ parserTests =
                     |> expectParseTo [ ( "prop", ( Text "hi ", [ Interpolation "name", Interpolation "other" ] ) ) ]
         , test "escaping {" <|
             \_ ->
-                """{ "prop": "escaped \\{ woop" }"""
+                """{ "prop": "escaped \\\\{ woop" }"""
                     |> expectParseTo [ ( "prop", ( Text "escaped { woop", [] ) ) ]
         , test "escaping \\" <|
             \_ ->
                 """{ "prop": "escaped \\\\ woop" }"""
                     |> expectParseTo [ ( "prop", ( Text "escaped \\ woop", [] ) ) ]
+        , test "escaping \"" <|
+            \_ ->
+                """{ "prop": "escaped \\" woop \\"!" }"""
+                    |> expectParseTo [ ( "prop", ( Text "escaped \" woop \"!", [] ) ) ]
         , test "error when trying to escape normal char" <|
             \_ ->
                 """{ "prop": "normal \\char" }"""
@@ -55,15 +59,21 @@ parserTests =
                     |> expectParseTo [ ( "prop", ( Text "", [] ) ) ]
         , test "simple html" <|
             \_ ->
-                """{ "a": "<span>Test</span>" }"""
-                    |> expectParseTo [ ( "a", ( Html { tag = "span", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+                """{ "a": "<span _id="test">Test</span>" }"""
+                    |> expectParseTo [ ( "a", ( Html { tag = "span", id = "test", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
+        , test "html without _id attribute fails to parse" <|
+            \_ ->
+                """{ "a": "<span>Test</span> }"""
+                    |> Json.parse
+                    |> Expect.err
         , test "html with attributes" <|
             \_ ->
-                """{ "a": "<span id="an id">Test</span>" }"""
+                """{ "a": "<span id="an id" _id="id for elm">Test</span>" }"""
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "span"
+                                , id = "id for elm"
                                 , attrs = [ ( "id", ( Text "an id", [] ) ) ]
                                 , content = ( Text "Test", [] )
                                 }
@@ -73,11 +83,12 @@ parserTests =
                         ]
         , test "multiple html attributes" <|
             \_ ->
-                """{ "a": "<span id="an id" data-testid="test">Test</span>" }"""
+                """{ "a": "<span id="an id" _id="realId" data-testid="test">Test</span>" }"""
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "span"
+                                , id = "realId"
                                 , attrs = [ ( "id", ( Text "an id", [] ) ), ( "data-testid", ( Text "test", [] ) ) ]
                                 , content = ( Text "Test", [] )
                                 }
@@ -87,18 +98,24 @@ parserTests =
                         ]
         , test "escaping html with \\" <|
             \_ ->
-                """{ "a": "\\<span>\\</span>" }"""
+                """{ "a": "\\\\<span>\\\\</span>" }"""
                     |> expectParseTo [ ( "a", ( Text "<span></span>", [] ) ) ]
         , test "nested html" <|
             \_ ->
-                """{ "a": "<a href="/"><div id="anId">test</div></a>" }"""
+                """{ "a": "<a _id="theLink" href="/"><div id="anId" _id="theDiv">test</div></a>" }"""
                     |> expectParseTo
                         [ ( "a"
                           , ( Html
                                 { tag = "a"
+                                , id = "theLink"
                                 , attrs = [ ( "href", ( Text "/", [] ) ) ]
                                 , content =
-                                    ( Html { tag = "div", attrs = [ ( "id", ( Text "anId", [] ) ) ], content = ( Text "test", [] ) }
+                                    ( Html
+                                        { tag = "div"
+                                        , id = "theDiv"
+                                        , attrs = [ ( "id", ( Text "anId", [] ) ) ]
+                                        , content = ( Text "test", [] )
+                                        }
                                     , []
                                     )
                                 }
@@ -117,52 +134,6 @@ parserTests =
                             , resources = ()
                             }
                         )
-        ]
-
-
-converterTests : Test
-converterTests =
-    describe "JSON to internal representation converter"
-        [ test "single property" <|
-            \_ ->
-                [ ( "name", StringValue "test" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "name", ( Text "test", [] ) ) ])
-        , test "single nested property" <|
-            \_ ->
-                [ ( "level1", Object [ ( "level2", StringValue "test" ) ] ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "level1Level2", ( Text "test", [] ) ) ])
-        , test "single property with placeholder" <|
-            \_ ->
-                [ ( "prop", StringValue "hi {name}" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name" ] ) ) ])
-        , test "multiple placeholders" <|
-            \_ ->
-                [ ( "prop", StringValue "hi {name}{other}" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "hi ", [ Interpolation "name", Interpolation "other" ] ) ) ])
-        , test "escaped {" <|
-            \_ ->
-                [ ( "prop", StringValue "escaped \\{ woop" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "escaped { woop", [] ) ) ])
-        , test "escaped \\" <|
-            \_ ->
-                [ ( "prop", StringValue "escaped \\\\ woop" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "escaped \\ woop", [] ) ) ])
-        , test "trying to escape character that should not be escaped" <|
-            \_ ->
-                [ ( "prop", StringValue "\\idk" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.err
-        , test "empty json string" <|
-            \_ ->
-                [ ( "prop", StringValue "" ) ]
-                    |> Json.jsonToInternalRep
-                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "prop", ( Text "", [] ) ) ])
         ]
 
 

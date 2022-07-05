@@ -2,14 +2,15 @@ module SingleTextCase exposing (main)
 
 import Dict
 import Dict.NonEmpty
-import Shared exposing (buildMain)
 import State exposing (NonEmptyState)
 import Types.Segment exposing (TSegment(..))
+import Util.Shared exposing (Generator, buildMain, inlineOpts)
+import Util.Shared exposing (dynamicOpts)
 
 
-main : Program () () msg
+main : Generator
 main =
-    buildMain "SingleText" state
+    buildMain [ inlineOpts, dynamicOpts ] state
 
 
 state : NonEmptyState ()

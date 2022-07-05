@@ -116,7 +116,7 @@ import Types.UniqueName as Unique
                                 |= Parser.int
                                 |. Parser.token "|"
                                 |= matchParser
-                            , Parser.succeed matchNumbers
+                            , Parser.succeed matchNumbersCodeGen
                                 |. Parser.token "P"
                                 |= Parser.int
                                 |. Parser.token "|"

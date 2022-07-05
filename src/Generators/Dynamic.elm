@@ -617,7 +617,7 @@ encodeSegment segment =
             wrapVar <| "D" ++ var ++ encodeArgs args
 
         Segment.Html html ->
-            wrapVar <| "H" ++ html.tag ++ "|"    
+            wrapVar <| "H" ++ html.tag ++ "|"
 
 
 encodeArgs : List ( String, ArgValue ) -> String

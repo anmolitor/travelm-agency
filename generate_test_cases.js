@@ -5,10 +5,13 @@ const { resolve, dirname, parse } = require("path");
 const testCaseDir = resolve(__dirname, "gen_test_cases");
 
 const generate = async (pathToTestCase) => {
+  const testCaseName = parse(pathToTestCase).name;
+  const name = testCaseName.replace("Case", "");
   const worker = await elmCompiler.compileWorker(
     __dirname,
     pathToTestCase,
-    parse(pathToTestCase).name
+    testCaseName,
+    { flags: { name } }
   );
   worker.ports.sendFile.subscribe(async ({ path, content }) => {
     const targetPath = resolve(__dirname, path);

@@ -182,6 +182,42 @@ for .properties files:
 ----
 |===
 
+== Internal structure
+
+This section is for people who are interested in contributing to help you get started quicker.
+
+=== Overview
+
+`Travelm-Agency` is a classic two stage compiler.
+In the first stage, the given file (like .json for example) is parsed and transformed into an AST (Abstract Syntax Tree).
+This is done by the code in the `ContentTypes` folder.
+The AST pieces are in the `Types` folder.
+
+For example, the string `{ "key": "value" }` becomes an Elm data type `("key", (Text "value", []))`.
+
+
+In the second stage, we generate Elm (and possibly other) files from the AST. This is done by the code in the `Generators` folder.
+
+=== Design considerations
+
+Most of the time, the less passes you have to do, the faster/less resource-intensive a compiler is. We still chose the two split phases for several reasons:
+
+* It is a lot easier to test, since we can test the two stages seperately.
+* We have to write less tests, since we do not have to cover the cartesian product of `ContentTypes x GenerationModes` but instead test `ContentTypes -> AST` and `AST -> GenerationModes`.
+* We can do some nice optimizations with some full AST analysis (i.e. do not generate some parsing code for some interpolation feature if it won't be used)
+
+=== Testing
+
+As mentioned in the previous section, most tests are of the kind
+`ContentTypes -> AST` or `AST -> GenerationModes`.
+The first kind is rather straight forward, using Elm multiline strings, we can just have "inlined" files in the tests from which we generate ASTs.
+
+
+The second kind is more involved. We could regression test the generated code using string comparison, but the tests would fail a lot because of minor, uninteresting changes, a lot of which would not even have any runtime impact.
+
+Therefore, we import the generated files in the tests themselves so that we can confirm that the generated code typechecks and does "the right thing". To do that, there is a seperate folder `gen_test_cases` and an associated JS script `generate_test_cases.js`, which calls the generator elm code via the `node-elm-compiler` for each file in `gen_test_cases` ending with `...Case.elm`. The resulting generated files live in the `gen_test_cases` Inline and Dynamic subdirectories and can be imported in tests just like any other file. The directories with generated files are gitignored and thus
+you will need to run generate_test_cases.js once for tests to compile.
+
 == 🙄 Why another i18n solution
 
 Here are some other i18n solutions with their differences:

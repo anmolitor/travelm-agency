@@ -3,6 +3,8 @@ module Generators.DynamicTest exposing (..)
 import Dict
 import Dynamic.DateFormatServer
 import Dynamic.DateFormatTranslations
+import Dynamic.HashServer
+import Dynamic.HashTranslations
 import Dynamic.InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations
 import Dynamic.MultiInterpolationServer
@@ -185,4 +187,22 @@ pluralCase =
                     |> Result.map (\i18n -> Dynamic.PluralTranslations.text i18n 4)
                     -- Due to the absent intl api, we can only test the default case here
                     |> Expect.equal (Ok "I met many people.")
+        ]
+
+
+hashRegressionTest : Test
+hashRegressionTest =
+    describe "content hashing of json files"
+        [ test "produces a consistent hash for english content" <|
+            \_ ->
+                sendRequest Dynamic.HashServer.server "messages.en.2061212766.json" Dynamic.HashTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.HashTranslations.init)
+                    |> Result.map Dynamic.HashTranslations.text
+                    |> Expect.equal (Ok "english text")
+        , test "produces a consistent hash for german content" <|
+            \_ ->
+                sendRequest Dynamic.HashServer.server "messages.de.1722545000.json" Dynamic.HashTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.HashTranslations.init)
+                    |> Result.map Dynamic.HashTranslations.text
+                    |> Expect.equal (Ok "german text")
         ]

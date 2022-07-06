@@ -2,15 +2,19 @@ module Types.Features exposing (Feature(..), Features, addFeature, combine, comb
 
 {-| Conditionals that change the output of the code generator that are inferred by the given translation files
 
-    Intl : Need dependency on the intl-proxy package. Allows for usage of the Browsers Intl API in generated code.
+    Any Intl Feature : Need dependency on the intl-proxy package. Allows for usage of the Browsers Intl API in generated code.
+
+    IntlNumber: specifically the ability to format numbers
+    IntlDate: specifically the ability to format dates
+    IntlPlural: specifically the ability to match on plural cases
+
+    Interpolation: classic string interpolation
+    Case Interpolation: match on given string values at run time to decide which path to take
 
     Html : Will produce Html instead of String as a return value (or Element/Element.WithContext (TODO))
 
-    Debug : Change default values to show errors when they happen. (TODO)
-
 -}
 
-import List.Extra
 import Set exposing (Set)
 
 

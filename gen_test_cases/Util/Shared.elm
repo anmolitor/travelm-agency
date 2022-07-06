@@ -116,11 +116,14 @@ writeServerProxy moduleName resources =
         serverExpr =
             CG.apply [ CG.fqFun [ "Dict" ] "fromList", CG.list <| List.map jsonToExpr resources ]
 
+        serverType =
+            CG.dictAnn CG.stringAnn CG.stringAnn
+
         serverDecl =
-            CG.valDecl Nothing Nothing "server" serverExpr
+            CG.valDecl Nothing (Just serverType) "server" serverExpr
     in
     CG.file (CG.normalModule [ "Dynamic", moduleName ] [])
-        [ CG.importStmt [ "Dict" ] Nothing Nothing ]
+        [ CG.importStmt [ "Dict" ] Nothing (Just <| CG.exposeExplicit [ CG.closedTypeExpose "Dict" ]) ]
         [ serverDecl ]
         Nothing
         |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")

@@ -3,6 +3,7 @@ module Generators.InlineTest exposing (..)
 import Expect
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
+import Inline.SimpleI18nLastTranslations
 import Inline.SingleInterpolationTranslations
 import Inline.SingleTextTranslations
 import Test exposing (Test, describe, test)
@@ -64,4 +65,15 @@ multiInterpolation =
                 Inline.MultiInterpolationTranslations.greeting (Inline.MultiInterpolationTranslations.init Inline.MultiInterpolationTranslations.Yoda)
                     { timeOfDay = "morning", name = "Luke" }
                     |> Expect.equal "Luke, good morning"
+        ]
+
+
+i18nLastSimple : Test
+i18nLastSimple =
+    describe "generated code with i18nArgLast flag"
+        [ test "single text" <|
+            \_ ->
+                Inline.SimpleI18nLastTranslations.init Inline.SimpleI18nLastTranslations.En
+                    |> Inline.SimpleI18nLastTranslations.singleText
+                    |> Expect.equal "the text"
         ]

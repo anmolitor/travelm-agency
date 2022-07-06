@@ -6,11 +6,12 @@ import State exposing (NonEmptyState)
 import Types.Segment exposing (TSegment(..))
 import Util.Shared exposing (Generator, buildMain)
 import Util.Shared exposing (inlineOpts)
+import Util.Shared exposing (dynamicOpts)
 
 
 main : Generator
 main =
-    buildMain [inlineOpts] state
+    buildMain [inlineOpts, dynamicOpts] state
 
 
 state : NonEmptyState ()

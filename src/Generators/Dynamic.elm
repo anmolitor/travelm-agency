@@ -21,7 +21,7 @@ import String.Extra
 import Types.ArgValue as ArgValue exposing (ArgValue)
 import Types.Basic exposing (Identifier)
 import Types.Features as Features
-import Types.InterpolationKind as InterpolationKind
+import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Types.Translation
 import Types.UniqueName as Unique
@@ -495,11 +495,14 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
                         getTranslationForLang lang =
                             Dict.NonEmpty.get lang translationSet
 
+                        interpolationMap =
+                            State.interpolationMap translationSet
+
                         content =
                             Types.Translation.completeFallback getTranslationForLang language translation
                                 |> Result.withDefault translation
                                 |> .pairs
-                                |> optimizeJson
+                                |> optimizeJson interpolationMap
                                 |> E.encode 0
                     in
                     { content = content
@@ -522,17 +525,21 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
         translationSet
 
 
-optimizeJson : Dict TKey TValue -> E.Value
-optimizeJson translations =
+optimizeJson : Dict TKey (Dict String InterpolationKind) -> Dict TKey TValue -> E.Value
+optimizeJson interpolationMap translations =
     let
-        optimizeSegments : TValue -> String
-        optimizeSegments =
-            indicifyInterpolations >> encodeSegments
+        optimizeSegments : ( TKey, TValue ) -> String
+        optimizeSegments ( key, val ) =
+            Dict.get key interpolationMap
+                |> Maybe.map Dict.keys
+                |> Maybe.withDefault []
+                |> indicifyInterpolations val
+                |> encodeSegments
     in
     translations
         |> Dict.toList
         |> List.sortBy Tuple.first
-        |> List.map (Tuple.second >> optimizeSegments)
+        |> List.map optimizeSegments
         |> Array.fromList
         |> E.array E.string
 
@@ -541,12 +548,9 @@ optimizeJson translations =
 Interpolations are assigned numbers in alphabetical order.
 Multiple interpolations with the same key get the same number.
 -}
-indicifyInterpolations : TValue -> TValue
-indicifyInterpolations tval =
+indicifyInterpolations : TValue -> List String -> TValue
+indicifyInterpolations tval interpolationSet =
     let
-        interpolationSet =
-            tval |> Segment.interpolationVars |> Dict.keys
-
         positionDict =
             interpolationSet
                 |> List.sort

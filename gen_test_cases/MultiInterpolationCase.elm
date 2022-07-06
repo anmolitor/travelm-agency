@@ -4,12 +4,12 @@ import Dict
 import Dict.NonEmpty
 import State exposing (NonEmptyState)
 import Types.Segment exposing (TSegment(..))
-import Util.Shared exposing (Generator, buildMain, inlineOpts)
+import Util.Shared exposing (Generator, buildMain, dynamicOpts, inlineOpts)
 
 
 main : Generator
 main =
-    buildMain [ inlineOpts ] state
+    buildMain [ inlineOpts, dynamicOpts ] state
 
 
 state : NonEmptyState ()

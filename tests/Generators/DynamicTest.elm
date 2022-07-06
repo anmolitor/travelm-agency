@@ -1,8 +1,14 @@
 module Generators.DynamicTest exposing (..)
 
 import Dict
+import Dynamic.MultiInterpolationServer
+import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
+import Dynamic.SimpleI18nLastServer
+import Dynamic.SimpleI18nLastTranslations
+import Dynamic.SingleInterpolationServer
+import Dynamic.SingleInterpolationTranslations
 import Dynamic.SingleTextServer
 import Dynamic.SingleTextTranslations
 import Expect
@@ -38,4 +44,52 @@ multiLanguageText =
                     |> Result.map ((|>) Dynamic.MultiLanguageTextTranslations.init)
                     |> Result.map Dynamic.MultiLanguageTextTranslations.text
                     |> Expect.equal (Ok "german text")
+        ]
+
+
+singleInterpolation : Test
+singleInterpolation =
+    describe "single interpolation"
+        [ test "interpolates the given value at the correct position" <|
+            \_ ->
+                sendRequest Dynamic.SingleInterpolationServer.server "messages.en.json" Dynamic.SingleInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SingleInterpolationTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.SingleInterpolationTranslations.text i18n "world")
+                    |> Expect.equal (Ok "hello world!")
+        ]
+
+
+multiInterpolation : Test
+multiInterpolation =
+    describe "multi interpolation"
+        [ test "interpolates the given values at the correct positions" <|
+            \_ ->
+                sendRequest Dynamic.MultiInterpolationServer.server "messages.en.json" Dynamic.MultiInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "morning", name = "my dear" })
+                    |> Expect.equal (Ok "Good morning, my dear")
+        , test "works for languages that do not use all interpolated values" <|
+            \_ ->
+                sendRequest Dynamic.MultiInterpolationServer.server "messages.de.json" Dynamic.MultiInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "Morgen", name = "Doesn't matter" })
+                    |> Expect.equal (Ok "Guten Morgen")
+        , test "works if languages interpolate values in different orders" <|
+            \_ ->
+                sendRequest Dynamic.MultiInterpolationServer.server "messages.yoda.json" Dynamic.MultiInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "morning", name = "Luke" })
+                    |> Expect.equal (Ok "Luke, good morning")
+        ]
+
+
+i18nLastSimple : Test
+i18nLastSimple =
+    describe "generated code with i18nArgLast flag"
+        [ test "single text" <|
+            \_ ->
+                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
+                    |> Result.map Dynamic.SimpleI18nLastTranslations.singleText
+                    |> Expect.equal (Ok "the text")
         ]

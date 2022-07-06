@@ -1,13 +1,18 @@
 module Generators.InlineTest exposing (..)
 
 import Expect
+import Inline.DateFormatTranslations
 import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
+import Inline.NumberFormatTranslations
 import Inline.SimpleI18nLastTranslations
 import Inline.SingleInterpolationTranslations
 import Inline.SingleTextTranslations
+import Json.Encode
 import Test exposing (Test, describe, test)
+import Time
+import Util
 
 
 singleText : Test
@@ -111,4 +116,34 @@ interpolationMatchCase =
                     (Inline.InterpolationMatchTranslations.init Inline.InterpolationMatchTranslations.En)
                     "anything else"
                     |> Expect.equal "It bought a cat."
+        ]
+
+
+numberFormatCase : Test
+numberFormatCase =
+    describe "number format"
+        [ test "type checks" <|
+            \_ ->
+                Inline.NumberFormatTranslations.text
+                    (Inline.NumberFormatTranslations.init Util.emptyIntl Inline.NumberFormatTranslations.En)
+                    52.34
+                    -- This is expected since we cannot get the actual browser intl API in the test
+                    -- We do not want to test the intl-proxy package here, so the fact that the generated
+                    -- code typechecks is enough here.
+                    |> Expect.equal "Price: "
+        ]
+
+
+dateFormatCase : Test
+dateFormatCase =
+    describe "date format"
+        [ test "type checks" <|
+            \_ ->
+                Inline.DateFormatTranslations.text
+                    (Inline.DateFormatTranslations.init Util.emptyIntl Inline.DateFormatTranslations.En)
+                    (Time.millisToPosix 1000)
+                    -- This is expected since we cannot get the actual browser intl API in the test
+                    -- We do not want to test the intl-proxy package here, so the fact that the generated
+                    -- code typechecks is enough here.
+                    |> Expect.equal "Today: "
         ]

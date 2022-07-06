@@ -1,12 +1,16 @@
 module Generators.DynamicTest exposing (..)
 
 import Dict
+import Dynamic.DateFormatServer
+import Dynamic.DateFormatTranslations
 import Dynamic.InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations
 import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
+import Dynamic.NumberFormatServer
+import Dynamic.NumberFormatTranslations
 import Dynamic.SimpleI18nLastServer
 import Dynamic.SimpleI18nLastTranslations
 import Dynamic.SingleInterpolationServer
@@ -16,6 +20,8 @@ import Dynamic.SingleTextTranslations
 import Expect
 import Json.Decode as D
 import Test exposing (Test, describe, test)
+import Time
+import Util
 import Util.Shared exposing (sendRequest)
 
 
@@ -130,4 +136,38 @@ interpolationMatchCase =
                     |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
                     |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "anything else")
                     |> Expect.equal (Ok "It bought a cat.")
+        ]
+
+
+numberFormatCase : Test
+numberFormatCase =
+    describe "number format"
+        [ test "type checks" <|
+            \_ ->
+                sendRequest Dynamic.NumberFormatServer.server
+                    "messages.en.json"
+                    Dynamic.NumberFormatTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.NumberFormatTranslations.init Util.emptyIntl Dynamic.NumberFormatTranslations.En))
+                    |> Result.map (\i18n -> Dynamic.NumberFormatTranslations.text i18n 12.34)
+                    -- This is expected since we cannot get the actual browser intl API in the test
+                    -- We do not want to test the intl-proxy package here, so the fact that the generated
+                    -- code typechecks is enough here.
+                    |> Expect.equal (Ok "Price: ")
+        ]
+
+
+dateFormatCase : Test
+dateFormatCase =
+    describe "date format"
+        [ test "type checks" <|
+            \_ ->
+                sendRequest Dynamic.DateFormatServer.server
+                    "messages.en.json"
+                    Dynamic.DateFormatTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.DateFormatTranslations.init Util.emptyIntl Dynamic.DateFormatTranslations.En))
+                    |> Result.map (\i18n -> Dynamic.DateFormatTranslations.text i18n <| Time.millisToPosix 9000)
+                    -- This is expected since we cannot get the actual browser intl API in the test
+                    -- We do not want to test the intl-proxy package here, so the fact that the generated
+                    -- code typechecks is enough here.
+                    |> Expect.equal (Ok "Today: ")
         ]

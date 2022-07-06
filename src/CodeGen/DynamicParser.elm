@@ -221,7 +221,7 @@ addReplacePlaceholderDeclaration =
                                                     )
                                             ]
                                         )
-                                , filterByFeatures [ Features.CaseInterpolation, Features.IntlNumber ] <|
+                                , filterByFeatures [ Features.CaseInterpolation, Features.IntlNumber, Features.IntlDate ] <|
                                     CG.letVal (lookup "matchParser")
                                         (p_succeed (CG.fqFun [ "Tuple" ] "pair")
                                             |> p_keep_infix (CG.parens <| CG.applyBinOp (p_chompUntil "|") CG.piper p_getChompedString)

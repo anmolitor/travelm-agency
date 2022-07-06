@@ -425,9 +425,13 @@ addReplacePlaceholderDeclaration =
             in
             { ctx
                 | file =
-                    ctx.file
-                        |> Shared.addDeclaration parserDecl
-                        |> Shared.addDeclaration replacePlaceholdersDecl
+                    if Features.isEmpty features then
+                        ctx.file
+
+                    else
+                        ctx.file
+                            |> Shared.addDeclaration parserDecl
+                            |> Shared.addDeclaration replacePlaceholdersDecl
             }
 
 

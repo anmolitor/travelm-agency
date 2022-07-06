@@ -1,4 +1,4 @@
-module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, needsIntl, singleton, union)
+module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, needsIntl, singleton, union, isEmpty)
 
 {-| Conditionals that change the output of the code generator that are inferred by the given translation files
 
@@ -66,6 +66,11 @@ singleton =
 fromList : List Feature -> Features
 fromList =
     List.map serialize >> Set.fromList >> Features
+
+
+isEmpty : Features -> Bool
+isEmpty (Features features) =
+    Set.isEmpty features
 
 
 addFeature : Feature -> Features -> Features

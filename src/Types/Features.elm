@@ -1,4 +1,4 @@
-module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, isActive)
+module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, needsIntl, singleton, union)
 
 {-| Conditionals that change the output of the code generator that are inferred by the given translation files
 
@@ -11,30 +11,72 @@ module Types.Features exposing (Feature(..), Features, addFeature, combine, comb
 -}
 
 import List.Extra
+import Set exposing (Set)
 
 
 type Feature
-    = Intl
-    | Debug
+    = IntlNumber
+    | IntlDate
+    | IntlPlural
+    | CaseInterpolation
+    | Interpolation
+    | Html
+
+
+serialize : Feature -> String
+serialize feature =
+    case feature of
+        IntlNumber ->
+            "IntlNumber"
+
+        IntlDate ->
+            "IntlDate"
+
+        IntlPlural ->
+            "IntlPlural"
+
+        CaseInterpolation ->
+            "CaseInterpolation"
+
+        Interpolation ->
+            "Interpolation"
+
+        Html ->
+            "Html"
 
 
 type Features
-    = Features (List Feature)
+    = Features (Set String)
 
 
 default : Features
 default =
-    Features []
+    Features Set.empty
+
+
+singleton : Feature -> Features
+singleton =
+    serialize >> Set.singleton >> Features
+
+
+fromList : List Feature -> Features
+fromList =
+    List.map serialize >> Set.fromList >> Features
 
 
 addFeature : Feature -> Features -> Features
-addFeature feature (Features features) =
-    Features (feature :: features)
+addFeature =
+    serialize >> Set.insert >> lift
 
 
 isActive : Feature -> Features -> Bool
 isActive feature (Features features) =
-    List.member feature features
+    Set.member (serialize feature) features
+
+
+needsIntl : Features -> Bool
+needsIntl features =
+    List.any (\feature -> isActive feature features) [ IntlNumber, IntlDate, IntlPlural ]
 
 
 combineMap : (a -> Features) -> List a -> Features
@@ -44,9 +86,14 @@ combineMap f =
 
 combine : List Features -> Features
 combine =
-    List.concatMap unwrap >> List.Extra.unique >> Features
+    List.foldl union default
 
 
-unwrap : Features -> List Feature
-unwrap (Features features) =
-    features
+union : Features -> Features -> Features
+union (Features features) =
+    lift <| Set.union features
+
+
+lift : (Set String -> Set String) -> Features -> Features
+lift f (Features features) =
+    Features <| f features

@@ -97,7 +97,7 @@ addInitDeclaration =
 
                     initDecl : CG.Declaration
                     initDecl =
-                        if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                        if State.inferFeatures ctx.state |> Features.needsIntl then
                             CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an i18n instance based on a language and access to the Intl API"))
                                 (Just <| CG.funAnn intlAnn langToI18nAnn)
                                 ctx.names.initFunName
@@ -124,7 +124,7 @@ addLoadLanguageDeclaration =
                         Just <| CG.funAnn (CG.typed ctx.names.languageTypeName []) (endoAnn <| CG.typed ctx.names.i18nTypeName [])
 
                     loadLanguageDecl =
-                        if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                        if State.inferFeatures ctx.state |> Features.needsIntl then
                             CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Switch to another i18n instance based on a language"))
                                 loadLanguageAnn
                                 loadName
@@ -157,7 +157,7 @@ addI18nTypeDeclarations unCtx =
                     State.interpolationMap <| State.collectiveTranslationSet ctx.state
 
                 i18nTypeDecls =
-                    if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                    if State.inferFeatures ctx.state |> Features.needsIntl then
                         [ CG.aliasDecl Nothing ctx.names.i18nTypeName [] (CG.tupleAnn [ CG.typed wrappedI18nTypeName [], intlAnn ])
                         , CG.aliasDecl Nothing
                             wrappedI18nTypeName
@@ -207,7 +207,7 @@ addAccessorDeclarations =
                                     |> Maybe.withDefault False
 
                             i18nPattern =
-                                if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                                if State.inferFeatures ctx.state |> Features.needsIntl then
                                     CG.tuplePattern [ CG.varPattern i18nName, CG.varPattern intlName ]
 
                                 else
@@ -275,7 +275,7 @@ addI18nInstances =
                 i18nDeclForLang lang translation =
                     let
                         typeDecl =
-                            if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                            if State.inferFeatures ctx.state |> Features.needsIntl then
                                 CG.typed (Util.safeName ctx.names.i18nTypeName) []
 
                             else

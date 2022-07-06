@@ -22,6 +22,12 @@ const generate = async (pathToTestCase) => {
 };
 
 const generateTestCases = async () => {
+  const [, , filePath] = process.argv;
+
+  if (filePath) {
+    generate(filePath);
+    return;
+  }
   const fileNames = await readdir(testCaseDir);
   fileNames
     .filter((fileName) => fileName.endsWith("Case.elm"))

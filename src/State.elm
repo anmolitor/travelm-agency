@@ -119,11 +119,19 @@ getHtmlIdsForKey key =
 isIntlNeededForKey : TKey -> NonEmptyState () -> Bool
 isIntlNeededForKey key =
     collectiveTranslationSet
-        >> interpolationMap
+        >> featureMap
         >> Dict.get key
-        >> Maybe.withDefault Dict.empty
-        >> Dict.toList
-        >> List.any (Tuple.second >> InterpolationKind.isIntlInterpolation)
+        >> Maybe.map Features.needsIntl
+        >> Maybe.withDefault False
+
+
+featureMap : TranslationSet any -> Dict TKey Features
+featureMap =
+    Dict.NonEmpty.map (\_ ts -> Dict.map (\_ -> Segment.inferFeatures) ts.pairs)
+        >> Dict.NonEmpty.foldl1
+            (mergeDictIntoDict <|
+                \key s1 s2 -> Dict.insert key <| Features.union s1 s2
+            )
 
 
 allTranslationKeys : NonEmptyState any -> List TKey

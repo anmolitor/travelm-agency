@@ -1,6 +1,8 @@
 module Generators.DynamicTest exposing (..)
 
 import Dict
+import Dynamic.InterpolationMatchServer
+import Dynamic.InterpolationMatchTranslations
 import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
@@ -92,4 +94,40 @@ i18nLastSimple =
                     |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
                     |> Result.map Dynamic.SimpleI18nLastTranslations.singleText
                     |> Expect.equal (Ok "the text")
+        , test "single interpolation" <|
+            \_ ->
+                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
+                    |> Result.map (Dynamic.SimpleI18nLastTranslations.interpolation "world")
+                    |> Expect.equal (Ok "Hello world!")
+        , test "multi interpolation" <|
+            \_ ->
+                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
+                    |> Result.map (Dynamic.SimpleI18nLastTranslations.greeting { timeOfDay = "evening", name = "Sir" })
+                    |> Expect.equal (Ok "Good evening, Sir")
+        ]
+
+
+interpolationMatchCase : Test
+interpolationMatchCase =
+    describe "interpolation match case"
+        [ test "interpolates the correct value for female gender" <|
+            \_ ->
+                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "female")
+                    |> Expect.equal (Ok "She bought a cat.")
+        , test "interpolates the correct value for male gender" <|
+            \_ ->
+                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "male")
+                    |> Expect.equal (Ok "He bought a cat.")
+        , test "interpolates the default value for other values" <|
+            \_ ->
+                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "anything else")
+                    |> Expect.equal (Ok "It bought a cat.")
         ]

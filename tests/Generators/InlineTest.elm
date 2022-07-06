@@ -1,6 +1,7 @@
 module Generators.InlineTest exposing (..)
 
 import Expect
+import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
 import Inline.SimpleI18nLastTranslations
@@ -76,4 +77,38 @@ i18nLastSimple =
                 Inline.SimpleI18nLastTranslations.init Inline.SimpleI18nLastTranslations.En
                     |> Inline.SimpleI18nLastTranslations.singleText
                     |> Expect.equal "the text"
+        , test "single interpolation" <|
+            \_ ->
+                Inline.SimpleI18nLastTranslations.init Inline.SimpleI18nLastTranslations.En
+                    |> Inline.SimpleI18nLastTranslations.interpolation "world"
+                    |> Expect.equal "Hello world!"
+        , test "multi interpolation" <|
+            \_ ->
+                Inline.SimpleI18nLastTranslations.init Inline.SimpleI18nLastTranslations.En
+                    |> Inline.SimpleI18nLastTranslations.greeting { timeOfDay = "evening", name = "Sir" }
+                    |> Expect.equal "Good evening, Sir"
+        ]
+
+
+interpolationMatchCase : Test
+interpolationMatchCase =
+    describe "interpolation match case"
+        [ test "interpolates the correct value for female gender" <|
+            \_ ->
+                Inline.InterpolationMatchTranslations.text
+                    (Inline.InterpolationMatchTranslations.init Inline.InterpolationMatchTranslations.En)
+                    "female"
+                    |> Expect.equal "She bought a cat."
+        , test "interpolates the correct value for male gender" <|
+            \_ ->
+                Inline.InterpolationMatchTranslations.text
+                    (Inline.InterpolationMatchTranslations.init Inline.InterpolationMatchTranslations.En)
+                    "male"
+                    |> Expect.equal "He bought a cat."
+        , test "interpolates the default value for other values" <|
+            \_ ->
+                Inline.InterpolationMatchTranslations.text
+                    (Inline.InterpolationMatchTranslations.init Inline.InterpolationMatchTranslations.En)
+                    "anything else"
+                    |> Expect.equal "It bought a cat."
         ]

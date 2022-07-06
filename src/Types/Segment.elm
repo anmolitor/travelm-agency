@@ -1,4 +1,4 @@
-module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, inferFeatures, interpolationVars, modifyVars, getHtmlIds)
+module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyVars)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -103,23 +103,37 @@ interpolationVars =
         >> Dict.fromList
 
 
+inferFeaturesForSegment : TSegment -> Features
+inferFeaturesForSegment seg =
+    case seg of
+        Text _ ->
+            Features.default
+
+        Interpolation _ ->
+            Features.singleton Features.Interpolation
+
+        InterpolationCase _ _ _ ->
+            Features.singleton Features.CaseInterpolation
+
+        FormatDate _ _ ->
+            Features.singleton Features.IntlDate
+
+        FormatNumber _ _ ->
+            Features.singleton Features.IntlNumber
+
+        PluralCase _ _ _ _ ->
+            Features.singleton Features.IntlPlural
+
+        Html _ ->
+            Features.singleton Features.Html
+
+
 {-| Infer needed code generation features from the given AST.
 -}
 inferFeatures : TValue -> Features
 inferFeatures val =
-    let
-        needsIntl =
-            List.NonEmpty.toList val
-                |> List.concatMap classifyInterpolationSegment
-                |> List.any (Tuple.second >> InterpolationKind.isIntlInterpolation)
-    in
-    (if needsIntl then
-        Features.addFeature Features.Intl
-
-     else
-        identity
-    )
-        Features.default
+    List.NonEmpty.toList val
+        |> Features.combineMap inferFeaturesForSegment
 
 
 getHtmlIds : TValue -> List String

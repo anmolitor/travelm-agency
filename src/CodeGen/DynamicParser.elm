@@ -14,12 +14,7 @@ import Types.Features as Features
 import Types.UniqueName as Unique
 
 
-{-| Generates one of the following code snippets
-
-    replacePlaceholders : List String -> String -> String
-    replacePlaceholders list str =
-        List.foldl (\\val ( index, acc ) -> ( index + 1, String.replace ("{" ++ String.fromInt index ++ "}") val acc )) ( 0, str ) list
-            |> Tuple.second
+{-| Generates part of the following code snippet
 
     parser : I18n -> List String -> Parser.Parser String
     parser ((I18n _ intl lang) as i18n) argList =
@@ -58,7 +53,7 @@ import Types.UniqueName as Unique
                                         Err err ->
                                             Parser.problem (Json.Decode.errorToString err)
                                 )
-                    )
+                       )
                     |. Parser.token "}"
 
             numberFormatUnsafe n parsedArgString =
@@ -138,209 +133,195 @@ import Types.UniqueName as Unique
 
 -}
 addReplacePlaceholderDeclaration :
-    Unique.UniqueNameContext
-        { ctx
-            | names : Names
-            , replacePlaceholdersName : String
-            , fallbackValueName : String
-            , file : CG.File
-            , state : State.NonEmptyState any
-        }
-    ->
-        Unique.UniqueNameContext
-            { ctx
-                | names : Names
-                , replacePlaceholdersName : String
-                , fallbackValueName : String
-                , file : CG.File
-                , state : State.NonEmptyState any
-            }
-addReplacePlaceholderDeclaration unCtx =
-    let
-        needsIntl =
-            (Unique.unwrap unCtx).state |> State.inferFeatures |> Features.isActive Features.Intl
-    in
-    if needsIntl then
-        addIntlReplaceDeclaration unCtx
-
-    else
-        addSimpleReplaceDeclaration unCtx
-
-
-addSimpleReplaceDeclaration : Unique.UniqueNameContext { ctx | names : Names, file : CG.File } -> Unique.UniqueNameContext { ctx | names : Names, file : CG.File }
-addSimpleReplaceDeclaration =
-    Unique.mapWithScope <|
-        \lookup ctx ->
-            let
-                replacePlaceholdersDecl : CG.Declaration
-                replacePlaceholdersDecl =
-                    CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Replaces all placeholder expressions in a string in order with the given values"))
-                        (Just <| CG.funAnn (CG.listAnn CG.stringAnn) (CG.funAnn CG.stringAnn CG.stringAnn))
-                        "replacePlaceholders"
-                        [ CG.varPattern <| lookup "list", CG.varPattern <| lookup "str" ]
-                    <|
-                        CG.applyBinOp
-                            (CG.apply
-                                [ CG.fqFun [ "List" ] "foldl"
-                                , CG.lambda [ CG.varPattern <| lookup "val", CG.tuplePattern [ CG.varPattern <| lookup "i", CG.varPattern <| lookup "acc" ] ]
-                                    (CG.tuple
-                                        [ CG.applyBinOp (CG.val <| lookup "i") CG.plus (CG.int 1)
-                                        , CG.apply
-                                            [ CG.fqFun [ "String" ] "replace"
-                                            , CG.parens <| appendAll (CG.string "{") [ CG.apply [ CG.fqFun [ "String" ] "fromInt", CG.val <| lookup "i" ], CG.string "}" ]
-                                            , CG.val <| lookup "val"
-                                            , CG.val <| lookup "acc"
-                                            ]
-                                        ]
-                                    )
-                                , CG.tuple [ CG.int 0, CG.val <| lookup "str" ]
-                                , CG.val <| lookup "list"
-                                ]
-                            )
-                            CG.piper
-                            (CG.fqFun [ "Tuple" ] "second")
-            in
-            { ctx | file = ctx.file |> Shared.addDeclaration replacePlaceholdersDecl }
-
-
-addIntlReplaceDeclaration :
-    Unique.UniqueNameContext { ctx | names : Names, file : CG.File, replacePlaceholdersName : String, fallbackValueName : String }
-    -> Unique.UniqueNameContext { ctx | names : Names, file : CG.File, replacePlaceholdersName : String, fallbackValueName : String }
-addIntlReplaceDeclaration =
+    Unique.UniqueNameContext { ctx | names : Names, file : CG.File, state : State.NonEmptyState any, replacePlaceholdersName : String, fallbackValueName : String }
+    -> Unique.UniqueNameContext { ctx | names : Names, file : CG.File, state : State.NonEmptyState any, replacePlaceholdersName : String, fallbackValueName : String }
+addReplacePlaceholderDeclaration =
     Unique.andThen "parser" <|
         \lookup ctx parserName ->
             let
+                features =
+                    ctx.state |> State.inferFeatures
+
+                filterByFeature feature =
+                    if Features.isActive feature features then
+                        Just
+
+                    else
+                        always Nothing
+
+                filterIntl =
+                    if Features.needsIntl features then
+                        Just
+
+                    else
+                        always Nothing
+
+                parserType : CG.TypeAnnotation
+                parserType =
+                    (if Features.needsIntl features then
+                        CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+
+                     else
+                        identity
+                    )
+                    <|
+                        CG.funAnn (CG.listAnn CG.stringAnn) (CG.fqTyped [ "Parser" ] "Parser" [ CG.stringAnn ])
+
+                parserArgs =
+                    List.filterMap identity
+                        [ CG.namedPattern ctx.names.i18nTypeName [ CG.allPattern, CG.varPattern <| lookup "intl", CG.varPattern <| lookup "lang" ]
+                            |> (\pat -> CG.asPattern pat (lookup "i18n"))
+                            |> filterIntl
+                        , Just <| CG.varPattern <| lookup "argList"
+                        ]
+
                 parserDecl : CG.Declaration
                 parserDecl =
                     CG.funDecl Nothing
-                        (Just <| CG.funAnn (CG.typed ctx.names.i18nTypeName []) <| CG.funAnn (CG.listAnn CG.stringAnn) (CG.fqTyped [ "Parser" ] "Parser" [ CG.stringAnn ]))
+                        (Just parserType)
                         parserName
-                        [ CG.namedPattern ctx.names.i18nTypeName [ CG.allPattern, CG.varPattern <| lookup "intl", CG.varPattern <| lookup "lang" ]
-                            |> (\pat -> CG.asPattern pat (lookup "i18n"))
-                        , CG.varPattern <| lookup "argList"
-                        ]
+                        parserArgs
                         (CG.letExpr
-                            [ CG.letVal (lookup "args") (CG.apply [ CG.fqFun [ "Array" ] "fromList", CG.val <| lookup "argList" ])
-                            , CG.letFunction (lookup "getArg")
-                                [ CG.varPattern <| lookup "n" ]
-                                (CG.applyBinOp (CG.apply [ CG.fqFun [ "Array" ] "get", CG.val <| lookup "n", CG.val <| lookup "args" ])
-                                    CG.piper
-                                    defaultMaybeToEmptyString
-                                )
-                            , CG.letVal (lookup "wrappedLang")
-                                (CG.binOpChain (CG.string "\"")
-                                    CG.append
-                                    [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ]
-                                    , CG.string "\""
-                                    ]
-                                )
-                            , CG.letVal (lookup "argParser")
-                                (p_oneOf
-                                    [ p_succeed (CG.val <| lookup "wrappedLang") |> p_drop_infix (p_token "}")
-                                    , p_succeed
-                                        (CG.parens <|
-                                            CG.lambda [ CG.varPattern <| lookup "str" ] <|
-                                                CG.binOpChain (CG.val <| lookup "wrappedLang") CG.append [ CG.string ",{", CG.val <| lookup "str", CG.string "}" ]
+                            (List.filterMap identity
+                                [ Just <| CG.letVal (lookup "args") (CG.apply [ CG.fqFun [ "Array" ] "fromList", CG.val <| lookup "argList" ])
+                                , Just <|
+                                    CG.letFunction (lookup "getArg")
+                                        [ CG.varPattern <| lookup "n" ]
+                                        (CG.applyBinOp (CG.apply [ CG.fqFun [ "Array" ] "get", CG.val <| lookup "n", CG.val <| lookup "args" ])
+                                            CG.piper
+                                            defaultMaybeToEmptyString
                                         )
-                                        |> p_keep_infix
-                                            (CG.parens (CG.applyBinOp (p_chompUntil "}") CG.piper p_getChompedString)
-                                                |> p_drop_infix (p_token "}")
-                                            )
-                                    ]
-                                )
-                            , CG.letVal (lookup "matchParser")
-                                (p_succeed (CG.fqFun [ "Tuple" ] "pair")
-                                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_chompUntil "|") CG.piper p_getChompedString)
-                                    |> p_drop_infix (p_token "|")
-                                    |> p_keep_infix
-                                        (CG.parens <|
-                                            CG.pipe (p_chompUntil "}")
-                                                [ p_getChompedString
-                                                , p_andThen <|
+                                , filterIntl <|
+                                    CG.letVal (lookup "wrappedLang")
+                                        (CG.binOpChain (CG.string "\"")
+                                            CG.append
+                                            [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ]
+                                            , CG.string "\""
+                                            ]
+                                        )
+                                , filterIntl <|
+                                    CG.letVal (lookup "argParser")
+                                        (p_oneOf
+                                            [ p_succeed (CG.val <| lookup "wrappedLang") |> p_drop_infix (p_token "}")
+                                            , p_succeed
+                                                (CG.parens <|
                                                     CG.lambda [ CG.varPattern <| lookup "str" ] <|
-                                                        CG.caseExpr
-                                                            (CG.apply
-                                                                [ DecodeM.decodeString
-                                                                , CG.parens <| CG.apply [ DecodeM.dict, DecodeM.string ]
-                                                                , CG.parens <| appendAll (CG.string "{") [ CG.val <| lookup "str", CG.string "}" ]
-                                                                ]
-                                                            )
-                                                            [ ( CG.namedPattern "Ok" [ CG.varPattern <| lookup "ok" ], p_succeed <| CG.val <| lookup "ok" )
-                                                            , ( CG.namedPattern "Err" [ CG.varPattern <| lookup "err" ], p_problem <| CG.parens <| CG.apply [ DecodeM.errorToString, CG.val <| lookup "err" ] )
+                                                        CG.binOpChain (CG.val <| lookup "wrappedLang") CG.append [ CG.string ",{", CG.val <| lookup "str", CG.string "}" ]
+                                                )
+                                                |> p_keep_infix
+                                                    (CG.parens (CG.applyBinOp (p_chompUntil "}") CG.piper p_getChompedString)
+                                                        |> p_drop_infix (p_token "}")
+                                                    )
+                                            ]
+                                        )
+                                , Just <|
+                                    CG.letVal (lookup "matchParser")
+                                        (p_succeed (CG.fqFun [ "Tuple" ] "pair")
+                                            |> p_keep_infix (CG.parens <| CG.applyBinOp (p_chompUntil "|") CG.piper p_getChompedString)
+                                            |> p_drop_infix (p_token "|")
+                                            |> p_keep_infix
+                                                (CG.parens <|
+                                                    CG.pipe (p_chompUntil "}")
+                                                        [ p_getChompedString
+                                                        , p_andThen <|
+                                                            CG.lambda [ CG.varPattern <| lookup "str" ] <|
+                                                                CG.caseExpr
+                                                                    (CG.apply
+                                                                        [ DecodeM.decodeString
+                                                                        , CG.parens <| CG.apply [ DecodeM.dict, DecodeM.string ]
+                                                                        , CG.parens <| appendAll (CG.string "{") [ CG.val <| lookup "str", CG.string "}" ]
+                                                                        ]
+                                                                    )
+                                                                    [ ( CG.namedPattern "Ok" [ CG.varPattern <| lookup "ok" ], p_succeed <| CG.val <| lookup "ok" )
+                                                                    , ( CG.namedPattern "Err" [ CG.varPattern <| lookup "err" ], p_problem <| CG.parens <| CG.apply [ DecodeM.errorToString, CG.val <| lookup "err" ] )
+                                                                    ]
+                                                        ]
+                                                )
+                                            |> p_drop_infix (p_token "}")
+                                        )
+                                , filterIntl <|
+                                    CG.letFunction (lookup "numberFormatUnsafe")
+                                        [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
+                                        (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
+                                            CG.applyBinOp
+                                                (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                CG.pipel
+                                            <|
+                                                appendAll (CG.string "[\"NumberFormat\",[")
+                                                    [ CG.val <| lookup "parsedArgString"
+                                                    , CG.string "],\"format\",["
+                                                    , CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ]
+                                                    , CG.string "]]"
+                                                    ]
+                                        )
+                                , filterIntl <|
+                                    CG.letFunction (lookup "dateFormatUnsafe")
+                                        [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
+                                        (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
+                                            CG.applyBinOp
+                                                (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                CG.pipel
+                                            <|
+                                                CG.binOpChain
+                                                    (CG.string "[\"DateTimeFormat\",[")
+                                                    CG.append
+                                                    [ CG.val <| lookup "parsedArgString"
+                                                    , CG.string "],\"format\",["
+                                                    , CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ]
+                                                    , CG.string "]]"
+                                                    ]
+                                        )
+                                , Just <|
+                                    CG.letFunction (lookup "matchStrings") [ CG.varPattern <| lookup "n", CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ] ] <|
+                                        CG.pipe (CG.apply [ CG.fqFun [ "Dict" ] "get", CG.parens <| CG.apply [ CG.fun <| lookup "getArg", CG.val <| lookup "n" ], CG.val <| lookup "cases" ])
+                                            [ CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val <| lookup "default" ]
+                                            , CG.apply
+                                                [ p_run
+                                                , CG.parens <|
+                                                    CG.apply <|
+                                                        List.filterMap identity
+                                                            [ Just <| CG.val parserName
+                                                            , filterIntl <| CG.val <| lookup "i18n"
+                                                            , Just <| CG.val <| lookup "argList"
                                                             ]
                                                 ]
-                                        )
-                                    |> p_drop_infix (p_token "}")
-                                )
-                            , CG.letFunction (lookup "numberFormatUnsafe")
-                                [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
-                                (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
-                                    CG.applyBinOp
-                                        (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
-                                        CG.pipel
-                                    <|
-                                        appendAll (CG.string "[\"NumberFormat\",[")
-                                            [ CG.val <| lookup "parsedArgString"
-                                            , CG.string "],\"format\",["
-                                            , CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ]
-                                            , CG.string "]]"
+                                            , CG.fqFun [ "Result" ] "toMaybe"
+                                            , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
                                             ]
-                                )
-                            , CG.letFunction (lookup "dateFormatUnsafe")
-                                [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
-                                (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
-                                    CG.applyBinOp
-                                        (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
-                                        CG.pipel
-                                    <|
-                                        CG.binOpChain
-                                            (CG.string "[\"DateTimeFormat\",[")
-                                            CG.append
-                                            [ CG.val <| lookup "parsedArgString"
-                                            , CG.string "],\"format\",["
-                                            , CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ]
-                                            , CG.string "]]"
-                                            ]
-                                )
-                            , CG.letFunction (lookup "matchStrings") [ CG.varPattern <| lookup "n", CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ] ] <|
-                                CG.pipe (CG.apply [ CG.fqFun [ "Dict" ] "get", CG.parens <| CG.apply [ CG.fun <| lookup "getArg", CG.val <| lookup "n" ], CG.val <| lookup "cases" ])
-                                    [ CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val <| lookup "default" ]
-                                    , CG.apply [ p_run, CG.parens <| CG.apply [ CG.val parserName, CG.val <| lookup "i18n", CG.val <| lookup "argList" ] ]
-                                    , CG.fqFun [ "Result" ] "toMaybe"
-                                    , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
-                                    ]
-                            , CG.letFunction (lookup "matchNumbers")
-                                [ CG.varPattern <| lookup "n"
-                                , CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ]
-                                ]
-                              <|
-                                CG.pipe (CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ])
-                                    [ CG.fqFun [ "String" ] "toFloat"
-                                    , CG.apply
-                                        [ CG.fqFun [ "Maybe" ] "andThen"
-                                        , CG.parens <|
-                                            CG.lambda [ CG.varPattern <| lookup "i" ] <|
-                                                CG.pipe
-                                                    (CG.apply
-                                                        [ CG.fqFun [ "Intl" ] "determinePluralRuleFloat"
-                                                        , CG.val <| lookup "intl"
-                                                        , CG.record
-                                                            [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ] )
-                                                            , ( "number", CG.val <| lookup "i" )
-                                                            , ( "type_", CG.fqVal [ "Intl" ] "Cardinal" )
-                                                            ]
-                                                        ]
-                                                    )
-                                                    [ CG.fqFun [ "Intl" ] "pluralRuleToString"
-                                                    , CG.lambda [ CG.varPattern <| lookup "pluralRule" ] <| CG.apply [ CG.fqFun [ "Dict" ] "get", CG.val <| lookup "pluralRule", CG.val <| lookup "cases" ]
-                                                    ]
+                                , filterIntl <|
+                                    CG.letFunction (lookup "matchNumbers")
+                                        [ CG.varPattern <| lookup "n"
+                                        , CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ]
                                         ]
-                                    , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val <| lookup "default" ]
-                                    , CG.apply [ p_run, CG.parens <| CG.apply [ CG.val parserName, CG.val <| lookup "i18n", CG.val <| lookup "argList" ] ]
-                                    , CG.fqFun [ "Result" ] "toMaybe"
-                                    , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
-                                    ]
-                            ]
+                                    <|
+                                        CG.pipe (CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ])
+                                            [ CG.fqFun [ "String" ] "toFloat"
+                                            , CG.apply
+                                                [ CG.fqFun [ "Maybe" ] "andThen"
+                                                , CG.parens <|
+                                                    CG.lambda [ CG.varPattern <| lookup "i" ] <|
+                                                        CG.pipe
+                                                            (CG.apply
+                                                                [ CG.fqFun [ "Intl" ] "determinePluralRuleFloat"
+                                                                , CG.val <| lookup "intl"
+                                                                , CG.record
+                                                                    [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ] )
+                                                                    , ( "number", CG.val <| lookup "i" )
+                                                                    , ( "type_", CG.fqVal [ "Intl" ] "Cardinal" )
+                                                                    ]
+                                                                ]
+                                                            )
+                                                            [ CG.fqFun [ "Intl" ] "pluralRuleToString"
+                                                            , CG.lambda [ CG.varPattern <| lookup "pluralRule" ] <| CG.apply [ CG.fqFun [ "Dict" ] "get", CG.val <| lookup "pluralRule", CG.val <| lookup "cases" ]
+                                                            ]
+                                                ]
+                                            , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val <| lookup "default" ]
+                                            , CG.apply [ p_run, CG.parens <| CG.apply [ CG.val parserName, CG.val <| lookup "i18n", CG.val <| lookup "argList" ] ]
+                                            , CG.fqFun [ "Result" ] "toMaybe"
+                                            , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
+                                            ]
+                                ]
+                            )
                          <|
                             CG.applyBinOp (CG.apply [ p_loop, CG.string "" ]) CG.pipel <|
                                 CG.lambda [ CG.varPattern <| lookup "state" ] <|
@@ -350,33 +331,42 @@ addIntlReplaceDeclaration =
                                             |> p_drop_infix
                                                 (p_token "{"
                                                     |> p_keep_infix
-                                                        (p_oneOf
-                                                            [ p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (p_int |> p_drop_infix (p_token "}"))
-                                                            , p_succeed (CG.val <| lookup "numberFormatUnsafe")
-                                                                |> p_drop_infix
-                                                                    (p_token "N"
-                                                                        |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                        (p_oneOf <|
+                                                            List.filterMap identity
+                                                                [ Just (p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (p_int |> p_drop_infix (p_token "}")))
+                                                                , filterIntl
+                                                                    (p_succeed (CG.val <| lookup "numberFormatUnsafe")
+                                                                        |> p_drop_infix
+                                                                            (p_token "N"
+                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                            )
                                                                     )
-                                                            , p_succeed (CG.val <| lookup "dateFormatUnsafe")
-                                                                |> p_drop_infix
-                                                                    (p_token "D"
-                                                                        |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                , filterIntl
+                                                                    (p_succeed (CG.val <| lookup "dateFormatUnsafe")
+                                                                        |> p_drop_infix
+                                                                            (p_token "D"
+                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                            )
                                                                     )
-                                                            , p_succeed (CG.val <| lookup "matchStrings")
-                                                                |> p_drop_infix
-                                                                    (p_token "S"
-                                                                        |> p_keep_infix p_int
-                                                                        |> p_drop_infix (p_token "|")
-                                                                        |> p_keep_infix (CG.val <| lookup "matchParser")
+                                                                , Just
+                                                                    (p_succeed (CG.val <| lookup "matchStrings")
+                                                                        |> p_drop_infix
+                                                                            (p_token "S"
+                                                                                |> p_keep_infix p_int
+                                                                                |> p_drop_infix (p_token "|")
+                                                                                |> p_keep_infix (CG.val <| lookup "matchParser")
+                                                                            )
                                                                     )
-                                                            , p_succeed (CG.val <| lookup "matchNumbers")
-                                                                |> p_drop_infix
-                                                                    (p_token "P"
-                                                                        |> p_keep_infix p_int
-                                                                        |> p_drop_infix (p_token "|")
-                                                                        |> p_keep_infix (CG.val <| lookup "matchParser")
+                                                                , filterIntl
+                                                                    (p_succeed (CG.val <| lookup "matchNumbers")
+                                                                        |> p_drop_infix
+                                                                            (p_token "P"
+                                                                                |> p_keep_infix p_int
+                                                                                |> p_drop_infix (p_token "|")
+                                                                                |> p_keep_infix (CG.val <| lookup "matchParser")
+                                                                            )
                                                                     )
-                                                            ]
+                                                                ]
                                                         )
                                                 )
                                         , CG.pipe (p_chompUntilEndOr "{")
@@ -393,15 +383,42 @@ addIntlReplaceDeclaration =
                                         ]
                         )
 
+                replacePlaceholdersType : CG.TypeAnnotation
+                replacePlaceholdersType =
+                    (if Features.needsIntl features then
+                        CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+
+                     else
+                        identity
+                    )
+                    <|
+                        CG.funAnn (CG.listAnn CG.stringAnn) (endoAnn CG.stringAnn)
+
+                replacePlaceholdersArgs =
+                    List.filterMap identity
+                        [ filterIntl <| CG.varPattern <| lookup "i18n"
+                        , Just <| CG.varPattern <| lookup "argList"
+                        ]
+
                 replacePlaceholdersDecl : CG.Declaration
                 replacePlaceholdersDecl =
                     CG.funDecl (CG.emptyDocComment |> CG.markdown "Replaces all placeholders with the given arguments using the Intl API on the marked spots" |> Just)
-                        (Just <| CG.funAnn (CG.typed ctx.names.i18nTypeName []) <| CG.funAnn (CG.listAnn CG.stringAnn) (endoAnn CG.stringAnn))
+                        (Just replacePlaceholdersType)
                         ctx.replacePlaceholdersName
-                        [ CG.varPattern <| lookup "i18n", CG.varPattern <| lookup "argList" ]
+                        replacePlaceholdersArgs
                     <|
                         CG.chain
-                            (CG.apply [ p_run, CG.parens <| CG.apply [ CG.val parserName, CG.val <| lookup "i18n", CG.val <| lookup "argList" ] ])
+                            (CG.apply
+                                [ p_run
+                                , CG.parens <|
+                                    CG.apply <|
+                                        List.filterMap identity
+                                            [ Just <| CG.val parserName
+                                            , filterIntl <| CG.val <| lookup "i18n"
+                                            , Just <| CG.val <| lookup "argList"
+                                            ]
+                                ]
+                            )
                             [ CG.fqFun [ "Result" ] "toMaybe"
                             , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
                             ]

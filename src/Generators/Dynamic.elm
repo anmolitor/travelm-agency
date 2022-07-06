@@ -116,7 +116,7 @@ addI18nTypeDeclaration =
                         ctx.names.i18nTypeName
                         []
                         [ ( ctx.names.i18nTypeName
-                          , if State.inferFeatures ctx.state |> Features.isActive Features.Intl then
+                          , if State.inferFeatures ctx.state |> Features.needsIntl then
                                 [ simpleI18nType, intlAnn, CG.typed ctx.names.languageTypeName [] ]
 
                             else
@@ -137,7 +137,7 @@ addInitDeclaration =
                         CG.record (List.map (\id -> ( id, CG.fqFun [ "Array" ] "empty" )) (Dict.NonEmpty.keys ctx.state))
 
                     needsIntl =
-                        State.inferFeatures ctx.state |> Features.isActive Features.Intl
+                        State.inferFeatures ctx.state |> Features.needsIntl
 
                     initDecl =
                         CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an (empty) `I18n` instance. This is useful on startup when no JSON was `load`ed yet."))
@@ -181,7 +181,7 @@ addAccessorDeclarations =
                         State.interpolationMap <| State.collectiveTranslationSet ctx.state
 
                     needsIntl =
-                        State.inferFeatures ctx.state |> Features.isActive Features.Intl
+                        State.inferFeatures ctx.state |> Features.needsIntl
 
                     accessorDeclaration : Identifier -> Int -> ( TKey, TValue ) -> CG.Declaration
                     accessorDeclaration identifier index ( key, value ) =
@@ -318,7 +318,7 @@ addDecodeDeclarations =
             \_ ctx arrName i18nName intlName langName ->
                 let
                     needsIntl =
-                        State.inferFeatures ctx.state |> Features.isActive Features.Intl
+                        State.inferFeatures ctx.state |> Features.needsIntl
 
                     decoderDecl : Identifier -> CG.Declaration
                     decoderDecl identifier =

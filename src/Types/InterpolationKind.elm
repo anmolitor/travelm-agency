@@ -26,13 +26,3 @@ interpolatedValueToString kind =
 
         Typed { toString } ->
             toString
-
-
-isIntlInterpolation : InterpolationKind -> Bool
-isIntlInterpolation kind =
-    case kind of
-        Simple ->
-            False
-
-        Typed _ ->
-            True

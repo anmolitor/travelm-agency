@@ -149,6 +149,13 @@ addReplacePlaceholderDeclaration =
                     else
                         always Nothing
 
+                filterByFeatures genIfActive =
+                    if Features.oneIsActive genIfActive features then
+                        Just
+
+                    else
+                        always Nothing
+
                 filterIntl =
                     if Features.needsIntl features then
                         Just
@@ -214,7 +221,7 @@ addReplacePlaceholderDeclaration =
                                                     )
                                             ]
                                         )
-                                , Just <|
+                                , filterByFeatures [ Features.CaseInterpolation, Features.IntlNumber ] <|
                                     CG.letVal (lookup "matchParser")
                                         (p_succeed (CG.fqFun [ "Tuple" ] "pair")
                                             |> p_keep_infix (CG.parens <| CG.applyBinOp (p_chompUntil "|") CG.piper p_getChompedString)
@@ -271,7 +278,7 @@ addReplacePlaceholderDeclaration =
                                                     , CG.string "]]"
                                                     ]
                                         )
-                                , Just <|
+                                , filterByFeature Features.CaseInterpolation <|
                                     CG.letFunction (lookup "matchStrings") [ CG.varPattern <| lookup "n", CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ] ] <|
                                         CG.pipe (CG.apply [ CG.fqFun [ "Dict" ] "get", CG.parens <| CG.apply [ CG.fun <| lookup "getArg", CG.val <| lookup "n" ], CG.val <| lookup "cases" ])
                                             [ CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val <| lookup "default" ]
@@ -348,7 +355,7 @@ addReplacePlaceholderDeclaration =
                                                                                 |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
                                                                             )
                                                                     )
-                                                                , Just
+                                                                , filterByFeature Features.CaseInterpolation
                                                                     (p_succeed (CG.val <| lookup "matchStrings")
                                                                         |> p_drop_infix
                                                                             (p_token "S"

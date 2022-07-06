@@ -1,4 +1,4 @@
-module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, needsIntl, singleton, union, isEmpty)
+module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, isEmpty, needsIntl, singleton, union, oneIsActive)
 
 {-| Conditionals that change the output of the code generator that are inferred by the given translation files
 
@@ -83,9 +83,14 @@ isActive feature (Features features) =
     Set.member (serialize feature) features
 
 
+oneIsActive : List Feature -> Features -> Bool
+oneIsActive list features =
+    List.any (\feature -> isActive feature features) list
+
+
 needsIntl : Features -> Bool
-needsIntl features =
-    List.any (\feature -> isActive feature features) [ IntlNumber, IntlDate, IntlPlural ]
+needsIntl =
+    oneIsActive [ IntlNumber, IntlDate, IntlPlural ]
 
 
 combineMap : (a -> Features) -> List a -> Features

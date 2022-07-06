@@ -6,6 +6,7 @@ import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
 import Inline.NumberFormatTranslations
+import Inline.PluralTranslations
 import Inline.SimpleI18nLastTranslations
 import Inline.SingleInterpolationTranslations
 import Inline.SingleTextTranslations
@@ -146,4 +147,17 @@ dateFormatCase =
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
                     |> Expect.equal "Today: "
+        ]
+
+
+pluralCase : Test
+pluralCase =
+    describe "plural"
+        [ test "type checks" <|
+            \_ ->
+                Inline.PluralTranslations.text
+                    (Inline.PluralTranslations.init Util.emptyIntl Inline.PluralTranslations.En)
+                    5
+                    -- Due to the absent intl api, we can only test the default case here
+                    |> Expect.equal "I met many people."
         ]

@@ -11,6 +11,8 @@ import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
 import Dynamic.NumberFormatServer
 import Dynamic.NumberFormatTranslations
+import Dynamic.PluralServer
+import Dynamic.PluralTranslations
 import Dynamic.SimpleI18nLastServer
 import Dynamic.SimpleI18nLastTranslations
 import Dynamic.SingleInterpolationServer
@@ -170,4 +172,17 @@ dateFormatCase =
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
                     |> Expect.equal (Ok "Today: ")
+        ]
+
+
+pluralCase : Test
+pluralCase =
+    describe "plural"
+        [ test "type checks" <|
+            \_ ->
+                sendRequest Dynamic.PluralServer.server "messages.en.json" Dynamic.PluralTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.PluralTranslations.init Util.emptyIntl Dynamic.PluralTranslations.En))
+                    |> Result.map (\i18n -> Dynamic.PluralTranslations.text i18n 4)
+                    -- Due to the absent intl api, we can only test the default case here
+                    |> Expect.equal (Ok "I met many people.")
         ]

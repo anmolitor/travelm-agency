@@ -7,7 +7,7 @@ import Dict.NonEmpty
 import Elm.CodeGen as CG
 import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
-import List.NonEmpty
+import List.NonEmpty exposing (NonEmpty)
 import Set
 import State exposing (NonEmptyState)
 import String.Extra
@@ -352,32 +352,39 @@ addI18nInstances =
                                 _ ->
                                     (::) (CG.varPattern extraAttrsName)
 
+                        refHtmlAttr id =
+                            if List.length htmlIds > 1 then
+                                CG.access (CG.val extraAttrsName) id
+
+                            else
+                                CG.val <| lookup <| id ++ "Attrs"
+
                         matchStatement default otherOptions =
                             (Dict.toList otherOptions
                                 |> List.map
                                     (Tuple.mapBoth CG.stringPattern
-                                        (List.NonEmpty.map segmentToExpression
+                                        (List.NonEmpty.map (segmentToExpression toHtml)
                                             >> List.NonEmpty.foldl1 concatenateExpressions
                                         )
                                     )
                             )
                                 ++ [ ( CG.allPattern
-                                     , List.NonEmpty.map segmentToExpression default
+                                     , List.NonEmpty.map (segmentToExpression toHtml) default
                                         |> List.NonEmpty.foldl1 concatenateExpressions
                                      )
                                    ]
 
-                        segmentToExpression : TSegment -> CG.Expression
-                        segmentToExpression segm =
+                        segmentToExpression : (CG.Expression -> CG.Expression) -> TSegment -> CG.Expression
+                        segmentToExpression wrapNonHtml segm =
                             case segm of
                                 Segment.Interpolation var ->
                                     (Dict.get var placeholders |> Maybe.map InterpolationKind.interpolatedValueToString |> Maybe.withDefault identity) (accessParam var)
-                                        |> toHtml
+                                        |> wrapNonHtml
 
                                 Segment.InterpolationCase var default otherOptions ->
                                     CG.caseExpr (accessParam var)
                                         (matchStatement default otherOptions)
-                                        |> toHtml
+                                        |> wrapNonHtml
 
                                 Segment.PluralCase var numArgs default otherOptions ->
                                     CG.caseExpr
@@ -413,7 +420,7 @@ addI18nInstances =
                                             ]
                                         )
                                         (matchStatement default otherOptions)
-                                        |> toHtml
+                                        |> wrapNonHtml
 
                                 Segment.FormatDate var args ->
                                     CG.apply
@@ -425,7 +432,7 @@ addI18nInstances =
                                             , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, ArgValue.generateEncoded v ]) |> CG.list )
                                             ]
                                         ]
-                                        |> toHtml
+                                        |> wrapNonHtml
 
                                 Segment.FormatNumber var args ->
                                     CG.apply
@@ -437,16 +444,19 @@ addI18nInstances =
                                             , ( "args", args |> List.map (\( k, v ) -> CG.tuple [ CG.string k, ArgValue.generateEncoded v ]) |> CG.list )
                                             ]
                                         ]
-                                        |> toHtml
+                                        |> wrapNonHtml
 
                                 Segment.Text text ->
-                                    CG.string text |> toHtml
+                                    CG.string text |> wrapNonHtml
 
                                 Segment.Html html ->
                                     CG.apply
                                         [ CG.fqFun [ "Html" ] "node"
                                         , CG.string html.tag
-                                        , generateHtmlAttrs html.attrs
+                                        , CG.parens <|
+                                            CG.applyBinOp (generateHtmlAttrs html.attrs)
+                                                CG.append
+                                                (refHtmlAttr html.id)
                                         , generateHtmlContent html.content
                                         ]
 
@@ -456,7 +466,7 @@ addI18nInstances =
                                     CG.apply
                                         [ CG.fqFun [ "Html", "Attributes" ] "attribute"
                                         , CG.string attrKey
-                                        , List.NonEmpty.map segmentToExpression attrVal
+                                        , List.NonEmpty.map (segmentToExpression identity) attrVal
                                             |> List.NonEmpty.foldl1 concatenateExpressions
                                         ]
                                 )
@@ -464,7 +474,7 @@ addI18nInstances =
                                 |> CG.list
 
                         generateHtmlContent content =
-                            List.NonEmpty.map segmentToExpression content
+                            List.NonEmpty.map (segmentToExpression toHtml) content
                                 |> concatExpressions
 
                         concatenateExpressions e1 e2 =
@@ -477,7 +487,7 @@ addI18nInstances =
                             else
                                 List.NonEmpty.toList >> CG.list
                     in
-                    List.NonEmpty.map segmentToExpression value
+                    List.NonEmpty.map (segmentToExpression toHtml) value
                         |> concatExpressions
                         |> (case Dict.toList placeholders of
                                 [] ->
@@ -543,37 +553,50 @@ translationToRecordTypeAnn state key =
         htmlIds =
             State.getHtmlIdsForKey key state
 
-        htmlReturnType =
-            CG.funAnn (htmlRecordTypeAnn htmlIds)
+        htmlReturnType nonEmptyIds =
+            CG.funAnn (htmlRecordTypeAnn nonEmptyIds)
                 (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
     in
-    case ( placeholders, htmlIds ) of
-        ( [], [] ) ->
+    case ( placeholders, List.NonEmpty.fromList htmlIds ) of
+        ( [], Nothing ) ->
             CG.stringAnn
 
-        ( [ ( _, kind ) ], [] ) ->
+        ( [], Just nonEmptyIds ) ->
+            htmlReturnType nonEmptyIds
+
+        ( [ ( _, kind ) ], Nothing ) ->
             CG.funAnn (InterpolationKind.toTypeAnn kind) CG.stringAnn
 
-        ( [ ( _, kind ) ], _ :: _ ) ->
-            CG.funAnn (InterpolationKind.toTypeAnn kind) htmlReturnType
+        ( [ ( _, kind ) ], Just nonEmptyIds ) ->
+            CG.funAnn (InterpolationKind.toTypeAnn kind) (htmlReturnType nonEmptyIds)
 
-        ( many, [] ) ->
+        ( many, Nothing ) ->
             many
                 |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
                 |> (\fields -> CG.funAnn (CG.recordAnn fields) CG.stringAnn)
 
-        ( many, _ :: _ ) ->
+        ( many, Just nonEmptyIds ) ->
             many
                 |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
-                |> (\fields -> CG.funAnn (CG.recordAnn fields) htmlReturnType)
+                |> (\fields -> CG.funAnn (CG.recordAnn fields) (htmlReturnType nonEmptyIds))
 
 
-htmlRecordTypeAnn : List String -> CG.TypeAnnotation
-htmlRecordTypeAnn =
-    CG.recordAnn
-        << List.map
-            (\id ->
-                ( id
-                , CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]
+htmlRecordTypeAnn : NonEmpty String -> CG.TypeAnnotation
+htmlRecordTypeAnn nonEmptyIds =
+    if List.NonEmpty.isSingleton nonEmptyIds then
+        htmlAttrsTypeAnn
+
+    else
+        CG.recordAnn <|
+            List.map
+                (\id ->
+                    ( id
+                    , htmlAttrsTypeAnn
+                    )
                 )
-            )
+                (List.NonEmpty.toList nonEmptyIds)
+
+
+htmlAttrsTypeAnn : CG.TypeAnnotation
+htmlAttrsTypeAnn =
+    CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]

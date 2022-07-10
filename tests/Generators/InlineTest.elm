@@ -1,17 +1,22 @@
 module Generators.InlineTest exposing (..)
 
 import Expect
+import Html
+import Html.Attributes
 import Inline.DateFormatTranslations
 import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
 import Inline.NumberFormatTranslations
 import Inline.PluralTranslations
+import Inline.SimpleHtmlTranslations
 import Inline.SimpleI18nLastTranslations
 import Inline.SingleInterpolationTranslations
 import Inline.SingleTextTranslations
 import Json.Encode
 import Test exposing (Test, describe, test)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
 import Time
 import Util
 
@@ -160,4 +165,37 @@ pluralCase =
                     5
                     -- Due to the absent intl api, we can only test the default case here
                     |> Expect.equal "I met many people."
+        ]
+
+
+simpleHtml : Test
+simpleHtml =
+    describe "simple html"
+        [ test "produces the correct html element and text content" <|
+            \_ ->
+                Inline.SimpleHtmlTranslations.html
+                    (Inline.SimpleHtmlTranslations.init Inline.SimpleHtmlTranslations.En)
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "a" ]
+                    |> Query.has [ Selector.text "Click me" ]
+        , test "generates html attribute from translation file" <|
+            \_ ->
+                Inline.SimpleHtmlTranslations.html
+                    (Inline.SimpleHtmlTranslations.init Inline.SimpleHtmlTranslations.En)
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "a" ]
+                    |> Query.has [ Selector.attribute <| Html.Attributes.href "/" ]
+        , test "passes extra attributes given at runtime" <|
+            \_ ->
+                Inline.SimpleHtmlTranslations.html
+                    (Inline.SimpleHtmlTranslations.init Inline.SimpleHtmlTranslations.En)
+                    [ Html.Attributes.class "link" ]
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "a" ]
+                    |> Query.has [ Selector.class "link" ]
         ]

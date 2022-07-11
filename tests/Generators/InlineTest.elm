@@ -7,6 +7,7 @@ import Inline.DateFormatTranslations
 import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
+import Inline.NestedInterpolationTranslations
 import Inline.NumberFormatTranslations
 import Inline.PluralTranslations
 import Inline.SimpleHtmlTranslations
@@ -122,6 +123,30 @@ interpolationMatchCase =
                     (Inline.InterpolationMatchTranslations.init Inline.InterpolationMatchTranslations.En)
                     "anything else"
                     |> Expect.equal "It bought a cat."
+        ]
+
+
+nestedInterpolation : Test
+nestedInterpolation =
+    describe "nested interpolation"
+        [ test "interpolates the correct values for 'Ich'" <|
+            \_ ->
+                Inline.NestedInterpolationTranslations.text
+                    (Inline.NestedInterpolationTranslations.init Inline.NestedInterpolationTranslations.De)
+                    { pronoun = "Ich", objectsToBuy = "Gemüse" }
+                    |> Expect.equal "Ich kaufe Gemüse."
+        , test "interpolates the correct values for 'Du'" <|
+            \_ ->
+                Inline.NestedInterpolationTranslations.text
+                    (Inline.NestedInterpolationTranslations.init Inline.NestedInterpolationTranslations.De)
+                    { pronoun = "Du", objectsToBuy = "Obst" }
+                    |> Expect.equal "Du kaufst Obst."
+        , test "interpolates the default value for other values" <|
+            \_ ->
+                Inline.NestedInterpolationTranslations.text
+                    (Inline.NestedInterpolationTranslations.init Inline.NestedInterpolationTranslations.De)
+                    { pronoun = "Er", objectsToBuy = "Fleisch" }
+                    |> Expect.equal "Er kauft Fleisch."
         ]
 
 

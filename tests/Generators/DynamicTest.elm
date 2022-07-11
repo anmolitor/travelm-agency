@@ -11,6 +11,8 @@ import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
+import Dynamic.NestedInterpolationServer
+import Dynamic.NestedInterpolationTranslations
 import Dynamic.NumberFormatServer
 import Dynamic.NumberFormatTranslations
 import Dynamic.PluralServer
@@ -140,6 +142,34 @@ interpolationMatchCase =
                     |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
                     |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "anything else")
                     |> Expect.equal (Ok "It bought a cat.")
+        ]
+
+
+nestedInterpolation : Test
+nestedInterpolation =
+    describe "nested interpolation" <|
+        let
+            i18n =
+                sendRequest Dynamic.NestedInterpolationServer.server
+                    "messages.de.json"
+                    Dynamic.NestedInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NestedInterpolationTranslations.init)
+        in
+        [ test "interpolates the correct values for 'Ich'" <|
+            \_ ->
+                i18n
+                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Ich", objectsToBuy = "Gemüse" })
+                    |> Expect.equal (Ok "Ich kaufe Gemüse.")
+        , test "interpolates the correct values for 'Du'" <|
+            \_ ->
+                i18n
+                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Du", objectsToBuy = "Obst" })
+                    |> Expect.equal (Ok "Du kaufst Obst.")
+        , test "interpolates the default value for other values" <|
+            \_ ->
+                i18n
+                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Er", objectsToBuy = "Fleisch" })
+                    |> Expect.equal (Ok "Er kauft Fleisch.")
         ]
 
 

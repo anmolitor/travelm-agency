@@ -580,11 +580,9 @@ encodeCaseOptions =
     Dict.toList
         >> List.map
             (\( k, v ) ->
-                (E.string k |> E.encode 0)
-                    ++ ":"
-                    ++ (E.string (encodeSegments v) |> E.encode 0)
+                k ++ "|" ++ encodeSegments v
             )
-        >> String.join ","
+        >> String.join "|"
 
 
 encodeSegment : TSegment -> String

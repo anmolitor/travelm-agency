@@ -17,6 +17,8 @@ import Dynamic.NumberFormatServer
 import Dynamic.NumberFormatTranslations
 import Dynamic.PluralServer
 import Dynamic.PluralTranslations
+import Dynamic.SimpleHtmlServer
+import Dynamic.SimpleHtmlTranslations
 import Dynamic.SimpleI18nLastServer
 import Dynamic.SimpleI18nLastTranslations
 import Dynamic.SingleInterpolationServer
@@ -24,8 +26,11 @@ import Dynamic.SingleInterpolationTranslations
 import Dynamic.SingleTextServer
 import Dynamic.SingleTextTranslations
 import Expect
+import Html
 import Json.Decode as D
 import Test exposing (Test, describe, test)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
 import Time
 import Util
 import Util.Shared exposing (sendRequest)
@@ -235,4 +240,26 @@ hashRegressionTest =
                     |> Result.map ((|>) Dynamic.HashTranslations.init)
                     |> Result.map Dynamic.HashTranslations.text
                     |> Expect.equal (Ok "german text")
+        ]
+
+
+simpleHtml : Test
+simpleHtml =
+    describe "simple html"
+        [ test "produces the correct html element and text content" <|
+            \_ ->
+                sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.SimpleHtmlTranslations.html i18n [])
+                    |> (\result ->
+                            case result of
+                                Err err ->
+                                    Expect.fail "Failed to load translation file"
+
+                                Ok html ->
+                                    Html.div [] html
+                                        |> Query.fromHtml
+                                        |> Query.find [ Selector.tag "a" ]
+                                        |> Query.has [ Selector.text "Click me" ]
+                       )
         ]

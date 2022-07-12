@@ -554,7 +554,7 @@ translationToRecordTypeAnn state key =
             State.getHtmlIdsForKey key state
 
         htmlReturnType nonEmptyIds =
-            CG.funAnn (htmlRecordTypeAnn nonEmptyIds)
+            CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
                 (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
     in
     case ( placeholders, List.NonEmpty.fromList htmlIds ) of
@@ -581,22 +581,4 @@ translationToRecordTypeAnn state key =
                 |> (\fields -> CG.funAnn (CG.recordAnn fields) (htmlReturnType nonEmptyIds))
 
 
-htmlRecordTypeAnn : NonEmpty String -> CG.TypeAnnotation
-htmlRecordTypeAnn nonEmptyIds =
-    if List.NonEmpty.isSingleton nonEmptyIds then
-        htmlAttrsTypeAnn
 
-    else
-        CG.recordAnn <|
-            List.map
-                (\id ->
-                    ( id
-                    , htmlAttrsTypeAnn
-                    )
-                )
-                (List.NonEmpty.toList nonEmptyIds)
-
-
-htmlAttrsTypeAnn : CG.TypeAnnotation
-htmlAttrsTypeAnn =
-    CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]

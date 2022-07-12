@@ -192,6 +192,9 @@ addAccessorDeclarations =
                                     |> Dict.toList
                                     |> List.sortBy Tuple.first
 
+                            htmlIds =
+                                State.getHtmlIdsForKey key ctx.state
+
                             placeholderPatterns =
                                 case placeholders of
                                     [] ->
@@ -214,30 +217,42 @@ addAccessorDeclarations =
                                     many ->
                                         List.map (\( name, _ ) -> CG.access (CG.val dataName) name) many
 
-                            orderTypeSignature templateArgsType =
-                                if ctx.i18nArgLast then
-                                    CG.stringAnn
-                                        |> CG.funAnn (CG.typed ctx.names.i18nTypeName [])
-                                        |> CG.funAnn templateArgsType
+                            returnType =
+                                case List.NonEmpty.fromList htmlIds of
+                                    Nothing ->
+                                        CG.stringAnn
 
-                                else
-                                    CG.stringAnn
-                                        |> CG.funAnn templateArgsType
-                                        |> CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+                                    Just nonEmptyIds ->
+                                        CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
+                                            (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
+
+                            orderTypeSignature signatureWithoutI18n =
+                                (if ctx.i18nArgLast then
+                                    CodeGen.Utils.funAnnArgLast
+
+                                 else
+                                    CG.funAnn
+                                )
+                                    (CG.typed ctx.names.i18nTypeName [])
+                                <|
+                                    signatureWithoutI18n
 
                             typeAnn =
-                                case placeholders of
-                                    [] ->
-                                        CG.funAnn (CG.typed ctx.names.i18nTypeName []) CG.stringAnn
+                                orderTypeSignature <|
+                                    case placeholders of
+                                        [] ->
+                                            returnType
 
-                                    [ ( _, kind ) ] ->
-                                        orderTypeSignature (InterpolationKind.toTypeAnn kind)
+                                        [ ( _, kind ) ] ->
+                                            CG.funAnn (InterpolationKind.toTypeAnn kind) returnType
 
-                                    many ->
-                                        many
-                                            |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
-                                            |> CG.extRecordAnn "a"
-                                            |> orderTypeSignature
+                                        many ->
+                                            CG.funAnn
+                                                (many
+                                                    |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
+                                                    |> CG.extRecordAnn "a"
+                                                )
+                                                returnType
 
                             aliasPatternIfNotEmptyPlaceholders =
                                 if List.isEmpty placeholders then
@@ -245,6 +260,13 @@ addAccessorDeclarations =
 
                                 else
                                     \pat -> CG.asPattern pat i18nName
+
+                            htmlPatterns =
+                                if List.isEmpty htmlIds then
+                                    []
+
+                                else
+                                    [ CG.varPattern <| lookup "extraHtmlAttrs" ]
 
                             i18nPattern =
                                 if needsIntl then
@@ -255,10 +277,10 @@ addAccessorDeclarations =
 
                             patterns =
                                 if ctx.i18nArgLast then
-                                    placeholderPatterns ++ [ i18nPattern ]
+                                    htmlPatterns ++ placeholderPatterns ++ [ i18nPattern ]
 
                                 else
-                                    i18nPattern :: placeholderPatterns
+                                    i18nPattern :: htmlPatterns ++ placeholderPatterns
                         in
                         CG.funDecl Nothing
                             (Just typeAnn)
@@ -267,7 +289,11 @@ addAccessorDeclarations =
                             (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]
                                   , if List.isEmpty placeholderFunctionArguments then
-                                        CG.val translationName
+                                        if List.isEmpty htmlIds then
+                                            CG.val translationName
+
+                                        else
+                                            CG.apply [ CG.fun (lookup "replaceHtmlPlaceholders"), CG.list placeholderFunctionArguments, CG.val translationName ]
 
                                     else if needsIntl then
                                         CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.val i18nName, CG.list placeholderFunctionArguments, CG.val translationName ]
@@ -276,7 +302,11 @@ addAccessorDeclarations =
                                         CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.list placeholderFunctionArguments, CG.val translationName ]
                                   )
                                 , ( CG.namedPattern "Nothing" []
-                                  , CG.val ctx.fallbackValueName
+                                  , if List.isEmpty htmlIds then
+                                        CG.val ctx.fallbackValueName
+
+                                    else
+                                        CG.list []
                                   )
                                 ]
                             )
@@ -619,7 +649,15 @@ encodeSegment segment =
             wrapVar <| "D" ++ var ++ encodeArgs args
 
         Segment.Html html ->
-            wrapVar <| "H" ++ html.tag ++ "|"
+            wrapVar <|
+                "H"
+                    ++ html.tag
+                    ++ "|"
+                    ++ encodeSegments html.content
+                    ++ "|"
+                    ++ (List.concatMap (\( key, val ) -> [ key, encodeSegments val ]) html.attrs
+                            |> String.join "|"
+                       )
 
 
 encodeArgs : List ( String, ArgValue ) -> String

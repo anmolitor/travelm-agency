@@ -109,7 +109,7 @@ inferFeaturesTranslationSet =
     Dict.NonEmpty.values >> Features.combineMap Types.Translation.inferFeatures
 
 
-getHtmlIdsForKey : TKey -> NonEmptyState () -> List String
+getHtmlIdsForKey : TKey -> NonEmptyState any -> List String
 getHtmlIdsForKey key =
     collectiveTranslationSet
         >> Dict.NonEmpty.values

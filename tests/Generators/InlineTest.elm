@@ -4,6 +4,7 @@ import Expect
 import Html
 import Html.Attributes
 import Inline.DateFormatTranslations
+import Inline.HtmlInterpolationTranslations
 import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
@@ -271,5 +272,27 @@ nestedHtml =
                         [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
                         , Selector.text ""
                         , Selector.class "nestedImage"
+                        ]
+        ]
+
+
+mixedHtmlAndInterpolation : Test
+mixedHtmlAndInterpolation =
+    describe "mixed html and interpolation"
+        [ test "shows expected content for admin role" <|
+            \_ ->
+                Inline.HtmlInterpolationTranslations.text
+                    (Inline.HtmlInterpolationTranslations.init Inline.HtmlInterpolationTranslations.En)
+                    { adminLink = "/admin", role = "admin", username = "A. Dmin" }
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.has
+                        [ Selector.text "Thanks for logging in. "
+                        , Selector.containing
+                            [ Selector.tag "a"
+                            , Selector.attribute <| Html.Attributes.href "/admin"
+                            , Selector.text "A. Dmin may click on this link."
+                            ]
                         ]
         ]

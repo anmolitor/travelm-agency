@@ -1,4 +1,4 @@
-module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyHtmlIds, modifyVars)
+module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, htmlIdsForSegment, inferFeatures, interpolationVars, modifyHtmlIds, modifyVars)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -174,16 +174,27 @@ inferFeatures val =
 
 getHtmlIds : TValue -> Set String
 getHtmlIds =
-    let
-        htmlIdsForSegment seg =
-            case seg of
-                Html html ->
-                    Set.insert html.id <| getHtmlIds html.content
-
-                _ ->
-                    Set.empty
-    in
     List.NonEmpty.toList >> List.map htmlIdsForSegment >> List.foldl Set.union Set.empty
+
+
+htmlIdsForSegment : TSegment -> Set String
+htmlIdsForSegment seg =
+    case seg of
+        Html html ->
+            Set.insert html.id <| getHtmlIds html.content
+
+        InterpolationCase var default cases ->
+            List.NonEmpty.fromCons (getHtmlIds default)
+                (List.map getHtmlIds <| Dict.values cases)
+                |> List.NonEmpty.foldl1 Set.union
+
+        PluralCase var opts default cases ->
+            List.NonEmpty.fromCons (getHtmlIds default)
+                (List.map getHtmlIds <| Dict.values cases)
+                |> List.NonEmpty.foldl1 Set.union
+
+        _ ->
+            Set.empty
 
 
 classifyInterpolationSegment : TSegment -> List ( String, InterpolationKind )

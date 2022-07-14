@@ -1,17 +1,18 @@
-module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, emptyFile, endoAnn, finishFile, intlAnn, languageRelatedDecls, htmlRecordTypeAnn)
+module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls)
 
 import CodeGen.Utils
 import Elm.CodeGen as CG
 import Elm.Syntax.Exposing as Exposing
+import Elm.Syntax.Expression as Expression
 import Elm.Syntax.Module exposing (Module(..))
 import Elm.Syntax.Node as Node
 import Elm.Syntax.Range as Range
 import Generators.Names exposing (Names)
 import Intl exposing (Intl)
+import List.NonEmpty exposing (NonEmpty)
 import State exposing (NonEmptyState)
 import String.Extra
 import Types.UniqueName as Unique
-import List.NonEmpty exposing (NonEmpty)
 
 
 type alias Context =
@@ -190,6 +191,7 @@ This will map languages based on the prefix i.e. 'en-US' and 'en' will both map 
         <|
             CG.apply [ CG.val <| lookup "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]
 
+
 htmlRecordTypeAnn : NonEmpty String -> CG.TypeAnnotation
 htmlRecordTypeAnn nonEmptyIds =
     if List.NonEmpty.isSingleton nonEmptyIds then
@@ -204,6 +206,16 @@ htmlRecordTypeAnn nonEmptyIds =
                     )
                 )
                 (List.NonEmpty.toList nonEmptyIds)
+
+
+concatenateLists : CG.Expression -> CG.Expression -> CG.Expression
+concatenateLists e1 e2 =
+    case ( e2, e1 ) of
+        ( Expression.ListExpr [ single ], _ ) ->
+            CG.applyBinOp (Node.value single) CG.cons e1
+
+        _ ->
+            CG.applyBinOp e2 CG.append e1
 
 
 htmlAttrsTypeAnn : CG.TypeAnnotation

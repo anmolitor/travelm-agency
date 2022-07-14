@@ -295,4 +295,22 @@ mixedHtmlAndInterpolation =
                             , Selector.text "A. Dmin may click on this link."
                             ]
                         ]
+        , test "shows expected content for normal role" <|
+            \_ ->
+                Inline.HtmlInterpolationTranslations.text
+                    (Inline.HtmlInterpolationTranslations.init Inline.HtmlInterpolationTranslations.En)
+                    { adminLink = "/admin", role = "normal", username = "Justin Normal" }
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.text "You (Justin Normal) are not an admin." ]
+        , test "shows expected content for default role" <|
+            \_ ->
+                Inline.HtmlInterpolationTranslations.text
+                    (Inline.HtmlInterpolationTranslations.init Inline.HtmlInterpolationTranslations.En)
+                    { adminLink = "/admin", role = "undefined", username = "Does not matter" }
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.text "You are not logged in." ]
         ]

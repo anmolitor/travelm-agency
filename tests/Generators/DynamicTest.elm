@@ -11,6 +11,8 @@ import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
+import Dynamic.NestedHtmlServer
+import Dynamic.NestedHtmlTranslations
 import Dynamic.NestedInterpolationServer
 import Dynamic.NestedInterpolationTranslations
 import Dynamic.NumberFormatServer
@@ -283,6 +285,58 @@ simpleHtml =
                                 |> Query.find [ Selector.tag "a" ]
                                 |> Query.has [ Selector.class "link" ]
                         )
+        ]
+
+
+nestedHtml : Test
+nestedHtml =
+    describe "nested html"
+        [ test "produces the correct outer html element" <|
+            \_ ->
+                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.NestedHtmlTranslations.html i18n { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.tag "a" ]
+                                |> Query.has
+                                    [ Selector.attribute <| Html.Attributes.href "/"
+                                    , Selector.text "!"
+                                    , Selector.class "nestedLink"
+                                    ]
+                        )
+
+        -- , test "produces the correct inner span element" <|
+        --     \_ ->
+        --         Inline.NestedHtmlTranslations.html
+        --             (Inline.NestedHtmlTranslations.init Inline.NestedHtmlTranslations.En)
+        --             { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
+        --             |> Html.div []
+        --             |> Query.fromHtml
+        --             |> Query.find [ Selector.tag "a" ]
+        --             |> Query.find [ Selector.tag "span" ]
+        --             |> Query.has
+        --                 [ Selector.attribute <| Html.Attributes.width 100
+        --                 , Selector.attribute <| Html.Attributes.height 50
+        --                 , Selector.text "Click me"
+        --                 , Selector.class "theText"
+        --                 ]
+        -- , test "produces the correct inner img element" <|
+        --     \_ ->
+        --         Inline.NestedHtmlTranslations.html
+        --             (Inline.NestedHtmlTranslations.init Inline.NestedHtmlTranslations.En)
+        --             { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
+        --             |> Html.div []
+        --             |> Query.fromHtml
+        --             |> Query.find [ Selector.tag "a" ]
+        --             |> Query.find [ Selector.tag "img" ]
+        --             |> Query.has
+        --                 [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
+        --                 , Selector.text ""
+        --                 , Selector.class "nestedImage"
+        --                 ]
         ]
 
 

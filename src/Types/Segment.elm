@@ -1,4 +1,4 @@
-module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyVars, modifyHtmlIds)
+module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyHtmlIds, modifyVars)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -50,9 +50,29 @@ modifySegmentHtmlId : (String -> String) -> TSegment -> TSegment
 modifySegmentHtmlId modify segment =
     case segment of
         Html html ->
-            Html { html | id = modify html.id }
+            Html
+                { html
+                    | id = modify html.id
+                    , attrs = List.map (Tuple.mapSecond <| modifyHtmlIds modify) html.attrs
+                    , content = modifyHtmlIds modify html.content
+                }
 
-        _ ->
+        InterpolationCase var default cases ->
+            InterpolationCase var (modifyHtmlIds modify default) (Dict.map (always <| modifyHtmlIds modify) cases)
+
+        PluralCase var opts default cases ->
+            PluralCase var opts (modifyHtmlIds modify default) (Dict.map (always <| modifyHtmlIds modify) cases)
+
+        FormatNumber _ _ ->
+            segment
+
+        FormatDate _ _ ->
+            segment
+
+        Interpolation _ ->
+            segment
+
+        Text _ ->
             segment
 
 

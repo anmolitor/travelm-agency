@@ -1,8 +1,9 @@
-module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyVars)
+module Types.Segment exposing (TKey, TSegment(..), TValue, concatenateTextSegments, getHtmlIds, inferFeatures, interpolationVars, modifyVars, modifyHtmlIds)
 
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
 import List.NonEmpty exposing (NonEmpty)
+import Set exposing (Set)
 import Types.ArgValue exposing (ArgValue)
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
@@ -38,6 +39,21 @@ type TSegment
 modifyVars : (String -> String) -> TValue -> TValue
 modifyVars modify =
     List.NonEmpty.map (modifySegment modify)
+
+
+modifyHtmlIds : (String -> String) -> TValue -> TValue
+modifyHtmlIds modify =
+    List.NonEmpty.map (modifySegmentHtmlId modify)
+
+
+modifySegmentHtmlId : (String -> String) -> TSegment -> TSegment
+modifySegmentHtmlId modify segment =
+    case segment of
+        Html html ->
+            Html { html | id = modify html.id }
+
+        _ ->
+            segment
 
 
 modifySegment : (String -> String) -> TSegment -> TSegment
@@ -136,18 +152,18 @@ inferFeatures val =
         |> Features.combineMap inferFeaturesForSegment
 
 
-getHtmlIds : TValue -> List String
+getHtmlIds : TValue -> Set String
 getHtmlIds =
     let
         htmlIdsForSegment seg =
             case seg of
                 Html html ->
-                    html.id :: getHtmlIds html.content
+                    Set.insert html.id <| getHtmlIds html.content
 
                 _ ->
-                    []
+                    Set.empty
     in
-    List.NonEmpty.toList >> List.concatMap htmlIdsForSegment
+    List.NonEmpty.toList >> List.map htmlIdsForSegment >> List.foldl Set.union Set.empty
 
 
 classifyInterpolationSegment : TSegment -> List ( String, InterpolationKind )

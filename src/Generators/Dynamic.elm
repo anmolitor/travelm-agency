@@ -15,7 +15,7 @@ import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import Json.Encode as E
 import List.NonEmpty
-import Set
+import Set exposing (Set)
 import State exposing (NonEmptyState, OptimizedJson, TranslationSet)
 import String.Extra
 import Types.ArgValue as ArgValue exposing (ArgValue)
@@ -183,6 +183,9 @@ addAccessorDeclarations =
                     needsIntl =
                         State.inferFeatures ctx.state |> Features.needsIntl
 
+                    htmlMap =
+                        State.getHtmlIds ctx.state
+
                     accessorDeclaration : Identifier -> Int -> ( TKey, TValue ) -> CG.Declaration
                     accessorDeclaration identifier index ( key, value ) =
                         let
@@ -193,7 +196,7 @@ addAccessorDeclarations =
                                     |> List.sortBy Tuple.first
 
                             htmlIds =
-                                State.getHtmlIdsForKey key ctx.state
+                                Dict.get key htmlMap |> Maybe.withDefault Set.empty
 
                             placeholderPatterns =
                                 case placeholders of
@@ -218,7 +221,7 @@ addAccessorDeclarations =
                                         List.map (\( name, _ ) -> CG.access (CG.val dataName) name) many
 
                             returnType =
-                                case List.NonEmpty.fromList htmlIds of
+                                case List.NonEmpty.fromList <| Set.toList htmlIds of
                                     Nothing ->
                                         CG.stringAnn
 
@@ -262,11 +265,24 @@ addAccessorDeclarations =
                                     \pat -> CG.asPattern pat i18nName
 
                             htmlPatterns =
-                                if List.isEmpty htmlIds then
-                                    []
+                                case List.NonEmpty.fromList <| Set.toList htmlIds of
+                                    Nothing ->
+                                        []
+
+                                    Just ( single, [] ) ->
+                                        [ CG.varPattern <| lookup single ]
+
+                                    _ ->
+                                        [ CG.varPattern <| lookup "extraHtmlAttrs" ]
+
+                            htmlRecordToList nonEmptyIds =
+                                if List.NonEmpty.isSingleton nonEmptyIds then
+                                    CG.list [ CG.val <| lookup <| List.NonEmpty.head nonEmptyIds ]
 
                                 else
-                                    [ CG.varPattern <| lookup "extraHtmlAttrs" ]
+                                    CG.list <|
+                                        List.map (CG.access <| CG.val <| lookup "extraHtmlAttrs") <|
+                                            List.NonEmpty.toList nonEmptyIds
 
                             i18nPattern =
                                 if needsIntl then
@@ -289,11 +305,12 @@ addAccessorDeclarations =
                             (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]
                                   , if List.isEmpty placeholderFunctionArguments then
-                                        if List.isEmpty htmlIds then
-                                            CG.val translationName
+                                        case List.NonEmpty.fromList <| Set.toList htmlIds of
+                                            Nothing ->
+                                                CG.val translationName
 
-                                        else
-                                            CG.apply [ CG.fun (lookup "replaceHtmlPlaceholders"), CG.list placeholderFunctionArguments, CG.val translationName ]
+                                            Just nonEmptyIds ->
+                                                CG.apply [ CG.fun (lookup "replaceHtmlPlaceholders"), CG.list placeholderFunctionArguments, htmlRecordToList nonEmptyIds, CG.val translationName ]
 
                                     else if needsIntl then
                                         CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.val i18nName, CG.list placeholderFunctionArguments, CG.val translationName ]
@@ -302,7 +319,7 @@ addAccessorDeclarations =
                                         CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.list placeholderFunctionArguments, CG.val translationName ]
                                   )
                                 , ( CG.namedPattern "Nothing" []
-                                  , if List.isEmpty htmlIds then
+                                  , if Set.isEmpty htmlIds then
                                         CG.val ctx.fallbackValueName
 
                                     else
@@ -528,11 +545,14 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
                         interpolationMap =
                             State.interpolationMap translationSet
 
+                        htmlMap =
+                            State.getHtmlIdsForTranslationSet translationSet
+
                         content =
                             Types.Translation.completeFallback getTranslationForLang language translation
                                 |> Result.withDefault translation
                                 |> .pairs
-                                |> optimizeJson interpolationMap
+                                |> optimizeJson interpolationMap htmlMap
                                 |> E.encode 0
                     in
                     { content = content
@@ -555,15 +575,23 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
         translationSet
 
 
-optimizeJson : Dict TKey (Dict String InterpolationKind) -> Dict TKey TValue -> E.Value
-optimizeJson interpolationMap translations =
+optimizeJson : Dict TKey (Dict String InterpolationKind) -> Dict TKey (Set String) -> Dict TKey TValue -> E.Value
+optimizeJson interpolationMap htmlMap translations =
     let
         optimizeSegments : ( TKey, TValue ) -> String
         optimizeSegments ( key, val ) =
-            Dict.get key interpolationMap
-                |> Maybe.map Dict.keys
-                |> Maybe.withDefault []
-                |> indicifyInterpolations val
+            let
+                interpolations =
+                    Dict.get key interpolationMap
+                        |> Maybe.map Dict.keys
+                        |> Maybe.withDefault []
+
+                htmlIds =
+                    Dict.get key htmlMap |> Maybe.withDefault Set.empty
+            in
+            val
+                |> indicifyInterpolations interpolations
+                |> indicifyHtmlIds htmlIds
                 |> encodeSegments
     in
     translations
@@ -578,8 +606,8 @@ optimizeJson interpolationMap translations =
 Interpolations are assigned numbers in alphabetical order.
 Multiple interpolations with the same key get the same number.
 -}
-indicifyInterpolations : TValue -> List String -> TValue
-indicifyInterpolations tval interpolationSet =
+indicifyInterpolations : List String -> TValue -> TValue
+indicifyInterpolations interpolationSet tval =
     let
         positionDict =
             interpolationSet
@@ -591,6 +619,22 @@ indicifyInterpolations tval interpolationSet =
             Dict.get var positionDict |> Maybe.withDefault ""
     in
     Segment.modifyVars indicify tval
+
+
+indicifyHtmlIds : Set String -> TValue -> TValue
+indicifyHtmlIds htmlIds tval =
+    let
+        htmlDict =
+            htmlIds
+                |> Set.toList
+                |> List.sort
+                |> List.indexedMap (\i var -> ( var, String.fromInt i ))
+                |> Dict.fromList
+
+        indicify var =
+            Dict.get var htmlDict |> Maybe.withDefault ""
+    in
+    Segment.modifyHtmlIds indicify tval
 
 
 wrapVar : String -> String
@@ -651,6 +695,7 @@ encodeSegment segment =
         Segment.Html html ->
             wrapVar <|
                 "H"
+                    ++ html.id
                     ++ html.tag
                     ++ "|"
                     ++ encodeSegments html.content

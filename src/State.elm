@@ -4,6 +4,7 @@ import Dict exposing (Dict)
 import Dict.NonEmpty exposing (NonEmpty)
 import List.NonEmpty
 import Result.Extra
+import Set exposing (Set)
 import Types.Basic exposing (Identifier, Language)
 import Types.Error as Error exposing (Failable)
 import Types.Features as Features exposing (Features)
@@ -109,11 +110,19 @@ inferFeaturesTranslationSet =
     Dict.NonEmpty.values >> Features.combineMap Types.Translation.inferFeatures
 
 
-getHtmlIdsForKey : TKey -> NonEmptyState any -> List String
-getHtmlIdsForKey key =
+getHtmlIds : NonEmptyState any -> Dict TKey (Set String)
+getHtmlIds =
     collectiveTranslationSet
-        >> Dict.NonEmpty.values
-        >> List.concatMap (.pairs >> Dict.get key >> Maybe.map Segment.getHtmlIds >> Maybe.withDefault [])
+        >> getHtmlIdsForTranslationSet
+
+
+getHtmlIdsForTranslationSet : TranslationSet any -> Dict TKey (Set String)
+getHtmlIdsForTranslationSet =
+    Dict.NonEmpty.map (\_ ts -> Dict.map (\_ -> Segment.getHtmlIds) ts.pairs)
+        >> Dict.NonEmpty.foldl1
+            (mergeDictIntoDict <|
+                \key s1 s2 -> Dict.insert key <| Set.union s1 s2
+            )
 
 
 isIntlNeededForKey : TKey -> NonEmptyState () -> Bool

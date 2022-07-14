@@ -268,6 +268,9 @@ addI18nInstances =
                 interpolationMap =
                     State.interpolationMap translationSet
 
+                htmlIdDict =
+                    State.getHtmlIds ctx.state
+
                 translationSet =
                     State.collectiveTranslationSet ctx.state
 
@@ -315,10 +318,10 @@ addI18nInstances =
                             Dict.get key interpolationMap |> Maybe.withDefault Dict.empty
 
                         htmlIds =
-                            State.getHtmlIdsForKey key ctx.state
+                            Dict.get key htmlIdDict |> Maybe.withDefault Set.empty
 
                         toHtml text =
-                            if List.isEmpty htmlIds then
+                            if Set.isEmpty htmlIds then
                                 text
 
                             else
@@ -342,7 +345,7 @@ addI18nInstances =
                                 identity
 
                         addHtmlAttrsIfNeeded =
-                            case htmlIds of
+                            case Set.toList htmlIds of
                                 [] ->
                                     identity
 
@@ -353,7 +356,7 @@ addI18nInstances =
                                     (::) (CG.varPattern extraAttrsName)
 
                         refHtmlAttr id =
-                            if List.length htmlIds > 1 then
+                            if Set.size htmlIds > 1 then
                                 CG.access (CG.val extraAttrsName) id
 
                             else
@@ -481,7 +484,7 @@ addI18nInstances =
                             CG.applyBinOp e2 CG.append e1
 
                         concatExpressions =
-                            if List.isEmpty htmlIds then
+                            if Set.isEmpty htmlIds then
                                 List.NonEmpty.foldl1 concatenateExpressions
 
                             else
@@ -551,13 +554,15 @@ translationToRecordTypeAnn state key =
                 |> List.sortBy Tuple.first
 
         htmlIds =
-            State.getHtmlIdsForKey key state
+            State.getHtmlIds state
+                |> Dict.get key
+                |> Maybe.withDefault Set.empty
 
         htmlReturnType nonEmptyIds =
             CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
                 (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
     in
-    case ( placeholders, List.NonEmpty.fromList htmlIds ) of
+    case ( placeholders, List.NonEmpty.fromList <| Set.toList htmlIds ) of
         ( [], Nothing ) ->
             CG.stringAnn
 
@@ -579,6 +584,3 @@ translationToRecordTypeAnn state key =
             many
                 |> List.map (Tuple.mapSecond InterpolationKind.toTypeAnn)
                 |> (\fields -> CG.funAnn (CG.recordAnn fields) (htmlReturnType nonEmptyIds))
-
-
-

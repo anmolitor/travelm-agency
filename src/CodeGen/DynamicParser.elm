@@ -187,15 +187,15 @@ addReplacePlaceholderDeclaration =
                     )
                     <|
                         CG.funAnn (CG.listAnn CG.charAnn) <|
-                            CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ])
-                                (CG.fqTyped [ "Parser" ]
-                                    "Parser"
-                                    [ CG.tupleAnn
-                                        [ CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ]
-                                        , CG.maybeAnn CG.charAnn
+                            CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ]) <|
+                                CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ] ]) <|
+                                    CG.fqTyped [ "Parser" ]
+                                        "Parser"
+                                        [ CG.tupleAnn
+                                            [ CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ]
+                                            , CG.maybeAnn CG.charAnn
+                                            ]
                                         ]
-                                    ]
-                                )
 
                 cfgParserArgs =
                     List.filterMap identity
@@ -206,14 +206,35 @@ addReplacePlaceholderDeclaration =
                         , Just <| CG.varPattern <| lookup "args"
                         ]
 
-                recursiveParserCall : String -> List Char -> CG.Expression
-                recursiveParserCall parserName endSymbols =
+                cfgHtmlParserArgs =
+                    List.filterMap identity
+                        [ CG.namedPattern ctx.names.i18nTypeName [ CG.allPattern, CG.varPattern <| lookup "intl", CG.varPattern <| lookup "lang" ]
+                            |> (\pat -> CG.asPattern pat (lookup "i18n"))
+                            |> filterIntl
+                        , Just <| CG.varPattern <| lookup "endSymbols"
+                        , Just <| CG.varPattern <| lookup "args"
+                        , Just <| CG.varPattern <| lookup "extraHtmlAttrs"
+                        ]
+
+                recursiveParserCall : List Char -> CG.Expression
+                recursiveParserCall endSymbols =
                     CG.apply <|
                         List.filterMap identity
-                            [ Just <| CG.val parserName
+                            [ Just <| CG.val cfgParserName
                             , filterIntl <| CG.val (lookup "i18n")
                             , Just <| CG.list <| List.map CG.char endSymbols
                             , Just <| CG.val <| lookup "args"
+                            ]
+
+                recursiveHtmlParserCall : List Char -> CG.Expression
+                recursiveHtmlParserCall endSymbols =
+                    CG.apply <|
+                        List.filterMap identity
+                            [ Just <| CG.val cfgHtmlParserName
+                            , filterIntl <| CG.val (lookup "i18n")
+                            , Just <| CG.list <| List.map CG.char endSymbols
+                            , Just <| CG.val <| lookup "args"
+                            , Just <| CG.val <| lookup "extraHtmlAttrs"
                             ]
 
                 cfgParserDecl : CG.Declaration
@@ -246,8 +267,8 @@ addReplacePlaceholderDeclaration =
                                     CG.letVal (lookup "matchParser") <|
                                         generateMatchParser
                                             { lookup = lookup
-                                            , defaultPartParserCall = recursiveParserCall cfgParserName
-                                            , dynamicPartParserCall = recursiveParserCall cfgParserName
+                                            , defaultPartParserCall = recursiveParserCall
+                                            , dynamicPartParserCall = recursiveParserCall
                                             }
                                 , Just <|
                                     CG.letFunction (lookup "endParsers")
@@ -446,7 +467,7 @@ addReplacePlaceholderDeclaration =
                     CG.funDecl Nothing
                         (Just cfgHtmlParserType)
                         cfgHtmlParserName
-                        cfgParserArgs
+                        cfgHtmlParserArgs
                         (CG.letExpr
                             (List.filterMap identity
                                 [ Just <|
@@ -460,6 +481,13 @@ addReplacePlaceholderDeclaration =
                                         (CG.applyBinOp (CG.apply [ CG.fqFun [ "Array" ] "get", CG.val <| lookup "n", CG.val <| lookup "args" ])
                                             CG.piper
                                             defaultMaybeToEmptyString
+                                        )
+                                , Just <|
+                                    CG.letFunction (lookup "getHtmlAttrs")
+                                        [ CG.varPattern <| lookup "n" ]
+                                        (CG.applyBinOp (CG.apply [ CG.fqFun [ "Array" ] "get", CG.val <| lookup "n", CG.val <| lookup "extraHtmlAttrs" ])
+                                            CG.piper
+                                            (CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.list [] ])
                                         )
                                 , filterIntl <|
                                     CG.letVal (lookup "wrappedLang")
@@ -476,11 +504,12 @@ addReplacePlaceholderDeclaration =
                                     CG.letVal (lookup "matchParser") <|
                                         generateMatchParser
                                             { lookup = lookup
-                                            , defaultPartParserCall = recursiveParserCall cfgHtmlParserName
-                                            , dynamicPartParserCall = recursiveParserCall cfgParserName
+                                            , defaultPartParserCall = recursiveHtmlParserCall
+                                            , dynamicPartParserCall = recursiveParserCall
                                             }
                                 , Just <|
-                                    CG.letFunction (lookup "endParsers")
+                                    CG.letFunction
+                                        (lookup "endParsers")
                                         [ CG.varPattern <| lookup "state" ]
                                     <|
                                         CG.applyBinOp
@@ -618,7 +647,8 @@ addReplacePlaceholderDeclaration =
                                                                             , Just
                                                                                 (p_succeed
                                                                                     (CG.lambda
-                                                                                        [ CG.varPattern <| lookup "tag"
+                                                                                        [ CG.varPattern <| lookup "i"
+                                                                                        , CG.varPattern <| lookup "tag"
                                                                                         , CG.tuplePattern [ CG.varPattern <| lookup "content", CG.varPattern <| lookup "attrs" ]
                                                                                         ]
                                                                                         (CG.list
@@ -626,20 +656,26 @@ addReplacePlaceholderDeclaration =
                                                                                                 [ CG.fqFun [ "Html" ] "node"
                                                                                                 , CG.val <| lookup "tag"
                                                                                                 , CG.parens <|
-                                                                                                    CG.pipe
-                                                                                                        (CG.apply
-                                                                                                            [ CG.fqFun [ "Dict" ] "map"
-                                                                                                            , CG.fqFun [ "Html", "Attributes" ] "attribute"
-                                                                                                            , CG.val <| lookup "attrs"
-                                                                                                            ]
+                                                                                                    CG.applyBinOp
+                                                                                                        (CG.parens <|
+                                                                                                            CG.pipe
+                                                                                                                (CG.apply
+                                                                                                                    [ CG.fqFun [ "Dict" ] "map"
+                                                                                                                    , CG.fqFun [ "Html", "Attributes" ] "attribute"
+                                                                                                                    , CG.val <| lookup "attrs"
+                                                                                                                    ]
+                                                                                                                )
+                                                                                                                [ CG.fqFun [ "Dict" ] "values" ]
                                                                                                         )
-                                                                                                        [ CG.fqFun [ "Dict" ] "values" ]
+                                                                                                        CG.append
+                                                                                                        (CG.apply [ CG.val <| lookup "getHtmlAttrs", CG.val <| lookup "i" ])
                                                                                                 , CG.val <| lookup "content"
                                                                                                 ]
                                                                                             ]
                                                                                         )
                                                                                     )
                                                                                     |> p_drop_infix (p_token "H")
+                                                                                    |> p_keep_infix p_int
                                                                                     |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
                                                                                     |> p_drop_infix (p_token "|")
                                                                                     |> p_keep_infix (CG.val <| lookup "matchParser")
@@ -756,12 +792,14 @@ addReplacePlaceholderDeclaration =
                     )
                     <|
                         CG.funAnn (CG.listAnn CG.stringAnn) <|
-                            CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
+                            CG.funAnn (CG.listAnn <| CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]) <|
+                                CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
 
                 replaceHtmlPlaceholdersArgs =
                     List.filterMap identity
                         [ filterIntl <| CG.varPattern <| lookup "i18n"
                         , Just <| CG.varPattern <| lookup "argList"
+                        , Just <| CG.varPattern <| lookup "extraHtmlAttrsList"
                         ]
 
                 replaceHtmlPlaceholdersDecl : CG.Declaration
@@ -781,6 +819,7 @@ addReplacePlaceholderDeclaration =
                                             , filterIntl <| CG.val <| lookup "i18n"
                                             , Just <| CG.list []
                                             , Just <| CG.parens <| CG.apply [ CG.fqFun [ "Array" ] "fromList", CG.val <| lookup "argList" ]
+                                            , Just <| CG.parens <| CG.apply [ CG.fqFun [ "Array" ] "fromList", CG.val <| lookup "extraHtmlAttrsList" ]
                                             ]
                                 ]
                             )

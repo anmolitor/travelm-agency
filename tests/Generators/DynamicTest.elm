@@ -1,6 +1,5 @@
 module Generators.DynamicTest exposing (..)
 
-import Dict
 import Dynamic.DateFormatServer
 import Dynamic.DateFormatTranslations
 import Dynamic.HashServer
@@ -32,7 +31,6 @@ import Dynamic.SingleTextTranslations
 import Expect
 import Html
 import Html.Attributes
-import Json.Decode as D
 import Test exposing (Test, describe, test)
 import Test.Html.Query as Query
 import Test.Html.Selector as Selector

@@ -893,11 +893,6 @@ p_chompUntil symbol =
     CG.apply [ CG.fqFun [ "Parser" ] "chompUntil", CG.string symbol ]
 
 
-p_chompUntilEndOr : String -> CG.Expression
-p_chompUntilEndOr symbol =
-    CG.apply [ CG.fqFun [ "Parser" ] "chompUntilEndOr", CG.string symbol ]
-
-
 p_getChompedString : CG.Expression
 p_getChompedString =
     CG.fqFun [ "Parser" ] "getChompedString"
@@ -933,11 +928,6 @@ p_succeed expr =
     CG.apply [ CG.fqFun [ "Parser" ] "succeed", expr ]
 
 
-p_problem : CG.Expression -> CG.Expression
-p_problem expr =
-    CG.apply [ CG.fqFun [ "Parser" ] "problem", expr ]
-
-
 p_lazy : CG.Expression -> CG.Expression
 p_lazy expr =
     CG.applyBinOp (CG.fqFun [ "Parser" ] "lazy") CG.pipel (CG.lambda [ CG.allPattern ] expr)
@@ -946,11 +936,6 @@ p_lazy expr =
 p_oneOf : List CG.Expression -> CG.Expression
 p_oneOf opts =
     CG.apply [ CG.fqFun [ "Parser" ] "oneOf", CG.list opts ]
-
-
-p_andThen : CG.Expression -> CG.Expression
-p_andThen expr =
-    CG.apply [ CG.fqFun [ "Parser" ] "andThen", expr ]
 
 
 p_token : String -> CG.Expression

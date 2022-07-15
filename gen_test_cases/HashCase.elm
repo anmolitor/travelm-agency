@@ -4,7 +4,7 @@ import Dict
 import Dict.NonEmpty
 import State exposing (NonEmptyState)
 import Types.Segment exposing (TSegment(..))
-import Util.Shared exposing (Generator, buildMain, dynamicOpts, inlineOpts)
+import Util.Shared exposing (Generator, buildMain, dynamicOpts)
 
 
 main : Generator

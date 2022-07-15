@@ -248,7 +248,8 @@ addReplacePlaceholderDeclaration =
                                     , filterIntl <|
                                         CG.letFunction (lookup "matchNumbers")
                                             [ CG.varPattern <| lookup "n"
-                                            , CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ]
+                                            , CG.varPattern <| lookup "default"
+                                            , CG.varPattern <| lookup "cases"
                                             ]
                                         <|
                                             CG.pipe (CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ])
@@ -481,7 +482,8 @@ addReplacePlaceholderDeclaration =
                                     , filterIntl <|
                                         CG.letFunction (lookup "matchNumbers")
                                             [ CG.varPattern <| lookup "n"
-                                            , CG.tuplePattern [ CG.varPattern <| lookup "default", CG.varPattern <| lookup "cases" ]
+                                            , CG.varPattern <| lookup "default"
+                                            , CG.varPattern <| lookup "cases"
                                             ]
                                         <|
                                             CG.pipe (CG.apply [ CG.val <| lookup "getArg", CG.val <| lookup "n" ])
@@ -840,7 +842,7 @@ addDictParserDeclaration =
                     if
                         State.inferFeatures ctx.state
                             |> Features.oneIsActive
-                                [ Features.CaseInterpolation, Features.IntlNumber, Features.IntlDate, Features.IntlPlural ]
+                                [ Features.CaseInterpolation, Features.Html, Features.IntlNumber, Features.IntlDate, Features.IntlPlural ]
                     then
                         ctx.file |> Shared.addDeclaration dictParserDecl
 

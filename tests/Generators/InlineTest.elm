@@ -5,6 +5,7 @@ import Html
 import Html.Attributes
 import Inline.DateFormatTranslations
 import Inline.HtmlInterpolationTranslations
+import Inline.HtmlIntlTranslations
 import Inline.InterpolationMatchTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
@@ -312,4 +313,44 @@ mixedHtmlAndInterpolation =
                     |> Html.div []
                     |> Query.fromHtml
                     |> Query.has [ Selector.text "You are not logged in." ]
+        ]
+
+
+htmlAndIntl : Test
+htmlAndIntl =
+    describe "html mixed with intl functions"
+        [ test "numberFormat typechecks" <|
+            \_ ->
+                Inline.HtmlIntlTranslations.formatNumber
+                    (Inline.HtmlIntlTranslations.init Util.emptyIntl Inline.HtmlIntlTranslations.En)
+                    4.2
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.has
+                        [ Selector.text "Price: "
+                        , Selector.containing [ Selector.tag "b" ]
+                        ]
+        , test "dateFormat typechecks" <|
+            \_ ->
+                Inline.HtmlIntlTranslations.formatDate
+                    (Inline.HtmlIntlTranslations.init Util.emptyIntl Inline.HtmlIntlTranslations.En)
+                    (Time.millisToPosix 1000)
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.has
+                        [ Selector.text "Today is "
+                        , Selector.containing [ Selector.tag "em" ]
+                        ]
+        , test "pluralRules typechecks" <|
+            \_ ->
+                Inline.HtmlIntlTranslations.pluralRules
+                    (Inline.HtmlIntlTranslations.init Util.emptyIntl Inline.HtmlIntlTranslations.En)
+                    5
+                    []
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "p" ]
+                    |> Query.has [ Selector.text "5" ]
         ]

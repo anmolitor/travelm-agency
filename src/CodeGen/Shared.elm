@@ -1,4 +1,4 @@
-module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls)
+module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls, applyWithParensIfNecessary)
 
 import CodeGen.Utils
 import Elm.CodeGen as CG
@@ -221,3 +221,13 @@ concatenateLists e1 e2 =
 htmlAttrsTypeAnn : CG.TypeAnnotation
 htmlAttrsTypeAnn =
     CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]
+
+
+applyWithParensIfNecessary : CG.Expression -> CG.Expression -> CG.Expression
+applyWithParensIfNecessary f expr =
+    case expr of
+        Expression.Application _ ->
+            CG.apply [ f, CG.parens expr ]
+
+        _ ->
+            CG.apply [ f, expr ]

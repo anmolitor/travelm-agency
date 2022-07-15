@@ -5,6 +5,7 @@ import CodeGen.Utils
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
+import Elm.Syntax.Expression
 import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import List.Extra
@@ -321,8 +322,8 @@ addI18nInstances =
                         htmlIds =
                             Dict.get key htmlIdDict |> Maybe.withDefault Set.empty
 
-                        toHtml text =
-                            CG.apply [ CG.fqFun [ "Html" ] "text", text ]
+                        toHtml =
+                            Shared.applyWithParensIfNecessary (CG.fqFun [ "Html" ] "text")
 
                         needsHtmlConversion seg =
                             Set.isEmpty (Segment.htmlIdsForSegment seg) && not (Set.isEmpty htmlIds)
@@ -383,6 +384,20 @@ addI18nInstances =
                             ( case seg of
                                 Segment.Html _ ->
                                     IsHtml
+
+                                Segment.PluralCase _ _ _ _ ->
+                                    if Set.isEmpty htmlIds then
+                                        NoHtml
+
+                                    else
+                                        ContainsHtml
+
+                                Segment.InterpolationCase _ _ _ ->
+                                    if Set.isEmpty htmlIds then
+                                        NoHtml
+
+                                    else
+                                        ContainsHtml
 
                                 _ ->
                                     if needsHtmlConversion seg then

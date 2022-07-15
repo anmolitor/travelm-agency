@@ -270,7 +270,6 @@ nestedHtml =
                     |> Query.find [ Selector.tag "img" ]
                     |> Query.has
                         [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
-                        , Selector.text ""
                         , Selector.class "nestedImage"
                         ]
         ]

@@ -148,8 +148,11 @@ inferFeaturesForSegment seg =
         Interpolation _ ->
             Features.singleton Features.Interpolation
 
-        InterpolationCase _ _ _ ->
-            Features.singleton Features.CaseInterpolation
+        InterpolationCase _ default cases ->
+            Features.combine <|
+                Features.singleton Features.CaseInterpolation
+                    :: inferFeatures default
+                    :: (Dict.values cases |> List.map inferFeatures)
 
         FormatDate _ _ ->
             Features.singleton Features.IntlDate
@@ -157,11 +160,17 @@ inferFeaturesForSegment seg =
         FormatNumber _ _ ->
             Features.singleton Features.IntlNumber
 
-        PluralCase _ _ _ _ ->
-            Features.singleton Features.IntlPlural
+        PluralCase _ _ default cases ->
+            Features.combine <|
+                Features.singleton Features.IntlPlural
+                    :: inferFeatures default
+                    :: (Dict.values cases |> List.map inferFeatures)
 
-        Html _ ->
-            Features.singleton Features.Html
+        Html html ->
+            Features.combine <|
+                Features.singleton Features.Html
+                    :: inferFeatures html.content
+                    :: List.map (Tuple.second >> inferFeatures) html.attrs
 
 
 {-| Infer needed code generation features from the given AST.

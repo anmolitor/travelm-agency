@@ -42,7 +42,12 @@ type alias WithAccessors ctx =
 
 
 type alias WithHelperFunctions ctx =
-    { ctx | fallbackValueName : String, replacePlaceholdersName : String, lookupLanguageToFileName : String -> String }
+    { ctx
+        | fallbackValueName : String
+        , replacePlaceholdersName : String
+        , replaceHtmlPlaceholdersName : String
+        , lookupLanguageToFileName : String -> String
+    }
 
 
 toFileUnique : Unique.UniqueNameContext (WithCtx ctx) -> CG.File
@@ -75,9 +80,13 @@ toFileUnique =
                 , lookupLanguageToFileName = (++) "languageToFileName_" >> lookup
                 }
             )
-        >> Unique.andThen2 "fallbackValue"
+        >> Unique.andThen6 "fallbackValue"
             "replacePlaceholders"
-            (\_ ctx fallbackValueName replacePlaceholdersName ->
+            "replaceHtmlPlaceholders"
+            "parser"
+            "htmlParser"
+            "dictParser"
+            (\_ ctx fallbackValueName replacePlaceholdersName replaceHtmlPlaceholdersName parserName htmlParserName dictParserName ->
                 { names = ctx.names
                 , intl = ctx.intl
                 , state = ctx.state
@@ -87,6 +96,10 @@ toFileUnique =
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
                 , fallbackValueName = fallbackValueName
                 , replacePlaceholdersName = replacePlaceholdersName
+                , replaceHtmlPlaceholdersName = replaceHtmlPlaceholdersName
+                , parserName = parserName
+                , htmlParserName = htmlParserName
+                , dictParserName = dictParserName
                 }
             )
         >> addI18nTypeDeclaration
@@ -293,10 +306,41 @@ addAccessorDeclarations =
 
                             patterns =
                                 if ctx.i18nArgLast then
-                                    htmlPatterns ++ placeholderPatterns ++ [ i18nPattern ]
+                                    placeholderPatterns ++ htmlPatterns ++ [ i18nPattern ]
 
                                 else
-                                    i18nPattern :: htmlPatterns ++ placeholderPatterns
+                                    i18nPattern :: placeholderPatterns ++ htmlPatterns
+
+                            intlVal =
+                                if needsIntl then
+                                    Just <| CG.val i18nName
+
+                                else
+                                    Nothing
+
+                            body =
+                                case ( List.NonEmpty.fromList <| Set.toList htmlIds, placeholderFunctionArguments ) of
+                                    ( Nothing, [] ) ->
+                                        CG.val translationName
+
+                                    ( Nothing, _ :: _ ) ->
+                                        CG.apply <|
+                                            List.filterMap identity
+                                                [ Just <| CG.fun ctx.replacePlaceholdersName
+                                                , intlVal
+                                                , Just <| CG.list placeholderFunctionArguments
+                                                , Just <| CG.val translationName
+                                                ]
+
+                                    ( Just nonEmptyIds, _ ) ->
+                                        CG.apply <|
+                                            List.filterMap identity
+                                                [ Just <| CG.fun ctx.replaceHtmlPlaceholdersName
+                                                , intlVal
+                                                , Just <| CG.list placeholderFunctionArguments
+                                                , Just <| htmlRecordToList nonEmptyIds
+                                                , Just <| CG.val translationName
+                                                ]
                         in
                         CG.funDecl Nothing
                             (Just typeAnn)
@@ -304,19 +348,7 @@ addAccessorDeclarations =
                             patterns
                             (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]
-                                  , if List.isEmpty placeholderFunctionArguments then
-                                        case List.NonEmpty.fromList <| Set.toList htmlIds of
-                                            Nothing ->
-                                                CG.val translationName
-
-                                            Just nonEmptyIds ->
-                                                CG.apply [ CG.fun (lookup "replaceHtmlPlaceholders"), CG.list placeholderFunctionArguments, htmlRecordToList nonEmptyIds, CG.val translationName ]
-
-                                    else if needsIntl then
-                                        CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.val i18nName, CG.list placeholderFunctionArguments, CG.val translationName ]
-
-                                    else
-                                        CG.apply [ CG.fun ctx.replacePlaceholdersName, CG.list placeholderFunctionArguments, CG.val translationName ]
+                                  , body
                                   )
                                 , ( CG.namedPattern "Nothing" []
                                   , if Set.isEmpty htmlIds then

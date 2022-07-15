@@ -5,6 +5,8 @@ import Dynamic.DateFormatServer
 import Dynamic.DateFormatTranslations
 import Dynamic.HashServer
 import Dynamic.HashTranslations
+import Dynamic.HtmlInterpolationServer
+import Dynamic.HtmlInterpolationTranslations
 import Dynamic.InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations
 import Dynamic.MultiInterpolationServer
@@ -307,43 +309,102 @@ nestedHtml =
                                     , Selector.class "nestedLink"
                                     ]
                         )
+        , test "produces the correct inner span element" <|
+            \_ ->
+                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.NestedHtmlTranslations.html i18n { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.tag "a" ]
+                                |> Query.find [ Selector.tag "span" ]
+                                |> Query.has
+                                    [ Selector.attribute <| Html.Attributes.width 100
+                                    , Selector.attribute <| Html.Attributes.height 50
+                                    , Selector.text "Click me"
+                                    , Selector.class "theText"
+                                    ]
+                        )
+        , test "produces the correct inner img element" <|
+            \_ ->
+                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.NestedHtmlTranslations.html i18n { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.tag "a" ]
+                                |> Query.find [ Selector.tag "img" ]
+                                |> Query.has
+                                    [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
+                                    , Selector.class "nestedImage"
+                                    ]
+                        )
+        ]
 
-        -- , test "produces the correct inner span element" <|
-        --     \_ ->
-        --         Inline.NestedHtmlTranslations.html
-        --             (Inline.NestedHtmlTranslations.init Inline.NestedHtmlTranslations.En)
-        --             { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
-        --             |> Html.div []
-        --             |> Query.fromHtml
-        --             |> Query.find [ Selector.tag "a" ]
-        --             |> Query.find [ Selector.tag "span" ]
-        --             |> Query.has
-        --                 [ Selector.attribute <| Html.Attributes.width 100
-        --                 , Selector.attribute <| Html.Attributes.height 50
-        --                 , Selector.text "Click me"
-        --                 , Selector.class "theText"
-        --                 ]
-        -- , test "produces the correct inner img element" <|
-        --     \_ ->
-        --         Inline.NestedHtmlTranslations.html
-        --             (Inline.NestedHtmlTranslations.init Inline.NestedHtmlTranslations.En)
-        --             { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
-        --             |> Html.div []
-        --             |> Query.fromHtml
-        --             |> Query.find [ Selector.tag "a" ]
-        --             |> Query.find [ Selector.tag "img" ]
-        --             |> Query.has
-        --                 [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
-        --                 , Selector.text ""
-        --                 , Selector.class "nestedImage"
-        --                 ]
+
+mixedHtmlAndInterpolation : Test
+mixedHtmlAndInterpolation =
+    describe "mixed html and interpolation"
+        [ test "shows expected content for admin role" <|
+            \_ ->
+                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "Thanks for logging in. "
+                                    , Selector.containing
+                                        [ Selector.tag "a"
+                                        , Selector.attribute <| Html.Attributes.href "/admin"
+                                        , Selector.text "A. Dmin"
+                                        ]
+                                    , Selector.containing
+                                        [ Selector.tag "a"
+                                        , Selector.attribute <| Html.Attributes.href "/admin"
+                                        , Selector.text "may click on this link"
+                                        ]
+                                    ]
+                        )
+        , test "shows expected content for normal role" <|
+            \_ ->
+                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "You ("
+                                    , Selector.text "Justin Normal"
+                                    , Selector.text ") are not an admin."
+                                    ]
+                        )
+        , test "shows expected content for default role" <|
+            \_ ->
+                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has [ Selector.text "You are not logged in." ]
+                        )
         ]
 
 
 expectOkWith : (a -> Expect.Expectation) -> Result x a -> Expect.Expectation
 expectOkWith expect result =
     case result of
-        Err err ->
+        Err _ ->
             Expect.fail "Failed to load translation file"
 
         Ok ok ->

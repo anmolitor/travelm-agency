@@ -24,6 +24,7 @@ addReplacePlaceholderDeclaration :
             , parserName : String
             , htmlParserName : String
             , dictParserName : String
+            , intParserName : String
             , fallbackValueName : String
         }
     ->
@@ -37,10 +38,12 @@ addReplacePlaceholderDeclaration :
                 , parserName : String
                 , htmlParserName : String
                 , dictParserName : String
+                , intParserName : String
                 , fallbackValueName : String
             }
 addReplacePlaceholderDeclaration =
     addDictParserDeclaration
+        >> addIntParserDeclaration
         >> Unique.mapWithScope
             (\lookup ctx ->
                 let
@@ -294,26 +297,26 @@ addReplacePlaceholderDeclaration =
                                                                     |> p_keep_infix
                                                                         (p_oneOf <|
                                                                             List.filterMap identity
-                                                                                [ Just (p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (p_int |> p_drop_infix (p_token "}")))
+                                                                                [ Just (p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}")))
                                                                                 , filterIntl
                                                                                     (p_succeed (CG.val <| lookup "numberFormatUnsafe")
                                                                                         |> p_drop_infix
                                                                                             (p_token "N"
-                                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
                                                                                             )
                                                                                     )
                                                                                 , filterIntl
                                                                                     (p_succeed (CG.val <| lookup "dateFormatUnsafe")
                                                                                         |> p_drop_infix
                                                                                             (p_token "D"
-                                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
                                                                                             )
                                                                                     )
                                                                                 , filterByFeature Features.CaseInterpolation
                                                                                     (p_succeed (CG.val <| lookup "matchStrings")
                                                                                         |> p_drop_infix
                                                                                             (p_token "S"
-                                                                                                |> p_keep_infix p_int
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
                                                                                                 |> p_drop_infix (p_token "|")
                                                                                                 |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| CG.parens <| recursiveParserCall [ '|' ])
                                                                                                 |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
@@ -323,7 +326,7 @@ addReplacePlaceholderDeclaration =
                                                                                     (p_succeed (CG.val <| lookup "matchNumbers")
                                                                                         |> p_drop_infix
                                                                                             (p_token "P"
-                                                                                                |> p_keep_infix p_int
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
                                                                                                 |> p_drop_infix (p_token "|")
                                                                                                 |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveParserCall [ '|' ])
                                                                                                 |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
@@ -531,7 +534,7 @@ addReplacePlaceholderDeclaration =
                                                                                 [ Just
                                                                                     (p_succeed
                                                                                         (CG.parens <| CG.chain (CG.val <| lookup "getArg") [ CG.fun <| lookup "stringToHtml" ])
-                                                                                        |> p_keep_infix (p_int |> p_drop_infix (p_token "}"))
+                                                                                        |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}"))
                                                                                     )
                                                                                 , Just
                                                                                     (p_succeed
@@ -565,31 +568,37 @@ addReplacePlaceholderDeclaration =
                                                                                             )
                                                                                         )
                                                                                         |> p_drop_infix (p_token "H")
-                                                                                        |> p_keep_infix p_int
+                                                                                        |> p_keep_infix (CG.val ctx.intParserName)
                                                                                         |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
                                                                                         |> p_drop_infix (p_token "|")
                                                                                         |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
                                                                                         |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
                                                                                     )
                                                                                 , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "numberFormatUnsafe")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "N"
-                                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
-                                                                                            )
+                                                                                    (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
+                                                                                        CG.pipel
+                                                                                        (p_succeed (CG.val <| lookup "numberFormatUnsafe")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "N"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                )
+                                                                                        )
                                                                                     )
                                                                                 , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "dateFormatUnsafe")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "D"
-                                                                                                |> p_keep_infix (p_int |> p_keep_infix (CG.val <| lookup "argParser"))
-                                                                                            )
+                                                                                    (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
+                                                                                        CG.pipel
+                                                                                        (p_succeed (CG.val <| lookup "dateFormatUnsafe")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "D"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                )
+                                                                                        )
                                                                                     )
                                                                                 , filterByFeature Features.CaseInterpolation
                                                                                     (p_succeed (CG.val <| lookup "matchStrings")
                                                                                         |> p_drop_infix
                                                                                             (p_token "S"
-                                                                                                |> p_keep_infix p_int
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
                                                                                                 |> p_drop_infix (p_token "|")
                                                                                                 |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
                                                                                                 |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
@@ -599,7 +608,7 @@ addReplacePlaceholderDeclaration =
                                                                                     (p_succeed (CG.val <| lookup "matchNumbers")
                                                                                         |> p_drop_infix
                                                                                             (p_token "P"
-                                                                                                |> p_keep_infix p_int
+                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
                                                                                                 |> p_drop_infix (p_token "|")
                                                                                                 |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
                                                                                                 |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
@@ -818,21 +827,25 @@ addDictParserDeclaration =
                                                 )
                                       )
                                     , ( CG.namedPattern "Nothing" []
-                                      , p_succeed
-                                            (CG.lambda [ CG.varPattern <| lookup "key" ] <|
-                                                CG.apply
-                                                    [ p_Loop
-                                                    , CG.tuple
-                                                        [ CG.apply
-                                                            [ CG.fqFun [ "Maybe" ] "Just"
-                                                            , CG.val <| lookup "key"
+                                      , p_oneOf
+                                            [ p_succeed (CG.parens <| CG.apply [ p_Done, CG.val <| lookup "cases" ])
+                                                |> p_drop_infix (p_token "}")
+                                            , p_succeed
+                                                (CG.lambda [ CG.varPattern <| lookup "key" ] <|
+                                                    CG.apply
+                                                        [ p_Loop
+                                                        , CG.tuple
+                                                            [ CG.apply
+                                                                [ CG.fqFun [ "Maybe" ] "Just"
+                                                                , CG.val <| lookup "key"
+                                                                ]
+                                                            , CG.val <| lookup "cases"
                                                             ]
-                                                        , CG.val <| lookup "cases"
                                                         ]
-                                                    ]
-                                            )
-                                            |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
-                                            |> p_drop_infix (p_token "|")
+                                                )
+                                                |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
+                                                |> p_drop_infix (p_token "|")
+                                            ]
                                       )
                                     ]
                             ]
@@ -865,6 +878,36 @@ generateArgParser { lookup } =
                     |> p_drop_infix (p_token "}")
                 )
         ]
+
+
+{-| Necessary because of some weird behaviour with parsing 0a vs 0b etc. with the default int parser
+-}
+addIntParserDeclaration : Unique.UniqueNameContext { ctx | file : CG.File, intParserName : String } -> Unique.UniqueNameContext { ctx | file : CG.File, intParserName : String }
+addIntParserDeclaration =
+    let
+        body =
+            CG.pipe (CG.apply [ CG.fqFun [ "Parser" ] "chompWhile", CG.fqFun [ "Char" ] "isDigit" ])
+                [ p_getChompedString
+                , CG.apply
+                    [ CG.fqFun [ "Parser" ] "andThen"
+                    , CG.parens <|
+                        CG.chain (CG.fqFun [ "String" ] "toInt")
+                            [ CG.apply [ CG.fqFun [ "Maybe" ] "map", CG.fqFun [ "Parser" ] "succeed" ]
+                            , CG.apply
+                                [ CG.fqFun [ "Maybe" ] "withDefault"
+                                , CG.parens <| CG.apply [ CG.fqFun [ "Parser" ] "problem", CG.string "Expected int" ]
+                                ]
+                            ]
+                    ]
+                ]
+
+        decl name =
+            CG.valDecl Nothing
+                (Just <| CG.fqTyped [ "Parser" ] "Parser" [ CG.intAnn ])
+                name
+                body
+    in
+    Unique.map (\ctx -> { ctx | file = ctx.file |> Shared.addDeclaration (decl ctx.intParserName) })
 
 
 defaultMaybeToEmptyString : CG.Expression
@@ -943,11 +986,6 @@ p_oneOf opts =
 p_token : String -> CG.Expression
 p_token tok =
     CG.apply [ CG.fqFun [ "Parser" ] "token", CG.string tok ]
-
-
-p_int : CG.Expression
-p_int =
-    CG.fqFun [ "Parser" ] "int"
 
 
 p_run : CG.Expression

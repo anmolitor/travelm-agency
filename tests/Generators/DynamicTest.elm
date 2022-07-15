@@ -6,6 +6,8 @@ import Dynamic.HashServer
 import Dynamic.HashTranslations
 import Dynamic.HtmlInterpolationServer
 import Dynamic.HtmlInterpolationTranslations
+import Dynamic.HtmlIntlServer
+import Dynamic.HtmlIntlTranslations
 import Dynamic.InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations
 import Dynamic.MultiInterpolationServer
@@ -395,6 +397,52 @@ mixedHtmlAndInterpolation =
                                 |> Html.div []
                                 |> Query.fromHtml
                                 |> Query.has [ Selector.text "You are not logged in." ]
+                        )
+        ]
+
+
+htmlAndIntl : Test
+htmlAndIntl =
+    describe "html mixed with intl functions"
+        [ test "numberFormat typechecks" <|
+            \_ ->
+                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlIntlTranslations.formatNumber i18n 4.2 []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "Price: "
+                                    , Selector.containing [ Selector.tag "b" ]
+                                    ]
+                        )
+        , test "dateFormat typechecks" <|
+            \_ ->
+                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlIntlTranslations.formatDate i18n (Time.millisToPosix 1000) []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "Today is "
+                                    , Selector.containing [ Selector.tag "em" ]
+                                    ]
+                        )
+        , test "pluralRules typechecks" <|
+            \_ ->
+                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.HtmlIntlTranslations.pluralRules i18n 5 []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.tag "p" ]
+                                |> Query.has [ Selector.text "5" ]
                         )
         ]
 

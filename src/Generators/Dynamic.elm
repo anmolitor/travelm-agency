@@ -102,6 +102,24 @@ toFileUnique =
                 , dictParserName = dictParserName
                 }
             )
+        >> Unique.andThen "intParser"
+            (\_ ctx intParserName ->
+                { names = ctx.names
+                , intl = ctx.intl
+                , state = ctx.state
+                , file = ctx.file
+                , i18nArgLast = ctx.i18nArgLast
+                , lookupAccessor = ctx.lookupAccessor
+                , lookupLanguageToFileName = ctx.lookupLanguageToFileName
+                , fallbackValueName = ctx.fallbackValueName
+                , replacePlaceholdersName = ctx.replacePlaceholdersName
+                , replaceHtmlPlaceholdersName = ctx.replaceHtmlPlaceholdersName
+                , parserName = ctx.parserName
+                , htmlParserName = ctx.htmlParserName
+                , dictParserName = ctx.dictParserName
+                , intParserName = intParserName
+                }
+            )
         >> addI18nTypeDeclaration
         >> addInitDeclaration
         >> Shared.addLanguageRelatedDeclsUnique
@@ -283,14 +301,14 @@ addAccessorDeclarations =
                                         []
 
                                     Just ( single, [] ) ->
-                                        [ CG.varPattern <| lookup single ]
+                                        [ CG.varPattern <| lookup <| single ++ "Attrs" ]
 
                                     _ ->
                                         [ CG.varPattern <| lookup "extraHtmlAttrs" ]
 
                             htmlRecordToList nonEmptyIds =
                                 if List.NonEmpty.isSingleton nonEmptyIds then
-                                    CG.list [ CG.val <| lookup <| List.NonEmpty.head nonEmptyIds ]
+                                    CG.list [ CG.val <| lookup <| List.NonEmpty.head nonEmptyIds ++ "Attrs" ]
 
                                 else
                                     CG.list <|

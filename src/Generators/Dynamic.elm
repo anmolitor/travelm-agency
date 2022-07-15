@@ -46,6 +46,7 @@ type alias WithHelperFunctions ctx =
         | replacePlaceholdersName : String
         , replaceHtmlPlaceholdersName : String
         , lookupLanguageToFileName : String -> String
+        , lookupAccessor : String -> String
     }
 
 
@@ -358,7 +359,7 @@ addAccessorDeclarations =
                         in
                         CG.funDecl Nothing
                             (Just typeAnn)
-                            key
+                            (ctx.lookupAccessor key)
                             patterns
                             (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]

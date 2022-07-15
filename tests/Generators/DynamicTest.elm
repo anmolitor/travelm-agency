@@ -16,6 +16,8 @@ import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
 import Dynamic.MultiLanguageTextTranslations
+import Dynamic.NamespacingServer
+import Dynamic.NamespacingTranslations
 import Dynamic.NestedHtmlServer
 import Dynamic.NestedHtmlTranslations
 import Dynamic.NestedInterpolationServer
@@ -484,6 +486,24 @@ multipleBundles =
                             , Dynamic.MultiBundleTranslations.text2 >> Expect.equal "text from bundle 2"
                             ]
                         )
+        ]
+
+
+namespacing : Test
+namespacing =
+    describe "namespacing"
+        [ test "escapes elm keywords" <|
+            \_ ->
+                sendRequest Dynamic.NamespacingServer.server "messages.en.json" Dynamic.NamespacingTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NamespacingTranslations.init)
+                    |> Result.map Dynamic.NamespacingTranslations.let_
+                    |> Expect.equal (Ok "elm keyword")
+        , test "escapes top level function names" <|
+            \_ ->
+                sendRequest Dynamic.NamespacingServer.server "messages.en.json" Dynamic.NamespacingTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.NamespacingTranslations.init)
+                    |> Result.map Dynamic.NamespacingTranslations.init_
+                    |> Expect.equal (Ok "reserved name")
         ]
 
 

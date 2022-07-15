@@ -10,6 +10,7 @@ import Inline.InterpolationMatchTranslations
 import Inline.MultiBundleTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
+import Inline.NamespacingTranslations
 import Inline.NestedHtmlTranslations
 import Inline.NestedInterpolationTranslations
 import Inline.NumberFormatTranslations
@@ -18,7 +19,6 @@ import Inline.SimpleHtmlTranslations
 import Inline.SimpleI18nLastTranslations
 import Inline.SingleInterpolationTranslations
 import Inline.SingleTextTranslations
-import Json.Encode
 import Test exposing (Test, describe, test)
 import Test.Html.Query as Query
 import Test.Html.Selector as Selector
@@ -370,4 +370,20 @@ multipleBundles =
                 Inline.MultiBundleTranslations.init Inline.MultiBundleTranslations.En
                     |> Inline.MultiBundleTranslations.text2
                     |> Expect.equal "text from bundle 2"
+        ]
+
+
+namespacing : Test
+namespacing =
+    describe "namespacing"
+        [ test "escapes elm keywords" <|
+            \_ ->
+                Inline.NamespacingTranslations.init Inline.NamespacingTranslations.En
+                    |> Inline.NamespacingTranslations.let_
+                    |> Expect.equal "elm keyword"
+        , test "escapes top level function names" <|
+            \_ ->
+                Inline.NamespacingTranslations.init Inline.NamespacingTranslations.En
+                    |> Inline.NamespacingTranslations.init_
+                    |> Expect.equal "reserved name"
         ]

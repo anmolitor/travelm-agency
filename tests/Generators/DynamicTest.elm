@@ -10,6 +10,8 @@ import Dynamic.HtmlIntlServer
 import Dynamic.HtmlIntlTranslations
 import Dynamic.InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations
+import Dynamic.MultiBundleServer
+import Dynamic.MultiBundleTranslations
 import Dynamic.MultiInterpolationServer
 import Dynamic.MultiInterpolationTranslations
 import Dynamic.MultiLanguageTextServer
@@ -443,6 +445,44 @@ htmlAndIntl =
                                 |> Query.fromHtml
                                 |> Query.find [ Selector.tag "p" ]
                                 |> Query.has [ Selector.text "5" ]
+                        )
+        ]
+
+
+multipleBundles : Test
+multipleBundles =
+    describe "multiple bundles"
+        [ test "finds the first bundles text when first bundle is loaded" <|
+            \_ ->
+                sendRequest Dynamic.MultiBundleServer.server "bundle_1.en.json" Dynamic.MultiBundleTranslations.decodeBundle1
+                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
+                    |> Result.map Dynamic.MultiBundleTranslations.text1
+                    |> Expect.equal (Ok "text from bundle 1")
+        , test "finds the second bundles text when second bundle is loaded" <|
+            \_ ->
+                sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
+                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
+                    |> Result.map Dynamic.MultiBundleTranslations.text2
+                    |> Expect.equal (Ok "text from bundle 2")
+        , test "does not find the first bundles text when second bundle is loaded" <|
+            \_ ->
+                sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
+                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
+                    |> Result.map Dynamic.MultiBundleTranslations.text1
+                    |> Expect.equal (Ok "")
+        , test "finds both texts if both bundles are loaded" <|
+            \_ ->
+                sendRequest Dynamic.MultiBundleServer.server "bundle_1.en.json" Dynamic.MultiBundleTranslations.decodeBundle1
+                    |> Result.andThen
+                        (\addTranslations1 ->
+                            sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
+                                |> Result.map ((|>) (addTranslations1 Dynamic.MultiBundleTranslations.init))
+                        )
+                    |> expectOkWith
+                        (Expect.all
+                            [ Dynamic.MultiBundleTranslations.text1 >> Expect.equal "text from bundle 1"
+                            , Dynamic.MultiBundleTranslations.text2 >> Expect.equal "text from bundle 2"
+                            ]
                         )
         ]
 

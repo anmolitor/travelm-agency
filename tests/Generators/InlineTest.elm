@@ -7,6 +7,7 @@ import Inline.DateFormatTranslations
 import Inline.HtmlInterpolationTranslations
 import Inline.HtmlIntlTranslations
 import Inline.InterpolationMatchTranslations
+import Inline.MultiBundleTranslations
 import Inline.MultiInterpolationTranslations
 import Inline.MultiLanguageTextTranslations
 import Inline.NestedHtmlTranslations
@@ -353,4 +354,20 @@ htmlAndIntl =
                     |> Query.fromHtml
                     |> Query.find [ Selector.tag "p" ]
                     |> Query.has [ Selector.text "5" ]
+        ]
+
+
+multipleBundles : Test
+multipleBundles =
+    describe "multiple bundles"
+        [ test "keys from first bundle works" <|
+            \_ ->
+                Inline.MultiBundleTranslations.init Inline.MultiBundleTranslations.En
+                    |> Inline.MultiBundleTranslations.text1
+                    |> Expect.equal "text from bundle 1"
+        , test "keys from second bundle works" <|
+            \_ ->
+                Inline.MultiBundleTranslations.init Inline.MultiBundleTranslations.En
+                    |> Inline.MultiBundleTranslations.text2
+                    |> Expect.equal "text from bundle 2"
         ]

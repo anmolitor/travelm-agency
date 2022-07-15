@@ -43,8 +43,7 @@ type alias WithAccessors ctx =
 
 type alias WithHelperFunctions ctx =
     { ctx
-        | fallbackValueName : String
-        , replacePlaceholdersName : String
+        | replacePlaceholdersName : String
         , replaceHtmlPlaceholdersName : String
         , lookupLanguageToFileName : String -> String
     }
@@ -80,13 +79,13 @@ toFileUnique =
                 , lookupLanguageToFileName = (++) "languageToFileName_" >> lookup
                 }
             )
-        >> Unique.andThen6 "fallbackValue"
+        >> Unique.andThen5
             "replacePlaceholders"
             "replaceHtmlPlaceholders"
             "parser"
             "htmlParser"
             "dictParser"
-            (\_ ctx fallbackValueName replacePlaceholdersName replaceHtmlPlaceholdersName parserName htmlParserName dictParserName ->
+            (\_ ctx replacePlaceholdersName replaceHtmlPlaceholdersName parserName htmlParserName dictParserName ->
                 { names = ctx.names
                 , intl = ctx.intl
                 , state = ctx.state
@@ -94,7 +93,6 @@ toFileUnique =
                 , i18nArgLast = ctx.i18nArgLast
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
-                , fallbackValueName = fallbackValueName
                 , replacePlaceholdersName = replacePlaceholdersName
                 , replaceHtmlPlaceholdersName = replaceHtmlPlaceholdersName
                 , parserName = parserName
@@ -111,7 +109,6 @@ toFileUnique =
                 , i18nArgLast = ctx.i18nArgLast
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
-                , fallbackValueName = ctx.fallbackValueName
                 , replacePlaceholdersName = ctx.replacePlaceholdersName
                 , replaceHtmlPlaceholdersName = ctx.replaceHtmlPlaceholdersName
                 , parserName = ctx.parserName
@@ -126,7 +123,6 @@ toFileUnique =
         >> addLoadDeclarations
         >> addAccessorDeclarations
         >> addDecodeDeclarations
-        >> addFallbackDeclaration
         >> addReplacePlaceholderDeclaration
         >> addLanguageToFileNameDecls
         >> Unique.unwrap
@@ -370,7 +366,7 @@ addAccessorDeclarations =
                                   )
                                 , ( CG.namedPattern "Nothing" []
                                   , if Set.isEmpty htmlIds then
-                                        CG.val ctx.fallbackValueName
+                                        CG.string ""
 
                                     else
                                         CG.list []
@@ -395,17 +391,6 @@ addAccessorDeclarations =
                             |> Shared.addDeclarations accessorDecls
                             |> Shared.addExposings (List.filterMap (CodeGen.Utils.declName >> Maybe.map CG.funExpose) accessorDecls)
                 }
-
-
-addFallbackDeclaration : Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx)) -> Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
-addFallbackDeclaration =
-    Unique.map <|
-        \ctx ->
-            let
-                fallbackValDecl =
-                    CG.valDecl Nothing (Just CG.stringAnn) ctx.fallbackValueName (CG.string "...")
-            in
-            { ctx | file = ctx.file |> Shared.addDeclaration fallbackValDecl }
 
 
 addDecodeDeclarations : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)

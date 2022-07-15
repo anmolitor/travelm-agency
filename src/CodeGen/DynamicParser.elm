@@ -25,7 +25,6 @@ addReplacePlaceholderDeclaration :
             , htmlParserName : String
             , dictParserName : String
             , intParserName : String
-            , fallbackValueName : String
         }
     ->
         Unique.UniqueNameContext
@@ -39,7 +38,6 @@ addReplacePlaceholderDeclaration :
                 , htmlParserName : String
                 , dictParserName : String
                 , intParserName : String
-                , fallbackValueName : String
             }
 addReplacePlaceholderDeclaration =
     addDictParserDeclaration
@@ -681,7 +679,7 @@ addReplacePlaceholderDeclaration =
                                 )
                                 [ CG.apply [ CG.fqFun [ "Result" ] "map", CG.fqFun [ "Tuple" ] "first" ]
                                 , CG.fqFun [ "Result" ] "toMaybe"
-                                , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.val ctx.fallbackValueName ]
+                                , CG.apply [ CG.fqFun [ "Maybe" ] "withDefault", CG.string "" ]
                                 ]
 
                     replaceHtmlPlaceholdersType : CG.TypeAnnotation

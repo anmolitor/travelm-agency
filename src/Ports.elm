@@ -1,4 +1,4 @@
-port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, requestDecoder, respond, subToRequests)
+port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, generatorModeToString, requestDecoder, respond, subToRequests, generatorModeFromString)
 
 import Json.Decode as D
 import Json.Decode.Pipeline as D
@@ -49,19 +49,39 @@ type GeneratorMode
     | Dynamic
 
 
+generatorModeToString : GeneratorMode -> String
+generatorModeToString mode =
+    case mode of
+        Inline ->
+            "inline"
+
+        Dynamic ->
+            "dynamic"
+
+
+generatorModeFromString : String -> Maybe GeneratorMode
+generatorModeFromString str =
+    case String.toLower str of
+        "inline" ->
+            Just Inline
+
+        "dynamic" ->
+            Just Dynamic
+
+        _ ->
+            Nothing
+
+
 generatorModeDecoder : D.Decoder GeneratorMode
 generatorModeDecoder =
     D.string
         |> D.andThen
             (\str ->
-                case String.toLower str of
-                    "inline" ->
-                        D.succeed Inline
+                case generatorModeFromString str of
+                    Just mode ->
+                        D.succeed mode
 
-                    "dynamic" ->
-                        D.succeed Dynamic
-
-                    _ ->
+                    Nothing ->
                         D.fail <| "Unsupported generator mode: " ++ str
             )
 

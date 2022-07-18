@@ -1,0 +1,20 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "description": "demo application for travelm-agency",
+  "main": "index.js",
+  "scripts": {
+    "start": "vite",
+    "build": "node ../index.js translations"
+  },
+  "author": "Andreas Molitor",
+  "license": "ISC",
+  "devDependencies": {
+    "intl-proxy": "^1.0.1",
+    "vite": "^2.9.14",
+    "vite-plugin-elm": "^2.6.1"
+  },
+  "dependencies": {
+    "prismjs": "^1.28.0"
+  }
+}

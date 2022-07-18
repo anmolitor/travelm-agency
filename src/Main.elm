@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (main, tryAddTranslation, tryFinishModule)
 
 import ContentTypes.Fluent
 import ContentTypes.Json
@@ -62,9 +62,9 @@ update msg model =
 
 onAddTranslation : Model -> Ports.TranslationRequest -> ( Model, Cmd msg )
 onAddTranslation model req =
-    case parseTranslationContent model.intl req of
-        Ok content ->
-            ( { model | state = State.addTranslations req.identifier req.language content model.state }
+    case tryAddTranslation req model of
+        Ok newModel ->
+            ( newModel
             , Cmd.none
             )
 
@@ -72,8 +72,19 @@ onAddTranslation model req =
             ( model, Ports.respond <| Err err )
 
 
+tryAddTranslation : Ports.TranslationRequest -> Model -> Error.Failable Model
+tryAddTranslation req model =
+    parseTranslationContent model.intl req
+        |> Result.map (\content -> { model | state = State.addTranslations req.identifier req.language content model.state })
+
+
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
-onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast } =
+onFinishModule model req =
+    tryFinishModule req model |> Ports.respond
+
+
+tryFinishModule : Ports.FinishRequest -> Model -> Failable Ports.ResponseContent
+tryFinishModule { generatorMode, elmModuleName, addContentHash, i18nArgLast } model =
     let
         context =
             { moduleName = Util.moduleName elmModuleName
@@ -99,7 +110,7 @@ onFinishModule model { generatorMode, elmModuleName, addContentHash, i18nArgLast
                     , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                     }
     in
-    State.validateState model.devMode model.state |> Result.map generate |> Ports.respond
+    State.validateState model.devMode model.state |> Result.map generate
 
 
 parseTranslationContent : Intl -> Ports.TranslationRequest -> Failable (Translation ())

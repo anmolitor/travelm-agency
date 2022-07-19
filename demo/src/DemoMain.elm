@@ -1,8 +1,10 @@
 module DemoMain exposing (..)
 
 import Browser
+import Browser.Events
 import Browser.Navigation
-import Dict
+import Dict exposing (Dict)
+import File exposing (InputFile, OutputFile)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -12,39 +14,64 @@ import Intl exposing (Intl)
 import Json.Decode
 import Main
 import Maybe.Extra
+import Pages.Interpolation
+import Pages.Intro
 import Ports
 import Routes exposing (Route)
+import State exposing (OptimizedJson)
 import Translations exposing (I18n, Language)
+import TutorialView
 import Types.Error exposing (Failable)
 import Url
 
 
 type alias Flags =
-    { language : String, version : String, intl : Intl }
+    { language : String, version : String, intl : Intl, height : Int, width : Int }
 
 
 type alias Model =
-    { key : Browser.Navigation.Key
-    , route : Route
-    , language : Language
-    , i18n : I18n
+    { -- static data
+      key : Browser.Navigation.Key
     , version : String
-    , inputType : InputType
-    , input : String
-    , caretPos : Int
-    , generatorMode : Ports.GeneratorMode
-    , output : String
+
+    -- internationization
+    , i18n : I18n
     , intl : Intl
+    , language : Language
+
+    -- routing
+    , route : Route
+    , generatorMode : Ports.GeneratorMode
+    , inputType : InputType
+
+    -- viewport
+    , height : Int
+    , width : Int
+
+    -- code editor
+    , caretPosition : Int
+    , inputFiles : Dict String InputFile
+    , activeInputFilePath : String
+    , outputFiles : Dict String OutputFile
+    , activeOutputFilePath : String
     }
 
 
 type Msg
-    = UrlChanged Url.Url
+    = -- Navigation
+      UrlChanged Url.Url
     | UrlRequested Browser.UrlRequest
+      -- Get static resource files
     | LoadedTranslations (Result Http.Error (I18n -> I18n))
-    | LoadedInput (Result Http.Error String)
-    | EditedInput String Int
+    | LoadedInputFile (Result Http.Error InputFile)
+      -- Code editor
+    | EditedInput { fileName : String, newContent : String, caretPosition : Int }
     | ChangeInputType InputType
+    | ChangeGeneratorMode Ports.GeneratorMode
+    | ChangeActiveInputFile String
+    | ChangeActiveOutputFile String
+      -- Browser-related
+    | Resize Int Int
 
 
 init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
@@ -57,44 +84,47 @@ init flags url key =
             Routes.fromUrl url
 
         model =
-            { key = key
-            , language = language
-            , i18n = Translations.init
-            , input = ""
-            , caretPos = 0
-            , inputType = InputType.Json
-            , generatorMode = Ports.Inline
-            , output = ""
+            { -- static data
+              key = key
             , version = flags.version
+
+            -- internationalzation
+            , i18n = Translations.init
             , intl = flags.intl
+            , language = language
+
+            -- routing
             , route = route
+            , generatorMode = Ports.Inline
+            , inputType = InputType.Json
+
+            -- viewport
+            , height = flags.height
+            , width = flags.width
+
+            -- code editor
+            , inputFiles = Dict.empty
+            , activeInputFilePath = ""
+            , outputFiles = Dict.empty
+            , activeOutputFilePath = "Translations.elm"
+            , caretPosition = 0
             }
     in
-    initPage route model
+    initPage model
 
 
-getInput : String -> String -> InputType -> Cmd Msg
-getInput folder fileName inputType =
-    Http.get { url = folder ++ "/" ++ fileName ++ "." ++ InputType.toString inputType, expect = Http.expectString LoadedInput }
-
-
-initPage : Route -> Model -> ( Model, Cmd Msg )
-initPage route model =
-    case route of
+initPage : Model -> ( Model, Cmd Msg )
+initPage model =
+    let
+        events =
+            { onInputLoad = LoadedInputFile, onTranslationLoad = LoadedTranslations }
+    in
+    case model.route of
         Routes.Intro mayMode mayInputType ->
-            let
-                generatorMode =
-                    mayMode |> Maybe.withDefault Ports.Inline
+            Pages.Intro.init events model mayMode mayInputType
 
-                inputType =
-                    mayInputType |> Maybe.withDefault InputType.Json
-            in
-            ( { model | generatorMode = generatorMode, inputType = inputType, route = route }
-            , Cmd.batch
-                [ Translations.loadIntro { language = model.language, path = "dist/i18n", onLoad = LoadedTranslations }
-                , getInput "intro" "example" inputType
-                ]
-            )
+        Routes.Interpolation mayMode mayInputType ->
+            Pages.Interpolation.init events model mayMode mayInputType
 
         Routes.NotFound _ ->
             ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl <| Routes.Intro Nothing Nothing )
@@ -104,7 +134,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UrlChanged url ->
-            initPage (Routes.fromUrl url) model
+            initPage
+                { model
+                    | route = Routes.fromUrl url
+                    , inputFiles = Dict.empty
+                    , outputFiles = Dict.empty
+                    , activeOutputFilePath = "Translations.elm"
+                }
 
         UrlRequested _ ->
             ( model, Cmd.none )
@@ -115,14 +151,31 @@ update msg model =
         LoadedTranslations (Err _) ->
             ( model, Cmd.none )
 
-        LoadedInput (Ok input) ->
-            ( { model | input = input } |> runTravelmAgencyAndUpdateModel, Cmd.none )
+        LoadedInputFile (Ok file) ->
+            let
+                path =
+                    File.inputFileToPath file
 
-        LoadedInput (Err _) ->
+                runTravelmAgencyIfActive =
+                    if path == model.activeInputFilePath then
+                        runTravelmAgencyAndUpdateModel
+
+                    else
+                        identity
+            in
+            ( { model | inputFiles = Dict.insert path file model.inputFiles } |> runTravelmAgencyIfActive, Cmd.none )
+
+        LoadedInputFile (Err _) ->
             ( model, Cmd.none )
 
-        EditedInput newInput caretPos ->
-            ( { model | caretPos = caretPos, input = newInput } |> runTravelmAgencyAndUpdateModel, Cmd.none )
+        EditedInput { caretPosition, newContent, fileName } ->
+            ( { model
+                | caretPosition = caretPosition
+                , inputFiles = Dict.update fileName (Maybe.map <| \file -> { file | content = newContent }) model.inputFiles
+              }
+                |> runTravelmAgencyAndUpdateModel
+            , Cmd.none
+            )
 
         ChangeInputType inputType ->
             ( model
@@ -132,6 +185,23 @@ update msg model =
                 |> Browser.Navigation.pushUrl model.key
             )
 
+        ChangeGeneratorMode mode ->
+            ( model
+            , model.route
+                |> Routes.setGeneratorMode mode
+                |> Routes.toUrl
+                |> Browser.Navigation.pushUrl model.key
+            )
+
+        Resize width height ->
+            ( { model | width = width, height = height }, Cmd.none )
+
+        ChangeActiveInputFile fileName ->
+            ( { model | activeInputFilePath = fileName }, Cmd.none )
+
+        ChangeActiveOutputFile fileName ->
+            ( { model | activeOutputFilePath = fileName }, Cmd.none )
+
 
 runTravelmAgencyAndUpdateModel : Model -> Model
 runTravelmAgencyAndUpdateModel model =
@@ -140,7 +210,37 @@ runTravelmAgencyAndUpdateModel model =
             model
 
         Ok responseContent ->
-            { model | output = responseContent.elmFile }
+            let
+                generatedElmFile : OutputFile
+                generatedElmFile =
+                    { name = "Translations"
+                    , extension = "elm"
+                    , language = Nothing
+                    , content = responseContent.elmFile
+                    }
+
+                optimizedJsonToFile : OptimizedJson -> Maybe ( String, OutputFile )
+                optimizedJsonToFile json =
+                    case String.split "." json.filename of
+                        [ name, language, extension ] ->
+                            Just
+                                ( json.filename
+                                , { name = name
+                                  , language = Just language
+                                  , extension = extension
+                                  , content = json.content
+                                  }
+                                )
+
+                        _ ->
+                            Nothing
+            in
+            { model
+                | outputFiles =
+                    Dict.fromList <|
+                        ( "Translations.elm", generatedElmFile )
+                            :: List.filterMap optimizedJsonToFile responseContent.optimizedJson
+            }
 
 
 runTravelmAgency : Model -> Failable Ports.ResponseContent
@@ -153,11 +253,11 @@ runTravelmAgency model =
             , intl = model.intl
             }
 
-        translationRequest =
-            { content = model.input
+        translationRequest inputFile =
+            { content = inputFile.content
             , extension = InputType.toString model.inputType
-            , identifier = "messages"
-            , language = "en"
+            , identifier = inputFile.name
+            , language = inputFile.language
             }
 
         finishRequest =
@@ -166,43 +266,46 @@ runTravelmAgency model =
             , addContentHash = False
             , elmModuleName = "Translations"
             }
+
+        addInputFile inputFile =
+            Result.andThen (Main.tryAddTranslation <| translationRequest inputFile)
     in
-    Main.tryAddTranslation translationRequest mainModel |> Result.andThen (Main.tryFinishModule finishRequest)
+    List.foldl addInputFile (Ok mainModel) (Dict.values model.inputFiles)
+        |> Result.andThen (Main.tryFinishModule 80 finishRequest)
 
 
 view : Model -> Browser.Document Msg
-view { i18n, input, inputType, caretPos, output } =
-    { title = "Demo"
+view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition } as model) =
+    { title = "Tutorial"
     , body =
-        [ --Html.h1 [] [ Html.text <| Translations.headline i18n ]
-          --, Html.h2 [] [ Html.text <| Translations.stepOne i18n ]
-          Html.button [ Html.Events.onClick <| ChangeInputType InputType.Properties ]
-            [ Html.text <| Translations.inputTypeProperties i18n ]
-        , highlightedCode { lang = InputType.toString inputType, code = input, caretPos = Just caretPos }
-        , highlightedCode { lang = "elm", code = output, caretPos = Nothing }
-        ]
+        TutorialView.view
+            { inputFiles = inputFiles
+            , activeInputFilePath = activeInputFilePath
+            , outputFiles = outputFiles
+            , activeOutputFilePath = activeOutputFilePath
+            , caretPosition = caretPosition
+            , explanationText = viewExplanation model
+            }
+            { onEditInput = EditedInput
+            , onSwitchInput = ChangeActiveInputFile
+            , onSwitchOutput = ChangeActiveOutputFile
+            }
     }
 
 
-highlightedCode : { lang : String, code : String, caretPos : Maybe Int } -> Html Msg
-highlightedCode { lang, code, caretPos } =
-    Html.node "highlighted-code"
-        ([ Html.Attributes.attribute "lang" lang
-         , Html.Attributes.attribute "code" code
-         , Html.Events.on "edit"
-            (Json.Decode.map2 EditedInput
-                (Json.Decode.at [ "detail", "content" ] Json.Decode.string)
-                (Json.Decode.at [ "detail", "caretPos" ] Json.Decode.int)
-            )
-         ]
-            ++ Maybe.Extra.toList (Maybe.map (Html.Attributes.attribute "pos" << String.fromInt) caretPos)
-        )
-        []
+viewExplanation : Model -> List (Html Never)
+viewExplanation model =
+    case model.route of
+        Routes.Intro _ _ ->
+            Pages.Intro.viewExplanation model
+
+        _ ->
+            []
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Browser.Events.onResize Resize
 
 
 main : Program Flags Model Msg

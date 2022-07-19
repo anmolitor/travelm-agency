@@ -10,6 +10,7 @@ import Url.Parser.Query as Query
 
 type Route
     = Intro (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
     | NotFound Url.Url
 
 
@@ -28,6 +29,7 @@ parser =
     in
     oneOf
         [ map Intro (s "intro" <?> modeParser <?> inputParser)
+        , map Intro (s "interpolation" <?> modeParser <?> inputParser)
         ]
 
 
@@ -46,6 +48,13 @@ toUrl route =
                     , Maybe.map (string "input" << InputType.toString) inputType
                     ]
 
+        Interpolation mode inputType ->
+            absolute [ "interpolation" ] <|
+                List.filterMap identity
+                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
+                    , Maybe.map (string "input" << InputType.toString) inputType
+                    ]
+
         NotFound url ->
             Url.toString url
 
@@ -56,6 +65,9 @@ setInputType inputType route =
         Intro mode _ ->
             Intro mode (Just inputType)
 
+        Interpolation mode _ ->
+            Interpolation mode (Just inputType)
+
         NotFound _ ->
             route
 
@@ -65,6 +77,9 @@ setGeneratorMode mode route =
     case route of
         Intro _ inputType ->
             Intro (Just mode) inputType
+
+        Interpolation _ inputType ->
+            Interpolation (Just mode) inputType
 
         NotFound _ ->
             route

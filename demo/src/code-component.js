@@ -48,7 +48,7 @@ export class CodeComponent extends HTMLElement {
   restore;
 
   static get observedAttributes() {
-    return ["code", "lang", "pos"];
+    return ["code", "lang", "pos", "editable"];
   }
 
   constructor() {
@@ -75,16 +75,17 @@ export class CodeComponent extends HTMLElement {
   connectedCallback() {
     const pre = document.createElement("pre");
     this.codeEl = document.createElement("code");
-    this.codeEl.setAttribute("contentEditable", true);
 
     this.codeEl.addEventListener("input", this.onEdit);
 
     const lang = this.getAttribute("lang");
     const code = this.getAttribute("code");
     const pos = this.getAttribute("pos");
+    const editable = this.getAttribute("editable");
     lang && this.setLang(lang);
     code && this.setCode(code);
     pos && this.setCaretPosition(pos);
+    editable && this.codeEl.setAttribute("contentEditable", !!editable);
 
     pre.appendChild(this.codeEl);
     this.appendChild(pre);
@@ -102,6 +103,10 @@ export class CodeComponent extends HTMLElement {
     }
     if (attrName === "code") {
       this.setCode(newVal);
+    }
+    if (attrName === "editable") {
+      console.log("Bla", newVal);
+      this.codeEl && this.codeEl.setAttribute("contentEditable", !!newVal);
     }
     if (this.codeEl) {
       Prism.highlightElement(this.codeEl);

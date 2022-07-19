@@ -80,11 +80,16 @@ tryAddTranslation req model =
 
 onFinishModule : Model -> Ports.FinishRequest -> Cmd Msg
 onFinishModule model req =
-    tryFinishModule req model |> Ports.respond
+    tryFinishModule defaultFileWidth req model |> Ports.respond
 
 
-tryFinishModule : Ports.FinishRequest -> Model -> Failable Ports.ResponseContent
-tryFinishModule { generatorMode, elmModuleName, addContentHash, i18nArgLast } model =
+defaultFileWidth : number
+defaultFileWidth =
+    120
+
+
+tryFinishModule : Int -> Ports.FinishRequest -> Model -> Failable Ports.ResponseContent
+tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nArgLast } model =
     let
         context =
             { moduleName = Util.moduleName elmModuleName
@@ -97,7 +102,7 @@ tryFinishModule { generatorMode, elmModuleName, addContentHash, i18nArgLast } mo
         generate validatedState =
             case generatorMode of
                 Inline ->
-                    { elmFile = Generators.Inline.toFile context validatedState |> Pretty.pretty 120
+                    { elmFile = Generators.Inline.toFile context validatedState |> Pretty.pretty fileWidth
                     , optimizedJson = []
                     }
 
@@ -106,7 +111,7 @@ tryFinishModule { generatorMode, elmModuleName, addContentHash, i18nArgLast } mo
                         stateWithResources =
                             Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages addContentHash) validatedState
                     in
-                    { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty 120
+                    { elmFile = Generators.Dynamic.toFile context stateWithResources |> Pretty.pretty fileWidth
                     , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                     }
     in

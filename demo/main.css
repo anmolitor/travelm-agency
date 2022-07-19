@@ -1,0 +1,70 @@
+body,
+html {
+  background-color: #757f82;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: content-box;
+}
+
+p,
+div,
+h1,
+h2,
+h3 {
+  line-height: 1.5;
+}
+
+.content {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  max-width: 100%;
+}
+
+.explanation {
+  background-color: #303e41;
+  color: rgb(211, 211, 211);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow-y: scroll;
+  padding: 1.2rem 1rem;
+}
+
+.playground {
+  display: flex;
+  flex-direction: column;
+  width: 66%;
+}
+
+.file-header-container {
+  display: flex;
+}
+
+.file-header {
+  background-color: lightgray;
+  border: 1px solid black;
+  padding: 10px 20px;
+}
+
+.active {
+  background-color: #2d2d2d;
+  border-bottom: 0;
+  color: white;
+}
+
+.editor {
+  height: 40%;
+}
+
+highlighted-code {
+  overflow-y: scroll;
+}
+
+highlighted-code > pre[class*="language-"] {
+  margin: 0;
+  height: 100%;
+}

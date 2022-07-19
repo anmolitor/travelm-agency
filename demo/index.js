@@ -6,5 +6,11 @@ import { Elm } from "./src/DemoMain.elm";
 registerCodeComponent();
 
 Elm.DemoMain.init({
-  flags: { language: "en", version: __VERSION__, intl: intl_proxy },
+  flags: {
+    language: "en",
+    version: __VERSION__,
+    intl: intl_proxy,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  },
 });

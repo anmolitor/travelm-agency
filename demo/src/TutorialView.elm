@@ -3,14 +3,19 @@ module TutorialView exposing (Events, Model, view)
 import Dict exposing (Dict)
 import File exposing (InputFile, OutputFile)
 import Html exposing (Html)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, href)
 import Html.Events
 import Json.Decode
+import Material.Icons
+import Material.Icons.Types exposing (Coloring(..))
 import Maybe.Extra
+import Routes
 
 
 type alias Model =
-    { inputFiles : Dict String InputFile
+    { headline : String
+    , route : Routes.Route
+    , inputFiles : Dict String InputFile
     , activeInputFilePath : String
     , caretPosition : Int
     , outputFiles : Dict String OutputFile
@@ -34,6 +39,23 @@ view model events =
 
         activeOutputFile =
             Dict.get model.activeOutputFilePath model.outputFiles
+
+        navigation =
+            Html.div [ class "nav" ]
+                [ case Routes.previous model.route of
+                    Just previous ->
+                        Html.a [ href <| Routes.toUrl previous, class "arrow" ] [ Material.Icons.arrow_back 50 Inherit ]
+
+                    Nothing ->
+                        Material.Icons.arrow_back 50 Inherit
+                , Html.text model.headline
+                , case Routes.next model.route of
+                    Just next ->
+                        Html.a [ href <| Routes.toUrl next, class "arrow" ] [ Material.Icons.arrow_forward 50 Inherit ]
+
+                    Nothing ->
+                        Material.Icons.arrow_forward 50 Inherit
+                ]
 
         inputHeader =
             Html.div [ class "file-header-container" ] <|
@@ -103,7 +125,9 @@ view model events =
             Html.div [ class "editor" ] [ outputHeader, outputCode ]
     in
     [ Html.div [ class "content" ]
-        [ Html.map never <| Html.div [ class "explanation" ] model.explanationText
+        [ Html.map never <|
+            Html.div [ class "left-sidebar" ]
+                [ navigation, Html.div [ class "explanation" ] model.explanationText ]
         , Html.div [ class "playground" ]
             [ inputEditor
             , outputView

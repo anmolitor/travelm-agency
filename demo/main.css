@@ -10,11 +10,14 @@ html {
 }
 
 p,
-div,
 h1,
 h2,
 h3 {
   line-height: 1.5;
+}
+
+p {
+  margin-top: 0;
 }
 
 .content {
@@ -24,20 +27,33 @@ h3 {
   max-width: 100%;
 }
 
-.explanation {
-  background-color: #303e41;
-  color: rgb(211, 211, 211);
+.left-sidebar {
+  width: 33%;
+}
+
+.nav {
+  align-items: center;
+  background-color: #536f76;
   display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  overflow-y: scroll;
+  font-size: 1.5rem;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.arrow {
+  display: flex;
+}
+
+.explanation {
+  background-color: #354042;
+  color: rgb(211, 211, 211);
   padding: 1.2rem 1rem;
 }
 
 .playground {
   display: flex;
   flex-direction: column;
-  width: 66%;
+  width: 67%;
 }
 
 .file-header-container {

@@ -14,6 +14,49 @@ type Route
     | NotFound Url.Url
 
 
+order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
+order =
+    [ Intro, Interpolation ]
+
+
+next : Route -> Maybe Route
+next route =
+    let
+        inputType =
+            getInputType route
+
+        generatorMode =
+            getGeneratorMode route
+
+        appliedOrder =
+            List.map (\r -> r generatorMode inputType) order
+    in
+    List.drop 1 appliedOrder
+        |> List.map2 Tuple.pair appliedOrder
+        |> List.filter (\( curr, _ ) -> curr == route)
+        |> List.map Tuple.second
+        |> List.head
+
+
+previous : Route -> Maybe Route
+previous route =
+    let
+        inputType =
+            getInputType route
+
+        generatorMode =
+            getGeneratorMode route
+
+        appliedOrder =
+            List.map (\r -> r generatorMode inputType) order
+    in
+    List.drop 1 appliedOrder
+        |> List.map2 Tuple.pair appliedOrder
+        |> List.filter (\( _, curr ) -> curr == route)
+        |> List.map Tuple.first
+        |> List.head
+
+
 parser : Parser (Route -> a) a
 parser =
     let
@@ -29,7 +72,7 @@ parser =
     in
     oneOf
         [ map Intro (s "intro" <?> modeParser <?> inputParser)
-        , map Intro (s "interpolation" <?> modeParser <?> inputParser)
+        , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
         ]
 
 
@@ -57,6 +100,32 @@ toUrl route =
 
         NotFound url ->
             Url.toString url
+
+
+getInputType : Route -> Maybe InputType
+getInputType route =
+    case route of
+        Intro _ inputType ->
+            inputType
+
+        Interpolation _ inputType ->
+            inputType
+
+        NotFound _ ->
+            Nothing
+
+
+getGeneratorMode : Route -> Maybe Ports.GeneratorMode
+getGeneratorMode route =
+    case route of
+        Intro mode _ ->
+            mode
+
+        Interpolation mode _ ->
+            mode
+
+        NotFound _ ->
+            Nothing
 
 
 setInputType : InputType -> Route -> Route

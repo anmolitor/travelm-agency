@@ -5,6 +5,8 @@ import File exposing (InputFile)
 import Html exposing (Html)
 import Http
 import InputType exposing (InputType)
+import Material.Icons
+import Material.Icons.Types exposing (Coloring(..))
 import Ports exposing (GeneratorMode)
 import Translations exposing (I18n, Language)
 
@@ -59,8 +61,7 @@ init events model mayMode mayInputType =
 
 viewExplanation : { model | i18n : I18n } -> List (Html Never)
 viewExplanation { i18n } =
-    [ Html.h1 [] [ Html.text <| Translations.introHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.introPreamble i18n ]
+    [ Html.p [] [ Html.text <| Translations.introPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.introExplanationHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.introExplanationBody i18n ]
     , Html.h2 [] [ Html.text <| Translations.advantagesHeadline i18n ]

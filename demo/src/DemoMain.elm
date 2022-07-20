@@ -142,8 +142,13 @@ update msg model =
                     , activeOutputFilePath = "Translations.elm"
                 }
 
-        UrlRequested _ ->
-            ( model, Cmd.none )
+        UrlRequested urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Browser.Navigation.pushUrl model.key (Url.toString url) )
+
+                Browser.External url ->
+                    ( model, Browser.Navigation.load url )
 
         LoadedTranslations (Ok addTranslations) ->
             ( { model | i18n = addTranslations model.i18n }, Cmd.none )
@@ -275,11 +280,13 @@ runTravelmAgency model =
 
 
 view : Model -> Browser.Document Msg
-view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition } as model) =
+view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition, route } as model) =
     { title = "Tutorial"
     , body =
         TutorialView.view
-            { inputFiles = inputFiles
+            { headline = viewHeadline model
+            , route = route
+            , inputFiles = inputFiles
             , activeInputFilePath = activeInputFilePath
             , outputFiles = outputFiles
             , activeOutputFilePath = activeOutputFilePath
@@ -293,11 +300,27 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
     }
 
 
+viewHeadline : Model -> String
+viewHeadline model =
+    case model.route of
+        Routes.Intro _ _ ->
+            Translations.introHeadline model.i18n
+
+        Routes.Interpolation _ _ ->
+            Translations.interpolationHeadline model.i18n
+
+        _ ->
+            ""
+
+
 viewExplanation : Model -> List (Html Never)
 viewExplanation model =
     case model.route of
         Routes.Intro _ _ ->
             Pages.Intro.viewExplanation model
+
+        Routes.Interpolation _ _ ->
+            Pages.Interpolation.viewExplanation model
 
         _ ->
             []

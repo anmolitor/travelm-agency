@@ -148,6 +148,58 @@ blank lines"""
                             , attrs = []
                             }
                         )
+        , test "html message" <|
+            \_ ->
+                Parser.run F.message """msg = <a href="/" _id="link">content</a>"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "msg"
+                            , attrs = []
+                            , content =
+                                ( F.HtmlContent
+                                    { tag = "a"
+                                    , id = "link"
+                                    , attrs = [ ( "href", ( F.TextContent "/", [] ) ) ]
+                                    , content = ( F.TextContent "content", [] )
+                                    }
+                                , []
+                                )
+                            }
+                        )
+        , test "nested html message" <|
+            \_ ->
+                Parser.run F.message """msg = some <b _id="bold">important</b> paragraph: <p _id="p"><img _id="image" src="{ $imgSrc }"></img></p>"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "msg"
+                            , attrs = []
+                            , content =
+                                ( F.TextContent "some "
+                                , [ F.HtmlContent
+                                        { tag = "b"
+                                        , id = "bold"
+                                        , attrs = []
+                                        , content = ( F.TextContent "important", [] )
+                                        }
+                                  , F.TextContent " paragraph: "
+                                  , F.HtmlContent
+                                        { tag = "p"
+                                        , id = "p"
+                                        , attrs = []
+                                        , content =
+                                            ( F.HtmlContent
+                                                { tag = "img"
+                                                , id = "image"
+                                                , attrs = [ ( "src", ( F.PlaceableContent <| F.VarRef "imgSrc", [] ) ) ]
+                                                , content = ( F.TextContent "", [] )
+                                                }
+                                            , []
+                                            )
+                                        }
+                                  ]
+                                )
+                            }
+                        )
 
         -- Complete AST
         , test "multiple messages" <|
@@ -309,6 +361,70 @@ toInternalRepConverterTests =
                                 [ ( "msg", ( Text "some text", [] ) )
                                 , ( "msgTitle", ( Text "multiline\ntitle", [] ) )
                                 , ( "msgBody", ( Text "somebody\n   once\ntold ", [ Interpolation "person" ] ) )
+                                ]
+                        )
+        , test "html gets converted correctly" <|
+            \_ ->
+                [ F.MessageResource
+                    { identifier = F.MessageIdentifier "msg"
+                    , attrs = []
+                    , content =
+                        ( F.TextContent "some "
+                        , [ F.HtmlContent
+                                { tag = "b"
+                                , id = "bold"
+                                , attrs = []
+                                , content = ( F.TextContent "important", [] )
+                                }
+                          , F.TextContent " paragraph: "
+                          , F.HtmlContent
+                                { tag = "p"
+                                , id = "p"
+                                , attrs = []
+                                , content =
+                                    ( F.HtmlContent
+                                        { tag = "img"
+                                        , id = "image"
+                                        , attrs = [ ( "src", ( F.PlaceableContent <| F.VarRef "imgSrc", [] ) ) ]
+                                        , content = ( F.TextContent "", [] )
+                                        }
+                                    , []
+                                    )
+                                }
+                          ]
+                        )
+                    }
+                ]
+                    |> F.fluentToInternalRep emptyIntl "en"
+                    |> Expect.equal
+                        (Ok <|
+                            Types.Translation.fromPairs
+                                [ ( "msg"
+                                  , ( Text "some "
+                                    , [ Html
+                                            { tag = "b"
+                                            , id = "bold"
+                                            , attrs = []
+                                            , content = ( Text "important", [] )
+                                            }
+                                      , Text " paragraph: "
+                                      , Html
+                                            { tag = "p"
+                                            , id = "p"
+                                            , attrs = []
+                                            , content =
+                                                ( Html
+                                                    { tag = "img"
+                                                    , id = "image"
+                                                    , attrs = [ ( "src", ( Interpolation "imgSrc", [] ) ) ]
+                                                    , content = ( Text "", [] )
+                                                    }
+                                                , []
+                                                )
+                                            }
+                                      ]
+                                    )
+                                  )
                                 ]
                         )
         ]

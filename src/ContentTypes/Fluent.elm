@@ -21,6 +21,7 @@ module ContentTypes.Fluent exposing
 
 import Char exposing (isAlphaNum)
 import Dict exposing (Dict)
+import Dynamic.NamespacingTranslations exposing (init_)
 import Intl exposing (Intl)
 import Iso8601
 import List.Extra as List
@@ -246,12 +247,12 @@ fluentToInternalRep intl language ast_ =
 
                 HtmlContent html ->
                     Result.map2
-                        (\htmlContent attrs ->
+                        (\htmlCnt attrs ->
                             Segment.Html
                                 { tag = html.tag
                                 , id = html.id
                                 , attrs = attrs
-                                , content = htmlContent
+                                , content = htmlCnt
                                 }
                         )
                         (recurseOnContentList html.content)
@@ -465,16 +466,39 @@ multilineHelper multi =
 
 messageLine : Parser (List Content)
 messageLine =
-    loop [] messageLineHelper
+    loop [] <| messageLineHelper FluentContext
 
 
-messageLineHelper : List Content -> Parser (Step (List Content) (List Content))
-messageLineHelper revCnt =
+htmlAttrMessage : Parser (NonEmpty Content)
+htmlAttrMessage =
+    loop [] (messageLineHelper HtmlAttributeContext)
+        |> Parser.map (List.NonEmpty.fromList >> Maybe.withDefault ( TextContent "", [] ))
+
+
+htmlContent : String -> Parser (NonEmpty Content)
+htmlContent tag =
+    loop [] (messageLineHelper <| NestedHtmlContext tag)
+        |> Parser.map (List.NonEmpty.fromList >> Maybe.withDefault ( TextContent "", [] ))
+
+
+messageLineHelper : ContentContext -> List Content -> Parser (Step (List Content) (List Content))
+messageLineHelper ctx revCnt =
+    let
+        priorityCases =
+            case ctx of
+                NestedHtmlContext tag ->
+                    [ succeed (Done <| List.reverse revCnt) |. token ("</" ++ tag ++ ">") ]
+
+                _ ->
+                    []
+    in
     oneOf
-        [ succeed (\cnt -> Loop (cnt :: revCnt))
-            |= content
-        , succeed (Done <| List.reverse revCnt)
-        ]
+        (priorityCases
+            ++ [ succeed (\cnt -> Loop (cnt :: revCnt))
+                    |= content ctx
+               , succeed (Done <| List.reverse revCnt)
+               ]
+        )
 
 
 isSpace : Char -> Bool
@@ -482,11 +506,70 @@ isSpace c =
     c == ' ' || c == '\t'
 
 
-content : Parser Content
-content =
+type ContentContext
+    = HtmlAttributeContext
+    | NestedHtmlContext String
+    | FluentContext
+
+
+content : ContentContext -> Parser Content
+content ctx =
+    let
+        normalText =
+            case ctx of
+                FluentContext ->
+                    chompWhile (\c -> not <| List.member c [ '{', '\n', '<' ])
+
+                HtmlAttributeContext ->
+                    chompWhile (\c -> not <| List.member c [ '{', '\n', '<', '"' ])
+
+                NestedHtmlContext _ ->
+                    chompWhile (\c -> not <| List.member c [ '{', '\n', '<' ])
+
+        attributeParser attrs =
+            succeed identity
+                |. spaces
+                |= oneOf
+                    [ succeed (Done <| List.reverse attrs) |. token ">"
+                    , succeed (\key val -> Loop <| ( key, val ) :: attrs)
+                        |. spaces
+                        |= (Parser.chompUntil "=" |> getChompedString)
+                        |. token "="
+                        |. token "\""
+                        |= htmlAttrMessage
+                        |. token "\""
+                    ]
+
+        getIdAttr =
+            List.partition (Tuple.first >> (==) "_id")
+                >> Tuple.mapFirst (List.head >> Maybe.map Tuple.second)
+    in
     oneOf
         [ succeed PlaceableContent |. token "{" |= placeable
-        , chompWhile (\c -> c /= '{' && c /= '\n')
+        , (succeed Tuple.pair
+            |. token "<"
+            |= (Parser.chompWhile (\c -> c /= ' ') |> Parser.getChompedString)
+            |= loop [] attributeParser
+          )
+            |> Parser.andThen
+                (\( tag, attrs ) ->
+                    case getIdAttr attrs of
+                        ( Just ( TextContent id, [] ), otherAttrs ) ->
+                            htmlContent tag
+                                |> Parser.map
+                                    (\innerCnt ->
+                                        HtmlContent { tag = tag, id = id, attrs = otherAttrs, content = innerCnt }
+                                    )
+
+                        _ ->
+                            Parser.problem <|
+                                """Please define an '_id' attribute on your html elements.
+This makes it easy for you later when you want to style specific parts of your generated html.
+
+Here is the html tag that misses the _id attribute: """
+                                    ++ tag
+                )
+        , normalText
             |> getChompedString
             |> andThen
                 (\cnt ->

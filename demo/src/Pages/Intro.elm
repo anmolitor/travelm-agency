@@ -3,6 +3,7 @@ module Pages.Intro exposing (init, viewExplanation)
 import Dict exposing (Dict)
 import File exposing (InputFile)
 import Html exposing (Html)
+import Html.Attributes exposing (class)
 import Http
 import InputType exposing (InputType)
 import Material.Icons
@@ -66,9 +67,9 @@ viewExplanation { i18n } =
     , Html.p [] [ Html.text <| Translations.introExplanationBody i18n ]
     , Html.h2 [] [ Html.text <| Translations.advantagesHeadline i18n ]
     , Html.h3 [] [ Html.text <| Translations.advantageReadabilityHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.advantageReadabilityBody i18n ]
+    , Html.p [] <| Translations.advantageReadabilityBody i18n [ class "highlighted" ]
     , Html.h3 [] [ Html.text <| Translations.advantageTypeSafetyHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.advantageTypeSafetyBody i18n ]
+    , Html.p [] <| Translations.advantageTypeSafetyBody i18n { code = [ class "highlighted" ], list = [], item = [] }
     , Html.h3 [] [ Html.text <| Translations.advantagePerformanceHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.advantagePerformanceBody i18n ]
     , Html.h2 [] [ Html.text <| Translations.disadvantagesHeadline i18n ]

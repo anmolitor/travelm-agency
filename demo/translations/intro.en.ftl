@@ -8,17 +8,16 @@ introExplanationBody = Travelm-Agency is a compiler that simplifies working with
   Travelm-Agency then reads in these files and generates the Elm code you may have otherwise written yourself.
 advantagesHeadline = Advantages over handwritten code
 advantageReadabilityHeadline = Readability of translations
-advantageReadabilityBody = Texts are much more readable in a format like .properties or .json.
+advantageReadabilityBody = Texts are much more readable in a format like <code _id="code">.properties</code> or <code _id="code">.json</code>.
   Don't get me wrong, texts are also perfectly fine in an Elm file, but when you add in things like interpolation
   and more advanced concepts, readability tends to suffer, while Travelm-Agency can tackle these features at a compiler level.
 advantageTypeSafetyHeadline = Type safety
 advantageTypeSafetyBody = The biggest advantage when using Elm over other web solutions is the compile time safety.
   For internationalisation, that safety often goes out the window for ease of development. Functions for each translation key
-  are annoying to write boilerplate code, you either go towards a Dict String String and/or use some special placeholder syntax
+  are annoying to write boilerplate code, you either go towards a <code _id="code">Dict String String</code> and/or use some special placeholder syntax
   which does not guarantee all placeholders are filled at runtime.
   Travelm-Agency does the annoying boilerplate part for you and makes sure that
-  - All keys are defined in all languages (or have an explicit fallback)
-  - Placeholders and similar concepts get converted to parameters for the respective accessor functions
+  <ul _id="list"><li _id="item">All keys are defined in all languages (or have an explicit fallback)</li><li _id="item">Placeholders and similar concepts get converted to parameters for the respective accessor functions</li></ul>
 advantagePerformanceHeadline = Performance
 advantagePerformanceBody = Elm's bundle size is generally pretty small, but can get bloated if you have lots of texts in
   different languages on your site. Loading all the inactive languages is a waste most of the time.

@@ -21,7 +21,6 @@ module ContentTypes.Fluent exposing
 
 import Char exposing (isAlphaNum)
 import Dict exposing (Dict)
-import Dynamic.NamespacingTranslations exposing (init_)
 import Intl exposing (Intl)
 import Iso8601
 import List.Extra as List

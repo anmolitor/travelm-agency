@@ -84,3 +84,11 @@ highlighted-code > pre[class*="language-"] {
   margin: 0;
   height: 100%;
 }
+
+.highlighted {
+  background-color: #cac8c8;
+  color: #2d2d2d;
+  padding: 2px 6px;
+  margin: 0px 4px;
+  border-radius: 10px;
+}

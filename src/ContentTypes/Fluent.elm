@@ -14,6 +14,7 @@ module ContentTypes.Fluent exposing
     , messageLine
     , multilineHelper
     , noAttrs
+    , parse
     , runFluentParser
     , stringLit
     )
@@ -30,10 +31,17 @@ import Result.Extra
 import String.Extra
 import Time
 import Types.ArgValue as ArgValue exposing (ArgValue)
+import Types.Basic exposing (Language)
 import Types.Error as Error exposing (Failable)
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Types.Translation exposing (Translation)
 import Util
+
+
+parse : { input : String, intl : Intl, language : Language } -> Failable (Translation ())
+parse { input, intl, language } =
+    runFluentParser input
+        |> Result.andThen (fluentToInternalRep intl language)
 
 
 type alias AST =
@@ -71,6 +79,7 @@ type alias Message =
 type Content
     = TextContent String
     | PlaceableContent Placeable
+    | HtmlContent { tag : String, id : String, attrs : List ( String, NonEmpty Content ), content : NonEmpty Content }
 
 
 fluentToInternalRep : Intl -> String -> AST -> Failable (Translation ())
@@ -233,6 +242,20 @@ fluentToInternalRep intl language ast_ =
                             |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList)
                             |> Result.map Dict.fromList
                         )
+                        |> Result.map List.NonEmpty.singleton
+
+                HtmlContent html ->
+                    Result.map2
+                        (\htmlContent attrs ->
+                            Segment.Html
+                                { tag = html.tag
+                                , id = html.id
+                                , attrs = attrs
+                                , content = htmlContent
+                                }
+                        )
+                        (recurseOnContentList html.content)
+                        (html.attrs |> Result.Extra.combineMap (Result.Extra.combineMapSecond recurseOnContentList))
                         |> Result.map List.NonEmpty.singleton
 
         termDict : Dict String (NonEmpty Content)

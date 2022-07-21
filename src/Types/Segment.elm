@@ -192,12 +192,12 @@ htmlIdsForSegment seg =
         Html html ->
             Set.insert html.id <| getHtmlIds html.content
 
-        InterpolationCase var default cases ->
+        InterpolationCase _ default cases ->
             List.NonEmpty.fromCons (getHtmlIds default)
                 (List.map getHtmlIds <| Dict.values cases)
                 |> List.NonEmpty.foldl1 Set.union
 
-        PluralCase var opts default cases ->
+        PluralCase _ _ default cases ->
             List.NonEmpty.fromCons (getHtmlIds default)
                 (List.map getHtmlIds <| Dict.values cases)
                 |> List.NonEmpty.foldl1 Set.union

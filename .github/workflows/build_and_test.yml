@@ -46,7 +46,10 @@ jobs:
       - name: deploy docs
         run: |
           cd demo/dist
+          echo $GITHUB_ACTOR
+          echo ${{ env.GITHUB_ACTOR }}
           git init
+          git config user.name ${{ env.GITHUB_ACTOR }}
           git checkout -b gh-pages
           git add -A
           git commit -m "Deploy"

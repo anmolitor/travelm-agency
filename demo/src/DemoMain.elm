@@ -6,18 +6,15 @@ import Browser.Navigation
 import Dict exposing (Dict)
 import File exposing (InputFile, OutputFile)
 import Html exposing (Html)
-import Html.Attributes
-import Html.Events
 import Http
 import InputType exposing (InputType)
 import Intl exposing (Intl)
-import Json.Decode
 import Main
-import Maybe.Extra
 import Pages.Interpolation
 import Pages.Intro
 import Ports
 import Routes exposing (Route)
+import Set exposing (Set)
 import State exposing (OptimizedJson)
 import Translations exposing (I18n, Language)
 import TutorialView
@@ -48,6 +45,9 @@ type alias Model =
     , height : Int
     , width : Int
 
+    -- explanation text
+    , openAccordionElements : Dict String Int
+
     -- code editor
     , caretPosition : Int
     , inputFiles : Dict String InputFile
@@ -64,8 +64,10 @@ type Msg
       -- Get static resource files
     | LoadedTranslations (Result Http.Error (I18n -> I18n))
     | LoadedInputFile (Result Http.Error InputFile)
+      -- Explanation text
+    | ToggleAccordionElement String Int
       -- Code editor
-    | EditedInput { fileName : String, newContent : String, caretPosition : Int }
+    | EditedInput { filePath : String, newContent : String, caretPosition : Int }
     | ChangeInputType InputType
     | ChangeGeneratorMode Ports.GeneratorMode
     | ChangeActiveInputFile String
@@ -101,6 +103,9 @@ init flags url key =
             -- viewport
             , height = flags.height
             , width = flags.width
+
+            -- explanation text
+            , openAccordionElements = Dict.empty
 
             -- code editor
             , inputFiles = Dict.empty
@@ -173,10 +178,10 @@ update msg model =
         LoadedInputFile (Err _) ->
             ( model, Cmd.none )
 
-        EditedInput { caretPosition, newContent, fileName } ->
+        EditedInput { caretPosition, newContent, filePath } ->
             ( { model
                 | caretPosition = caretPosition
-                , inputFiles = Dict.update fileName (Maybe.map <| \file -> { file | content = newContent }) model.inputFiles
+                , inputFiles = Dict.update filePath (Maybe.map <| \file -> { file | content = newContent }) model.inputFiles
               }
                 |> runTravelmAgencyAndUpdateModel
             , Cmd.none
@@ -206,6 +211,9 @@ update msg model =
 
         ChangeActiveOutputFile fileName ->
             ( { model | activeOutputFilePath = fileName }, Cmd.none )
+
+        ToggleAccordionElement key elHeight ->
+            ( { model | openAccordionElements = toggleDict key elHeight model.openAccordionElements }, Cmd.none )
 
 
 runTravelmAgencyAndUpdateModel : Model -> Model
@@ -279,25 +287,43 @@ runTravelmAgency model =
         |> Result.andThen (Main.tryFinishModule 80 finishRequest)
 
 
+toggleDict : comparable -> v -> Dict comparable v -> Dict comparable v
+toggleDict key val dict =
+    if Dict.member key dict then
+        Dict.remove key dict
+
+    else
+        Dict.insert key val dict
+
+
 view : Model -> Browser.Document Msg
-view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition, route } as model) =
+view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition, route, inputType } as model) =
     { title = "Tutorial"
     , body =
         TutorialView.view
             { headline = viewHeadline model
+            , activeInputType = inputType
+            , inputTypes = inputTypesForRoute route
             , route = route
             , inputFiles = inputFiles
             , activeInputFilePath = activeInputFilePath
             , outputFiles = outputFiles
             , activeOutputFilePath = activeOutputFilePath
             , caretPosition = caretPosition
-            , explanationText = viewExplanation model
             }
             { onEditInput = EditedInput
             , onSwitchInput = ChangeActiveInputFile
             , onSwitchOutput = ChangeActiveOutputFile
+            , onSwitchInputType = ChangeInputType
             }
+        <|
+            viewExplanation model
     }
+
+
+inputTypesForRoute : Route -> List InputType
+inputTypesForRoute _ =
+    [ InputType.Json, InputType.Properties, InputType.Fluent ]
 
 
 viewHeadline : Model -> String
@@ -313,11 +339,11 @@ viewHeadline model =
             ""
 
 
-viewExplanation : Model -> List (Html Never)
+viewExplanation : Model -> List (Html Msg)
 viewExplanation model =
     case model.route of
         Routes.Intro _ _ ->
-            Pages.Intro.viewExplanation model
+            Pages.Intro.viewExplanation model { onToggleAccordionEl = ToggleAccordionElement }
 
         Routes.Interpolation _ _ ->
             Pages.Interpolation.viewExplanation model

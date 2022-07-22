@@ -1,3 +1,10 @@
+:root {
+  --nav-height: 3.5rem;
+  --file-header-height: 2.5rem;
+  --explanation-padding-x: 1.2rem;
+  --explanation-padding-y: 1rem;
+}
+
 body,
 html {
   background-color: #757f82;
@@ -7,6 +14,8 @@ html {
 
 * {
   box-sizing: content-box;
+  margin: 0;
+  padding: 0;
 }
 
 p,
@@ -16,8 +25,8 @@ h3 {
   line-height: 1.5;
 }
 
-p {
-  margin-top: 0;
+h2 {
+  margin-top: 10px;
 }
 
 .content {
@@ -28,6 +37,7 @@ p {
 }
 
 .left-sidebar {
+  height: 100%;
   width: 33%;
 }
 
@@ -36,8 +46,8 @@ p {
   background-color: #536f76;
   display: flex;
   font-size: 1.5rem;
+  height: var(--nav-height);
   justify-content: space-between;
-  padding: 10px 0;
 }
 
 .arrow {
@@ -47,7 +57,12 @@ p {
 .explanation {
   background-color: #354042;
   color: rgb(211, 211, 211);
-  padding: 1.2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - var(--nav-height) - 2 * var(--explanation-padding-y));
+  row-gap: 10px;
+  padding: var(--explanation-padding-y) var(--explanation-padding-x);
+  overflow: auto;
 }
 
 .playground {
@@ -58,6 +73,7 @@ p {
 
 .file-header-container {
   display: flex;
+  height: var(--nav-height);
 }
 
 .file-header {
@@ -72,17 +88,13 @@ p {
   color: white;
 }
 
-.editor {
-  height: 40%;
-}
-
 highlighted-code {
-  overflow-y: scroll;
+  height: calc(50% - var(--nav-height));
+  overflow: auto;
 }
 
 highlighted-code > pre[class*="language-"] {
   margin: 0;
-  height: 100%;
 }
 
 .highlighted {
@@ -91,4 +103,20 @@ highlighted-code > pre[class*="language-"] {
   padding: 2px 6px;
   margin: 0px 4px;
   border-radius: 10px;
+}
+
+.accordion-headline {
+  align-items: center;
+  background-color: rgb(94, 94, 94);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.accordion-content {
+  padding-left: 4px;
+  overflow: hidden;
+  transition: all 0.5s ease;
 }

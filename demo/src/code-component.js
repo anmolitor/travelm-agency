@@ -105,7 +105,6 @@ export class CodeComponent extends HTMLElement {
       this.setCode(newVal);
     }
     if (attrName === "editable") {
-      console.log("Bla", newVal);
       this.codeEl && this.codeEl.setAttribute("contentEditable", !!newVal);
     }
     if (this.codeEl) {

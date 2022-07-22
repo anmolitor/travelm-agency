@@ -5,6 +5,7 @@ import File exposing (InputFile, OutputFile)
 import Html exposing (Html)
 import Html.Attributes exposing (class, href)
 import Html.Events
+import InputType exposing (InputType)
 import Json.Decode
 import Material.Icons
 import Material.Icons.Types exposing (Coloring(..))
@@ -15,24 +16,26 @@ import Routes
 type alias Model =
     { headline : String
     , route : Routes.Route
+    , inputTypes : List InputType
+    , activeInputType : InputType
     , inputFiles : Dict String InputFile
     , activeInputFilePath : String
     , caretPosition : Int
     , outputFiles : Dict String OutputFile
     , activeOutputFilePath : String
-    , explanationText : List (Html Never)
     }
 
 
 type alias Events msg =
-    { onEditInput : { fileName : String, newContent : String, caretPosition : Int } -> msg
+    { onEditInput : { filePath : String, newContent : String, caretPosition : Int } -> msg
     , onSwitchInput : String -> msg
     , onSwitchOutput : String -> msg
+    , onSwitchInputType : InputType -> msg
     }
 
 
-view : Model -> Events msg -> List (Html msg)
-view model events =
+view : Model -> Events msg -> List (Html msg) -> List (Html msg)
+view model events explanationText =
     let
         activeInputFile =
             Dict.get model.activeInputFilePath model.inputFiles
@@ -56,6 +59,23 @@ view model events =
                     Nothing ->
                         Material.Icons.arrow_forward 50 Inherit
                 ]
+
+        inputTypeSelect =
+            Html.select
+                [ Html.Events.onInput
+                    (InputType.fromString
+                        >> Maybe.withDefault model.activeInputType
+                        >> events.onSwitchInputType
+                    )
+                ]
+            <|
+                List.map
+                    (\inputType ->
+                        Html.option
+                            [ Html.Attributes.selected <| inputType == model.activeInputType ]
+                            [ Html.text <| InputType.toString inputType ]
+                    )
+                    model.inputTypes
 
         inputHeader =
             Html.div [ class "file-header-container" ] <|
@@ -96,7 +116,7 @@ view model events =
                             Just <|
                                 \newContent caretPosition ->
                                     events.onEditInput
-                                        { fileName = file.name
+                                        { filePath = File.inputFileToPath file
                                         , newContent = newContent
                                         , caretPosition = caretPosition
                                         }
@@ -117,20 +137,15 @@ view model events =
 
                 Nothing ->
                     Html.div [] []
-
-        inputEditor =
-            Html.div [ class "editor" ] [ inputHeader, inputCode ]
-
-        outputView =
-            Html.div [ class "editor" ] [ outputHeader, outputCode ]
     in
     [ Html.div [ class "content" ]
-        [ Html.map never <|
-            Html.div [ class "left-sidebar" ]
-                [ navigation, Html.div [ class "explanation" ] model.explanationText ]
+        [ Html.div [ class "left-sidebar" ]
+            [ navigation, Html.div [ class "explanation" ] explanationText ]
         , Html.div [ class "playground" ]
-            [ inputEditor
-            , outputView
+            [ inputHeader
+            , inputCode
+            , outputHeader
+            , outputCode
             ]
         ]
     ]

@@ -56,7 +56,7 @@ init events model mayMode mayInputType =
     )
 
 
-viewExplanation : { model | i18n : I18n } -> List (Html Never)
+viewExplanation : { model | i18n : I18n } -> List (Html msg)
 viewExplanation { i18n } =
     [ Html.p [] [ Html.text <| Translations.interpolationPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.syntaxHeadline i18n ]

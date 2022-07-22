@@ -21,20 +21,20 @@ advantageTypeSafetyBody = The biggest advantage when using Elm over other web so
 advantagePerformanceHeadline = Performance
 advantagePerformanceBody = Elm's bundle size is generally pretty small, but can get bloated if you have lots of texts in
   different languages on your site. Loading all the inactive languages is a waste most of the time.
-  With Travelm-Agency you can switch from "inline" to "dynamic" mode with just a command line argument and a few small code changes
+  With Travelm-Agency you can switch from <code _id="code">inline</code> to <code _id="code">dynamic</code> mode with just a command line argument and a few small code changes
   and have your translations loaded on the fly instead. Since the switch is so simple, you can benchmark bundle sizes and load times
   and decide yourself which model suits your application best and possibly switch later. 
 disadvantagesHeadline = Disadvantages
 disadvantageProgrammabilityHeadline = Programmability
 disadvantageProgrammabilityBody = When writing translations in Elm, you have the full power of Elm at your disposal.
-  You can define your own data types, pattern match, define helper functions, all that stuff.
+  You can define your own data types, pattern match, define helper functions, all that good stuff.
   When using a compiler, you cannot interact on a low level with the code, you are bound to the exposed interface.
   I personally think that is completely fine since Travelm-Agency offers enough "programmable" pieces
-  like interpolation, string matching on an interpolated value and automatic html generation with overwritable attributes.
+  like interpolation, string matching on interpolated values and automatic html generation with overwritable attributes.
 disadvantageToolchainHeadline = Build complexity
 disadvantageToolchainBody = Frontend development is full of build tools and bundlers, with code generators left and right
   (Elm itself compiles to JS after all). It can be intimidating to add even more tools like this one to the list.
-  The compiler is generally pretty fast and easy to add to your project, feel free to open an issue if you had any problems.
+  The compiler is generally pretty fast and easy to add to your project, feel free to open an issue if you experience any problems.
 
 tutorialHowtoHeadline = How this tutorial works
 tutorialHowtoBody = This tutorial guides you through the features of Travelm-Agency. On each page will be one or multiple input

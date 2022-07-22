@@ -3,6 +3,7 @@ import elmPlugin from "vite-plugin-elm";
 import { version } from "../package.json";
 
 export default defineConfig({
+  base: "travelm-agency",
   define: {
     __VERSION__: JSON.stringify(version),
   },

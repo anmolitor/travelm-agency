@@ -4,14 +4,11 @@ import Accordion
 import Dict exposing (Dict)
 import File exposing (InputFile)
 import Html exposing (Html)
-import Html.Attributes exposing (class, classList, style)
-import Html.Events
+import Html.Attributes exposing (class)
 import Http
 import InputType exposing (InputType)
-import Material.Icons
 import Material.Icons.Types exposing (Coloring(..))
 import Ports exposing (GeneratorMode)
-import Set exposing (Set)
 import Translations exposing (I18n, Language)
 
 

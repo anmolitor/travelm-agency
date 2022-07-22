@@ -24,7 +24,7 @@
     "yargs": "^17.4.0"
   },
   "devDependencies": {
-    "@types/node": "^18.0.3",
+    "@types/node": "^18.0.6",
     "cross-env": "^7.0.3",
     "elm-test": "^0.19.1-revision9",
     "node-elm-compiler": "^5.0.6",

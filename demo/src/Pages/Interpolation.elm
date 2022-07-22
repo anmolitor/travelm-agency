@@ -1,7 +1,10 @@
 module Pages.Interpolation exposing (init, viewExplanation)
 
+import Accordion
+import Dict exposing (Dict)
 import File exposing (InputFile)
 import Html exposing (Html)
+import Html.Attributes exposing (class)
 import Http
 import InputType exposing (InputType)
 import Ports exposing (GeneratorMode)
@@ -57,14 +60,26 @@ init events model mayMode mayInputType =
     )
 
 
-viewExplanation : { model | i18n : I18n } -> List (Html msg)
-viewExplanation { i18n } =
+viewExplanation : { model | i18n : I18n, openAccordionElements : Dict String Int } -> { onToggleAccordionEl : String -> Int -> msg } -> List (Html msg)
+viewExplanation { i18n, openAccordionElements } events =
     [ Html.p [] [ Html.text <| Translations.interpolationPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.syntaxHeadline i18n ]
-    , Html.h3 [] [ Html.text <| Translations.jsonHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.jsonSyntaxBody i18n ]
-    , Html.h3 [] [ Html.text <| Translations.propertiesHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.propertiesSyntaxBody i18n ]
-    , Html.h3 [] [ Html.text <| Translations.fluentHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.fluentSyntaxBody i18n ]
+    , Accordion.view
+        { headline = Translations.jsonHeadline i18n
+        , content = List.map (Html.map never) <| Translations.jsonSyntaxBody i18n [ class "highlighted" ]
+        , onToggle = events.onToggleAccordionEl "json_syntax"
+        , height = Dict.get "json_syntax" openAccordionElements |> Maybe.withDefault 0
+        }
+    , Accordion.view
+        { headline = Translations.propertiesHeadline i18n
+        , content = List.map (Html.map never) <| Translations.propertiesSyntaxBody i18n [ class "highlighted" ]
+        , onToggle = events.onToggleAccordionEl "properties_syntax"
+        , height = Dict.get "properties_syntax" openAccordionElements |> Maybe.withDefault 0
+        }
+    , Accordion.view
+        { headline = Translations.fluentHeadline i18n
+        , content = List.map (Html.map never) <| Translations.fluentSyntaxBody i18n [ class "highlighted" ]
+        , onToggle = events.onToggleAccordionEl "fluent_syntax"
+        , height = Dict.get "fluent_syntax" openAccordionElements |> Maybe.withDefault 0
+        }
     ]

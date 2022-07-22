@@ -348,7 +348,7 @@ viewExplanation model =
             Pages.Intro.viewExplanation model { onToggleAccordionEl = ToggleAccordionElement }
 
         Routes.Interpolation _ _ ->
-            Pages.Interpolation.viewExplanation model
+            Pages.Interpolation.viewExplanation model { onToggleAccordionEl = ToggleAccordionElement }
 
         _ ->
             []

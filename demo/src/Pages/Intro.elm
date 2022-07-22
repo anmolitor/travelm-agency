@@ -41,9 +41,9 @@ init events model mayMode mayInputType =
     in
     ( { model | generatorMode = generatorMode, inputType = inputType, activeInputFilePath = filePathToLoad }
     , Cmd.batch
-        [ Translations.loadIntro { language = model.language, path = "/i18n", onLoad = events.onTranslationLoad }
+        [ Translations.loadIntro { language = model.language, path = model.basePath ++ "/i18n", onLoad = events.onTranslationLoad }
         , Http.get
-            { url = "/intro/" ++ filePathToLoad
+            { url = model.basePath ++ "/intro/" ++ filePathToLoad
             , expect =
                 Http.expectString
                     (Result.map

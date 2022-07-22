@@ -52,6 +52,6 @@ jobs:
           git add -A
           git commit -m "Deploy"
           git remote add origin https://andreasewering:$GITHUB_TOKEN@github.com/travelm-agency
-          git push -f gh-pages
+          git push -f --set-upstream origin gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

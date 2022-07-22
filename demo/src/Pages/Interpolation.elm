@@ -36,7 +36,7 @@ init events model mayMode mayInputType =
     in
     ( { model | generatorMode = generatorMode, inputType = inputType, activeInputFilePath = filePathToLoad }
     , Cmd.batch
-        [ Translations.loadInterpolation { language = model.language, path = "dist/i18n", onLoad = events.onTranslationLoad }
+        [ Translations.loadInterpolation { language = model.language, path = "i18n", onLoad = events.onTranslationLoad }
         , Http.get
             { url = "interpolation/" ++ filePathToLoad
             , expect =

@@ -6,5 +6,5 @@ export default defineConfig({
   define: {
     __VERSION__: JSON.stringify(version),
   },
-  plugins: [elmPlugin()],
+  plugins: [elmPlugin({ optimize: process.env.NODE_ENV === "production" })],
 });

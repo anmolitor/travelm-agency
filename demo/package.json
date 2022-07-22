@@ -5,11 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "vite",
-    "build": "node ../index.js translations"
+    "prebuild": "node ../index.js translations --json_path=public/i18n",
+    "build": "cross-env NODE_ENV=production vite build",
+    "postbuild": "",
+    "preview": "vite preview"
   },
   "author": "Andreas Molitor",
   "license": "ISC",
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "intl-proxy": "^1.0.1",
     "vite": "^2.9.14",
     "vite-plugin-elm": "^2.6.1"

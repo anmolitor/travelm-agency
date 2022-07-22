@@ -2,6 +2,8 @@ module Generators.DynamicTest exposing (..)
 
 import Dynamic.DateFormatServer
 import Dynamic.DateFormatTranslations
+import Dynamic.EscapeServer
+import Dynamic.EscapeTranslations
 import Dynamic.HashServer
 import Dynamic.HashTranslations
 import Dynamic.HtmlInterpolationServer
@@ -504,6 +506,18 @@ namespacing =
                     |> Result.map ((|>) Dynamic.NamespacingTranslations.init)
                     |> Result.map Dynamic.NamespacingTranslations.init_
                     |> Expect.equal (Ok "reserved name")
+        ]
+
+
+escapedCurlyBrackets : Test
+escapedCurlyBrackets =
+    describe "escaped curly brackets"
+        [ test "works without parsing problems" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> Result.map Dynamic.EscapeTranslations.text
+                    |> Expect.equal (Ok "escaped interpolation { $var }")
         ]
 
 

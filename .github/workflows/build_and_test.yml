@@ -41,16 +41,17 @@ jobs:
         env:
           CI: true
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-      - name: build docs
-        run: |
       - name: deploy docs
         run: |
           cd demo/dist
           echo $GITHUB_ACTOR
           git init
-          git config user.name $GITHUB_ACTOR
-          git config user.name $GITHUB_ACTOR@users.noreply.github.com
+          git config --global user.name $GITHUB_ACTOR
+          git config --global user.name $GITHUB_ACTOR@users.noreply.github.com
           git checkout -b gh-pages
           git add -A
           git commit -m "Deploy"
-          git push -f git@github.com:andreasewering/travelm-agency.git gh-pages
+          git remote set-url --push origin https://andreasewering:$GITHUB_TOKEN@github.com/travelm-agency
+          git push -f gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -12,5 +12,6 @@ Elm.DemoMain.init({
     intl: intl_proxy,
     width: window.innerWidth,
     height: window.innerHeight,
+    basePath: __BASE_PATH__
   },
 });

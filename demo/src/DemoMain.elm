@@ -14,7 +14,6 @@ import Pages.Interpolation
 import Pages.Intro
 import Ports
 import Routes exposing (Route)
-import Set exposing (Set)
 import State exposing (OptimizedJson)
 import Translations exposing (I18n, Language)
 import TutorialView
@@ -23,12 +22,13 @@ import Url
 
 
 type alias Flags =
-    { language : String, version : String, intl : Intl, height : Int, width : Int }
+    { language : String, version : String, intl : Intl, height : Int, width : Int, basePath : String }
 
 
 type alias Model =
     { -- static data
       key : Browser.Navigation.Key
+    , basePath : String
     , version : String
 
     -- internationization
@@ -83,11 +83,12 @@ init flags url key =
             Translations.languageFromString flags.language |> Maybe.withDefault Translations.En
 
         route =
-            Routes.fromUrl url
+            Routes.fromUrl flags.basePath url
 
         model =
             { -- static data
               key = key
+            , basePath = flags.basePath
             , version = flags.version
 
             -- internationalzation
@@ -132,7 +133,7 @@ initPage model =
             Pages.Interpolation.init events model mayMode mayInputType
 
         Routes.NotFound _ ->
-            ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl <| Routes.Intro Nothing Nothing )
+            ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -141,7 +142,7 @@ update msg model =
         UrlChanged url ->
             initPage
                 { model
-                    | route = Routes.fromUrl url
+                    | route = Routes.fromUrl model.basePath url
                     , inputFiles = Dict.empty
                     , outputFiles = Dict.empty
                     , activeOutputFilePath = "Translations.elm"
@@ -191,7 +192,7 @@ update msg model =
             ( model
             , model.route
                 |> Routes.setInputType inputType
-                |> Routes.toUrl
+                |> Routes.toUrl model.basePath
                 |> Browser.Navigation.pushUrl model.key
             )
 
@@ -199,7 +200,7 @@ update msg model =
             ( model
             , model.route
                 |> Routes.setGeneratorMode mode
-                |> Routes.toUrl
+                |> Routes.toUrl model.basePath
                 |> Browser.Navigation.pushUrl model.key
             )
 
@@ -297,7 +298,7 @@ toggleDict key val dict =
 
 
 view : Model -> Browser.Document Msg
-view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition, route, inputType } as model) =
+view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, caretPosition, route, inputType, basePath } as model) =
     { title = "Tutorial"
     , body =
         TutorialView.view
@@ -310,6 +311,7 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
             , outputFiles = outputFiles
             , activeOutputFilePath = activeOutputFilePath
             , caretPosition = caretPosition
+            , basePath = basePath
             }
             { onEditInput = EditedInput
             , onSwitchInput = ChangeActiveInputFile

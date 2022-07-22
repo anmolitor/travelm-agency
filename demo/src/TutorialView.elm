@@ -23,6 +23,7 @@ type alias Model =
     , caretPosition : Int
     , outputFiles : Dict String OutputFile
     , activeOutputFilePath : String
+    , basePath : String
     }
 
 
@@ -47,14 +48,14 @@ view model events explanationText =
             Html.div [ class "nav" ]
                 [ case Routes.previous model.route of
                     Just previous ->
-                        Html.a [ href <| Routes.toUrl previous, class "arrow" ] [ Material.Icons.arrow_back 50 Inherit ]
+                        Html.a [ href <| Routes.toUrl model.basePath previous, class "arrow" ] [ Material.Icons.arrow_back 50 Inherit ]
 
                     Nothing ->
                         Material.Icons.arrow_back 50 Inherit
                 , Html.text model.headline
                 , case Routes.next model.route of
                     Just next ->
-                        Html.a [ href <| Routes.toUrl next, class "arrow" ] [ Material.Icons.arrow_forward 50 Inherit ]
+                        Html.a [ href <| Routes.toUrl model.basePath next, class "arrow" ] [ Material.Icons.arrow_forward 50 Inherit ]
 
                     Nothing ->
                         Material.Icons.arrow_forward 50 Inherit

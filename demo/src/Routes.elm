@@ -4,7 +4,7 @@ import InputType exposing (InputType)
 import Ports
 import Url
 import Url.Builder exposing (absolute, string)
-import Url.Parser exposing ((<?>), Parser, map, oneOf, parse, s, top)
+import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, parse, s)
 import Url.Parser.Query as Query
 
 
@@ -76,23 +76,23 @@ parser =
         ]
 
 
-fromUrl : Url.Url -> Route
-fromUrl url =
-    parse parser url |> Maybe.withDefault (NotFound url)
+fromUrl : String -> Url.Url -> Route
+fromUrl basePath url =
+    parse (s basePath </> parser) url |> Maybe.withDefault (NotFound url)
 
 
-toUrl : Route -> String
-toUrl route =
+toUrl : String -> Route -> String
+toUrl basePath route =
     case route of
         Intro mode inputType ->
-            absolute [ "intro" ] <|
+            absolute [ basePath, "intro" ] <|
                 List.filterMap identity
                     [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
                     , Maybe.map (string "input" << InputType.toString) inputType
                     ]
 
         Interpolation mode inputType ->
-            absolute [ "interpolation" ] <|
+            absolute [ basePath, "interpolation" ] <|
                 List.filterMap identity
                     [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
                     , Maybe.map (string "input" << InputType.toString) inputType

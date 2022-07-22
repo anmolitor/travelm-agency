@@ -18,6 +18,7 @@ type alias Model model =
         , inputType : InputType
         , language : Language
         , activeInputFilePath : String
+        , basePath : String
     }
 
 

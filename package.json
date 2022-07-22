@@ -8,8 +8,7 @@
     "build": "tsc && cross-env NODE_ENV=production node build.js",
     "build:dev": "node build.js",
     "test": "node generate_test_cases.js && elm-test",
-    "test:integration": "mocha tests --timeout 10000",
-    "coverage": "elm-coverage"
+    "test:integration": "mocha tests --timeout 10000"
   },
   "keywords": [
     "Elm",
@@ -28,7 +27,6 @@
   "devDependencies": {
     "@types/node": "^18.0.3",
     "cross-env": "^7.0.3",
-    "elm-coverage": "^0.4.0",
     "elm-test": "^0.19.1-revision7",
     "finalhandler": "^1.2.0",
     "http-shutdown": "^1.2.2",

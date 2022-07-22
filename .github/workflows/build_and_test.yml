@@ -30,11 +30,7 @@ jobs:
       - name: install
         run: npm ci && (cd example && npm ci)
       - name: build
-        # need to remove elm-stuff to prevent caching to result in a corrupt elm-stuff error
-        run: |
-          npm run build
-          cd example
-          npm run build
+        run: npm run build
       - name: test
         run: npm test
       - name: npm publish
@@ -45,3 +41,13 @@ jobs:
         env:
           CI: true
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      - name: deploy docs
+        run: |
+          cd demo
+          npm run build
+          cd dist
+          git init
+          git checkout -b gh-pages
+          git add -A
+          git commit -m "Deploy"
+          git push -f git@github.com:andreasewering/travelm-agency.git gh-pages

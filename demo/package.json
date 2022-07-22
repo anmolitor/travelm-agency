@@ -7,7 +7,6 @@
     "start": "vite",
     "prebuild": "node ../index.js translations --json_path=public/i18n --hash",
     "build": "cross-env NODE_ENV=production vite build",
-    "postbuild": "",
     "preview": "vite preview"
   },
   "author": "Andreas Molitor",

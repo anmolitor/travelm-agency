@@ -7,8 +7,7 @@
   "scripts": {
     "build": "tsc && cross-env NODE_ENV=production node build.js",
     "build:dev": "node build.js",
-    "test": "node generate_test_cases.js && elm-test",
-    "test:integration": "mocha tests --timeout 10000"
+    "test": "node generate_test_cases.js && elm-test"
   },
   "keywords": [
     "Elm",
@@ -27,14 +26,8 @@
   "devDependencies": {
     "@types/node": "^18.0.3",
     "cross-env": "^7.0.3",
-    "elm-test": "^0.19.1-revision7",
-    "finalhandler": "^1.2.0",
-    "http-shutdown": "^1.2.2",
-    "jsdom": "^20.0.0",
-    "jsdom-global": "^3.0.2",
-    "mocha": "^10.0.0",
+    "elm-test": "^0.19.1-revision9",
     "node-elm-compiler": "^5.0.6",
-    "serve-static": "^1.15.0",
     "typescript": "^4.6.3",
     "uglify-js": "^3.15.3"
   }

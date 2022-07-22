@@ -516,8 +516,8 @@ escapedCurlyBrackets =
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map Dynamic.EscapeTranslations.text
-                    |> Expect.equal (Ok "escaped interpolation { $var }")
+                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.text i18n "interp")
+                    |> Expect.equal (Ok "escaped interpolation { $var }, actual interp")
         ]
 
 

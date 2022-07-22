@@ -699,7 +699,7 @@ encodeSegment : TSegment -> String
 encodeSegment segment =
     case segment of
         Segment.Text str ->
-            str
+            escapeCurlyBrackets str
 
         Segment.Interpolation var ->
             wrapVar var
@@ -739,6 +739,26 @@ encodeSegment segment =
                     ++ (List.concatMap (\( key, val ) -> [ key, encodeSegments val ]) html.attrs
                             |> String.join "|"
                        )
+
+
+escapeCurlyBrackets : String -> String
+escapeCurlyBrackets =
+    String.foldl
+        (\char ( needsEscape, result ) ->
+            if char == '{' && needsEscape then
+                ( True, result ++ "\\{" )
+
+            else if char == '}' && needsEscape then
+                ( False, result ++ "\\}" )
+
+            else if char == '\\' && not needsEscape then
+                ( False, result )
+
+            else
+                ( True, result ++ String.fromChar char )
+        )
+        ( True, "" )
+        >> Tuple.second
 
 
 encodeArgs : List ( String, ArgValue ) -> String

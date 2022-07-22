@@ -17,7 +17,7 @@ state =
     Dict.NonEmpty.singleton "messages" <|
         Dict.NonEmpty.singleton
             "en"
-            { pairs = Dict.fromList [ ( "text", ( Text "escaped interpolation { $var }", [] ) ) ]
+            { pairs = Dict.fromList [ ( "text", ( Text "escaped interpolation { $var }, actual ", [ Interpolation "interpolation" ] ) ) ]
             , fallback = Nothing
             , resources = ()
             }

@@ -28,9 +28,9 @@ jobs:
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       - name: install
-        run: npm ci && (cd example && npm ci)
+        run: npm ci && (cd demo && npm ci)
       - name: build
-        run: npm run build
+        run: npm run build && (cd demo && npm run build)
       - name: test
         run: npm test
       - name: npm publish
@@ -41,11 +41,11 @@ jobs:
         env:
           CI: true
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      - name: build docs
+        run: |
       - name: deploy docs
         run: |
-          cd demo
-          npm run build
-          cd dist
+          cd demo/dist
           git init
           git checkout -b gh-pages
           git add -A

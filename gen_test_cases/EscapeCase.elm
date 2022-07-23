@@ -17,7 +17,21 @@ state =
     Dict.NonEmpty.singleton "messages" <|
         Dict.NonEmpty.singleton
             "en"
-            { pairs = Dict.fromList [ ( "text", ( Text "escaped interpolation { $var }, actual ", [ Interpolation "interpolation" ] ) ) ]
+            { pairs =
+                Dict.fromList
+                    [ ( "text", ( Text "escaped interpolation { $var }, actual ", [ Interpolation "interpolation" ] ) )
+                    , ( "html"
+                      , ( Text "escaped interpolation { $var }, actual "
+                        , [ Html
+                                { tag = "b"
+                                , id = "bold"
+                                , attrs = []
+                                , content = (Interpolation "interpolation", [])
+                                }
+                          ]
+                        )
+                      )
+                    ]
             , fallback = Nothing
             , resources = ()
             }

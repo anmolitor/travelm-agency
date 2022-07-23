@@ -512,12 +512,29 @@ namespacing =
 escapedCurlyBrackets : Test
 escapedCurlyBrackets =
     describe "escaped curly brackets"
-        [ test "works without parsing problems" <|
+        [ test "works without parsing problems for text" <|
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
                     |> Result.map (\i18n -> Dynamic.EscapeTranslations.text i18n "interp")
                     |> Expect.equal (Ok "escaped interpolation { $var }, actual interp")
+        , test "works without parsing problems for html" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.EscapeTranslations.html i18n "interp" []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "escaped interpolation "
+                                    , Selector.text "{"
+                                    , Selector.text "$var"
+                                    , Selector.text "}"
+                                    , Selector.containing [ Selector.tag "b", Selector.text "interp" ]
+                                    ]
+                        )
         ]
 
 

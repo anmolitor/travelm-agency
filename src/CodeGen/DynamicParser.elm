@@ -535,6 +535,18 @@ addReplacePlaceholderDeclaration =
                                                 <|
                                                     CG.list
                                                         [ p_succeed
+                                                            (CG.parens <|
+                                                                CG.applyBinOp p_Loop CG.pipel <|
+                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.apply [CG.fun <| lookup "stringToHtml", CG.string "{"])
+                                                            )
+                                                            |> p_drop_infix (p_token "\\{")
+                                                        , p_succeed
+                                                            (CG.parens <|
+                                                                CG.applyBinOp p_Loop CG.pipel <|
+                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.apply [CG.fun <| lookup "stringToHtml", CG.string "}"])
+                                                            )
+                                                            |> p_drop_infix (p_token "\\}")
+                                                        , p_succeed
                                                             (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ]) CG.composer p_Loop)
                                                             |> p_drop_infix
                                                                 (p_token "{"
@@ -633,9 +645,9 @@ addReplacePlaceholderDeclaration =
                                                                 , CG.parens <|
                                                                     CG.lambda [ CG.varPattern <| lookup "c" ] <|
                                                                         CG.pipe
-                                                                            (CG.applyBinOp (CG.char '{')
+                                                                            (CG.binOpChain (CG.char '{')
                                                                                 CG.cons
-                                                                                (CG.applyBinOp (CG.char '}') CG.cons (CG.val <| lookup "endSymbols"))
+                                                                                [ CG.char '}', CG.char '\\', CG.val <| lookup "endSymbols" ]
                                                                             )
                                                                             [ CG.apply [ CG.fqFun [ "List" ] "member", CG.val <| lookup "c" ]
                                                                             , CG.fun "not"

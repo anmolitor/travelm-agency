@@ -31,6 +31,27 @@ type alias TutorialModel =
     }
 
 
+generateFreeFileName : TutorialModel -> InputFile
+generateFreeFileName { activeInputType, inputFiles } =
+    let
+        go num =
+            let
+                attempt =
+                    { name = "new" ++ String.fromInt num
+                    , language = "en"
+                    , extension = InputType.toString activeInputType
+                    , content = ""
+                    }
+            in
+            if Dict.member (File.inputFileToPath attempt) inputFiles then
+                go (num + 1)
+
+            else
+                attempt
+    in
+    go 0
+
+
 view : TutorialModel -> List (Html Msg) -> List (Html Msg)
 view model explanationText =
     let
@@ -102,9 +123,13 @@ view model explanationText =
                                 , onClick = ChangeActiveInputFile <| File.inputFileToPath file
                                 }
                         )
-                    <|
-                        Dict.toList
-                            model.inputFiles
+                        (Dict.toList model.inputFiles)
+                        ++ [ Html.div
+                                [ class "file-header"
+                                , Html.Events.onClick <| AddFile <| generateFreeFileName model
+                                ]
+                                [ Html.text "+" ]
+                           ]
                 , inputTypeSelect
                 ]
 

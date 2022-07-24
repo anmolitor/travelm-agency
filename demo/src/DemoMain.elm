@@ -11,6 +11,7 @@ import Intl exposing (Intl)
 import Main
 import Model exposing (Model)
 import Msg exposing (Msg(..))
+import Pages.Bundles
 import Pages.Consistency
 import Pages.Interpolation
 import Pages.Intro
@@ -93,6 +94,9 @@ initPage model =
 
         Routes.Consistency _ _ ->
             Pages.Consistency.init model
+
+        Routes.Bundles _ _ ->
+            Pages.Bundles.init model
 
         Routes.NotFound _ ->
             ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
@@ -177,6 +181,24 @@ update msg model =
 
         ToggleAccordionElement key elHeight ->
             ( { model | openAccordionElements = toggleDict key elHeight model.openAccordionElements }, Cmd.none )
+
+        AddFile file ->
+            ( { model | inputFiles = Dict.insert (File.inputFileToPath file) file model.inputFiles }, Cmd.none )
+
+        EditFileName oldFilePath newFile ->
+            ( { model
+                | inputFiles =
+                    (if Dict.member (File.inputFileToPath newFile) model.inputFiles then
+                        identity
+
+                     else
+                        Dict.remove oldFilePath
+                            >> Dict.insert (File.inputFileToPath newFile) newFile
+                    )
+                        model.inputFiles
+              }
+            , Cmd.none
+            )
 
 
 runTravelmAgencyAndUpdateModel : Model -> Model
@@ -300,6 +322,9 @@ viewHeadline model =
         Routes.Consistency _ _ ->
             Translations.consistencyHeadline model.i18n
 
+        Routes.Bundles _ _ ->
+            Translations.bundlesHeadline model.i18n
+
         Routes.NotFound _ ->
             ""
 
@@ -315,6 +340,9 @@ viewExplanation model =
 
         Routes.Consistency _ _ ->
             Pages.Consistency.viewExplanation model
+
+        Routes.Bundles _ _ ->
+            Pages.Bundles.viewExplanation model
 
         Routes.NotFound _ ->
             []

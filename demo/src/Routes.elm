@@ -12,12 +12,13 @@ type Route
     = Intro (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType)
     | NotFound Url.Url
 
 
 order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
 order =
-    [ Intro, Interpolation, Consistency ]
+    [ Intro, Interpolation, Consistency, Bundles ]
 
 
 next : Route -> Maybe Route
@@ -69,6 +70,7 @@ parser =
         [ map Intro (s "intro" <?> modeParser <?> inputParser)
         , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
         , map Consistency (s "consistency" <?> modeParser <?> inputParser)
+        , map Bundles (s "bundles" <?> modeParser <?> inputParser)
         ]
 
 
@@ -79,27 +81,26 @@ fromUrl basePath url =
 
 toUrl : String -> Route -> String
 toUrl basePath route =
+    let
+        default path mode inputType =
+            absolute [ basePath, path ] <|
+                List.filterMap identity
+                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
+                    , Maybe.map (string "input" << InputType.toString) inputType
+                    ]
+    in
     case route of
         Intro mode inputType ->
-            absolute [ basePath, "intro" ] <|
-                List.filterMap identity
-                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
-                    , Maybe.map (string "input" << InputType.toString) inputType
-                    ]
+            default "intro" mode inputType
 
         Interpolation mode inputType ->
-            absolute [ basePath, "interpolation" ] <|
-                List.filterMap identity
-                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
-                    , Maybe.map (string "input" << InputType.toString) inputType
-                    ]
+            default "interpolation" mode inputType
 
         Consistency mode inputType ->
-            absolute [ basePath, "consistency" ] <|
-                List.filterMap identity
-                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
-                    , Maybe.map (string "input" << InputType.toString) inputType
-                    ]
+            default "consistency" mode inputType
+
+        Bundles mode inputType ->
+            default "bundles" mode inputType
 
         NotFound url ->
             Url.toString url
@@ -115,6 +116,9 @@ getParams route =
             ( inputType, mode )
 
         Consistency mode inputType ->
+            ( inputType, mode )
+
+        Bundles mode inputType ->
             ( inputType, mode )
 
         NotFound _ ->
@@ -133,6 +137,9 @@ setInputType inputType route =
         Consistency mode _ ->
             Consistency mode (Just inputType)
 
+        Bundles mode _ ->
+            Bundles mode (Just inputType)
+
         NotFound _ ->
             route
 
@@ -148,6 +155,9 @@ setGeneratorMode mode route =
 
         Consistency _ inputType ->
             Consistency (Just mode) inputType
+
+        Bundles _ inputType ->
+            Bundles (Just mode) inputType
 
         NotFound _ ->
             route

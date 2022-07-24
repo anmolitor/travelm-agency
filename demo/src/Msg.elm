@@ -24,5 +24,7 @@ type Msg
     | ChangeGeneratorMode Ports.GeneratorMode
     | ChangeActiveInputFile String
     | ChangeActiveOutputFile String
+    | AddFile InputFile
+    | EditFileName String InputFile
       -- Browser-related
     | Resize Int Int

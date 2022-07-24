@@ -13,6 +13,7 @@ import Model exposing (Model)
 import Msg exposing (Msg(..))
 import Pages.Bundles
 import Pages.Consistency
+import Pages.Html
 import Pages.Interpolation
 import Pages.Intro
 import Ports
@@ -97,6 +98,9 @@ initPage model =
 
         Routes.Bundles _ _ ->
             Pages.Bundles.init model
+
+        Routes.Html _ _ ->
+            Pages.Html.init model
 
         Routes.NotFound _ ->
             ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
@@ -325,6 +329,9 @@ viewHeadline model =
         Routes.Bundles _ _ ->
             Translations.bundlesHeadline model.i18n
 
+        Routes.Html _ _ ->
+            Translations.htmlHeadline model.i18n
+
         Routes.NotFound _ ->
             ""
 
@@ -343,6 +350,9 @@ viewExplanation model =
 
         Routes.Bundles _ _ ->
             Pages.Bundles.viewExplanation model
+
+        Routes.Html _ _ ->
+            Pages.Html.viewExplanation model
 
         Routes.NotFound _ ->
             []

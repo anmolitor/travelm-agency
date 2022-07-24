@@ -13,12 +13,13 @@ type Route
     | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Html (Maybe Ports.GeneratorMode) (Maybe InputType)
     | NotFound Url.Url
 
 
 order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
 order =
-    [ Intro, Interpolation, Consistency, Bundles ]
+    [ Intro, Interpolation, Consistency, Bundles, Html ]
 
 
 next : Route -> Maybe Route
@@ -71,6 +72,7 @@ parser =
         , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
         , map Consistency (s "consistency" <?> modeParser <?> inputParser)
         , map Bundles (s "bundles" <?> modeParser <?> inputParser)
+        , map Html (s "html" <?> modeParser <?> inputParser)
         ]
 
 
@@ -102,6 +104,9 @@ toUrl basePath route =
         Bundles mode inputType ->
             default "bundles" mode inputType
 
+        Html mode inputType ->
+            default "html" mode inputType
+
         NotFound url ->
             Url.toString url
 
@@ -119,6 +124,9 @@ getParams route =
             ( inputType, mode )
 
         Bundles mode inputType ->
+            ( inputType, mode )
+
+        Html mode inputType ->
             ( inputType, mode )
 
         NotFound _ ->
@@ -140,6 +148,9 @@ setInputType inputType route =
         Bundles mode _ ->
             Bundles mode (Just inputType)
 
+        Html mode _ ->
+            Html mode (Just inputType)
+
         NotFound _ ->
             route
 
@@ -158,6 +169,9 @@ setGeneratorMode mode route =
 
         Bundles _ inputType ->
             Bundles (Just mode) inputType
+
+        Html _ inputType ->
+            Html (Just mode) inputType
 
         NotFound _ ->
             route

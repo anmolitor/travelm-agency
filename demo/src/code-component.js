@@ -43,6 +43,10 @@ function setCursorPosition(parent, range, stat) {
   return range;
 }
 
+function escapeHtml(str) {
+  return str.replace(/</g, "&lt").replace(/>/g, "&gt");
+}
+
 export class CodeComponent extends HTMLElement {
   codeEl;
   restore;
@@ -124,7 +128,7 @@ export class CodeComponent extends HTMLElement {
 
   setCode(code) {
     if (this.codeEl) {
-      this.codeEl.innerHTML = code;
+      this.codeEl.innerHTML = escapeHtml(code);
     }
   }
 

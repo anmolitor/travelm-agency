@@ -4,18 +4,20 @@ import Browser
 import Browser.Events
 import Browser.Navigation
 import Dict exposing (Dict)
-import File exposing (InputFile, OutputFile)
+import File exposing (OutputFile)
 import Html exposing (Html)
-import Http
 import InputType exposing (InputType)
 import Intl exposing (Intl)
 import Main
+import Model exposing (Model)
+import Msg exposing (Msg(..))
+import Pages.Consistency
 import Pages.Interpolation
 import Pages.Intro
 import Ports
 import Routes exposing (Route)
 import State exposing (OptimizedJson)
-import Translations exposing (I18n, Language)
+import Translations
 import TutorialView
 import Types.Error exposing (Failable)
 import Url
@@ -23,57 +25,6 @@ import Url
 
 type alias Flags =
     { language : String, version : String, intl : Intl, height : Int, width : Int, basePath : String }
-
-
-type alias Model =
-    { -- static data
-      key : Browser.Navigation.Key
-    , basePath : String
-    , version : String
-
-    -- internationization
-    , i18n : I18n
-    , intl : Intl
-    , language : Language
-
-    -- routing
-    , route : Route
-    , generatorMode : Ports.GeneratorMode
-    , inputType : InputType
-
-    -- viewport
-    , height : Int
-    , width : Int
-
-    -- explanation text
-    , openAccordionElements : Dict String Int
-
-    -- code editor
-    , caretPosition : Int
-    , inputFiles : Dict String InputFile
-    , activeInputFilePath : String
-    , outputFiles : Dict String OutputFile
-    , activeOutputFilePath : String
-    }
-
-
-type Msg
-    = -- Navigation
-      UrlChanged Url.Url
-    | UrlRequested Browser.UrlRequest
-      -- Get static resource files
-    | LoadedTranslations (Result Http.Error (I18n -> I18n))
-    | LoadedInputFile (Result Http.Error InputFile)
-      -- Explanation text
-    | ToggleAccordionElement String Int
-      -- Code editor
-    | EditedInput { filePath : String, newContent : String, caretPosition : Int }
-    | ChangeInputType InputType
-    | ChangeGeneratorMode Ports.GeneratorMode
-    | ChangeActiveInputFile String
-    | ChangeActiveOutputFile String
-      -- Browser-related
-    | Resize Int Int
 
 
 init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
@@ -117,20 +68,30 @@ init flags url key =
             }
     in
     initPage model
+        |> Tuple.mapSecond
+            (\cmds ->
+                Cmd.batch
+                    [ Translations.loadShared
+                        { language = model.language
+                        , path = model.basePath ++ "/i18n"
+                        , onLoad = LoadedTranslations
+                        }
+                    , cmds
+                    ]
+            )
 
 
 initPage : Model -> ( Model, Cmd Msg )
 initPage model =
-    let
-        events =
-            { onInputLoad = LoadedInputFile, onTranslationLoad = LoadedTranslations }
-    in
     case model.route of
-        Routes.Intro mayMode mayInputType ->
-            Pages.Intro.init events model mayMode mayInputType
+        Routes.Intro _ _ ->
+            Pages.Intro.init model
 
-        Routes.Interpolation mayMode mayInputType ->
-            Pages.Interpolation.init events model mayMode mayInputType
+        Routes.Interpolation _ _ ->
+            Pages.Interpolation.init model
+
+        Routes.Consistency _ _ ->
+            Pages.Consistency.init model
 
         Routes.NotFound _ ->
             ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
@@ -304,6 +265,7 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
         TutorialView.view
             { headline = viewHeadline model
             , activeInputType = inputType
+            , generatorMode = model.generatorMode
             , inputTypes = inputTypesForRoute route
             , route = route
             , inputFiles = inputFiles
@@ -312,11 +274,6 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
             , activeOutputFilePath = activeOutputFilePath
             , caretPosition = caretPosition
             , basePath = basePath
-            }
-            { onEditInput = EditedInput
-            , onSwitchInput = ChangeActiveInputFile
-            , onSwitchOutput = ChangeActiveOutputFile
-            , onSwitchInputType = ChangeInputType
             }
         <|
             viewExplanation model
@@ -337,7 +294,10 @@ viewHeadline model =
         Routes.Interpolation _ _ ->
             Translations.interpolationHeadline model.i18n
 
-        _ ->
+        Routes.Consistency _ _ ->
+            Translations.consistencyHeadline model.i18n
+
+        Routes.NotFound _ ->
             ""
 
 
@@ -345,12 +305,15 @@ viewExplanation : Model -> List (Html Msg)
 viewExplanation model =
     case model.route of
         Routes.Intro _ _ ->
-            Pages.Intro.viewExplanation model { onToggleAccordionEl = ToggleAccordionElement }
+            Pages.Intro.viewExplanation model
 
         Routes.Interpolation _ _ ->
-            Pages.Interpolation.viewExplanation model { onToggleAccordionEl = ToggleAccordionElement }
+            Pages.Interpolation.viewExplanation model
 
-        _ ->
+        Routes.Consistency _ _ ->
+            Pages.Consistency.viewExplanation model
+
+        Routes.NotFound _ ->
             []
 
 

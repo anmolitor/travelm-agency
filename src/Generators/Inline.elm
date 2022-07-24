@@ -5,7 +5,6 @@ import CodeGen.Utils
 import Dict
 import Dict.NonEmpty
 import Elm.CodeGen as CG
-import Elm.Syntax.Expression
 import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import List.Extra
@@ -570,13 +569,13 @@ addI18nInstances =
                                 _ ->
                                     CG.lambda <|
                                         addIntlIfNeeded <|
-                                            [ if Dict.isEmpty specificPlaceholdersForThisLanguage then
+                                            (if Dict.isEmpty specificPlaceholdersForThisLanguage then
                                                 CG.allPattern
 
                                               else
                                                 CG.varPattern dataName
-                                            ]
-                                                ++ addHtmlAttrsIfNeeded []
+                                            )
+                                                :: addHtmlAttrsIfNeeded []
                            )
 
                 i18nDecls : List CG.Declaration

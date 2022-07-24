@@ -11,22 +11,20 @@ import Url.Parser.Query as Query
 type Route
     = Intro (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
     | NotFound Url.Url
 
 
 order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
 order =
-    [ Intro, Interpolation ]
+    [ Intro, Interpolation, Consistency ]
 
 
 next : Route -> Maybe Route
 next route =
     let
-        inputType =
-            getInputType route
-
-        generatorMode =
-            getGeneratorMode route
+        ( inputType, generatorMode ) =
+            getParams route
 
         appliedOrder =
             List.map (\r -> r generatorMode inputType) order
@@ -41,11 +39,8 @@ next route =
 previous : Route -> Maybe Route
 previous route =
     let
-        inputType =
-            getInputType route
-
-        generatorMode =
-            getGeneratorMode route
+        ( inputType, generatorMode ) =
+            getParams route
 
         appliedOrder =
             List.map (\r -> r generatorMode inputType) order
@@ -73,6 +68,7 @@ parser =
     oneOf
         [ map Intro (s "intro" <?> modeParser <?> inputParser)
         , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
+        , map Consistency (s "consistency" <?> modeParser <?> inputParser)
         ]
 
 
@@ -98,34 +94,31 @@ toUrl basePath route =
                     , Maybe.map (string "input" << InputType.toString) inputType
                     ]
 
+        Consistency mode inputType ->
+            absolute [ basePath, "consistency" ] <|
+                List.filterMap identity
+                    [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
+                    , Maybe.map (string "input" << InputType.toString) inputType
+                    ]
+
         NotFound url ->
             Url.toString url
 
 
-getInputType : Route -> Maybe InputType
-getInputType route =
+getParams : Route -> ( Maybe InputType, Maybe Ports.GeneratorMode )
+getParams route =
     case route of
-        Intro _ inputType ->
-            inputType
+        Intro mode inputType ->
+            ( inputType, mode )
 
-        Interpolation _ inputType ->
-            inputType
+        Interpolation mode inputType ->
+            ( inputType, mode )
+
+        Consistency mode inputType ->
+            ( inputType, mode )
 
         NotFound _ ->
-            Nothing
-
-
-getGeneratorMode : Route -> Maybe Ports.GeneratorMode
-getGeneratorMode route =
-    case route of
-        Intro mode _ ->
-            mode
-
-        Interpolation mode _ ->
-            mode
-
-        NotFound _ ->
-            Nothing
+            ( Nothing, Nothing )
 
 
 setInputType : InputType -> Route -> Route
@@ -136,6 +129,9 @@ setInputType inputType route =
 
         Interpolation mode _ ->
             Interpolation mode (Just inputType)
+
+        Consistency mode _ ->
+            Consistency mode (Just inputType)
 
         NotFound _ ->
             route
@@ -149,6 +145,9 @@ setGeneratorMode mode route =
 
         Interpolation _ inputType ->
             Interpolation (Just mode) inputType
+
+        Consistency _ inputType ->
+            Consistency (Just mode) inputType
 
         NotFound _ ->
             route

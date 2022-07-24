@@ -26,7 +26,11 @@ h3 {
 }
 
 h2 {
-  margin-top: 10px;
+  margin-top: 1rem;
+}
+
+select {
+  padding: 0.5rem;
 }
 
 .content {
@@ -72,13 +76,27 @@ h2 {
 }
 
 .file-header-container {
+  align-items: flex-end;
   display: flex;
   height: var(--nav-height);
 }
 
+.file-header-container > select {
+  margin-left: auto;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.flex {
+  display: flex;
+}
+
 .file-header {
   background-color: lightgray;
-  border: 1px solid black;
+  border-top: 2px solid rgb(180, 180, 180);
+  border-right: 2px solid rgb(180, 180, 180);
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
   padding: 10px 20px;
 }
 
@@ -103,6 +121,7 @@ highlighted-code > pre[class*="language-"] {
   padding: 2px 6px;
   margin: 0px 4px;
   border-radius: 10px;
+  white-space: nowrap;
 }
 
 .accordion-headline {

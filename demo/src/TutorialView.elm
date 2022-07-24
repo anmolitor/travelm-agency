@@ -1,4 +1,4 @@
-module TutorialView exposing (Events, Model, view)
+module TutorialView exposing (TutorialModel, view)
 
 import Dict exposing (Dict)
 import File exposing (InputFile, OutputFile)
@@ -10,14 +10,17 @@ import Json.Decode
 import Material.Icons
 import Material.Icons.Types exposing (Coloring(..))
 import Maybe.Extra
+import Msg exposing (Msg(..))
+import Ports exposing (GeneratorMode)
 import Routes
 
 
-type alias Model =
+type alias TutorialModel =
     { headline : String
     , route : Routes.Route
     , inputTypes : List InputType
     , activeInputType : InputType
+    , generatorMode : GeneratorMode
     , inputFiles : Dict String InputFile
     , activeInputFilePath : String
     , caretPosition : Int
@@ -27,16 +30,8 @@ type alias Model =
     }
 
 
-type alias Events msg =
-    { onEditInput : { filePath : String, newContent : String, caretPosition : Int } -> msg
-    , onSwitchInput : String -> msg
-    , onSwitchOutput : String -> msg
-    , onSwitchInputType : InputType -> msg
-    }
-
-
-view : Model -> Events msg -> List (Html msg) -> List (Html msg)
-view model events explanationText =
+view : TutorialModel -> List (Html Msg) -> List (Html Msg)
+view model explanationText =
     let
         activeInputFile =
             Dict.get model.activeInputFilePath model.inputFiles
@@ -66,7 +61,7 @@ view model events explanationText =
                 [ Html.Events.onInput
                     (InputType.fromString
                         >> Maybe.withDefault model.activeInputType
-                        >> events.onSwitchInputType
+                        >> ChangeInputType
                     )
                 ]
             <|
@@ -78,33 +73,56 @@ view model events explanationText =
                     )
                     model.inputTypes
 
-        inputHeader =
-            Html.div [ class "file-header-container" ] <|
-                List.map
-                    (\( path, file ) ->
-                        viewFileHeader
-                            { fileName = File.inputFileToPath file
-                            , isActive = path == model.activeInputFilePath
-                            , onClick = events.onSwitchInput <| File.inputFileToPath file
-                            }
+        outputModeSelect =
+            Html.select
+                [ Html.Events.onInput
+                    (Ports.generatorModeFromString
+                        >> Maybe.withDefault model.generatorMode
+                        >> ChangeGeneratorMode
                     )
-                <|
-                    Dict.toList
-                        model.inputFiles
+                ]
+            <|
+                List.map
+                    (\mode ->
+                        Html.option
+                            [ Html.Attributes.selected <| mode == model.generatorMode ]
+                            [ Html.text <| Ports.generatorModeToString mode ]
+                    )
+                    [ Ports.Inline, Ports.Dynamic ]
+
+        inputHeader =
+            Html.div [ class "file-header-container" ]
+                [ Html.div [ class "flex" ] <|
+                    List.map
+                        (\( path, file ) ->
+                            viewFileHeader
+                                { fileName = File.inputFileToPath file
+                                , isActive = path == model.activeInputFilePath
+                                , onClick = ChangeActiveInputFile <| File.inputFileToPath file
+                                }
+                        )
+                    <|
+                        Dict.toList
+                            model.inputFiles
+                , inputTypeSelect
+                ]
 
         outputHeader =
-            Html.div [ class "file-header-container" ] <|
-                List.map
-                    (\( path, file ) ->
-                        viewFileHeader
-                            { fileName = File.outputFileToPath file
-                            , isActive = path == model.activeOutputFilePath
-                            , onClick = events.onSwitchOutput <| File.outputFileToPath file
-                            }
-                    )
-                <|
-                    Dict.toList
-                        model.outputFiles
+            Html.div [ class "file-header-container" ]
+                [ Html.div [ class "flex" ] <|
+                    List.map
+                        (\( path, file ) ->
+                            viewFileHeader
+                                { fileName = File.outputFileToPath file
+                                , isActive = path == model.activeOutputFilePath
+                                , onClick = ChangeActiveOutputFile <| File.outputFileToPath file
+                                }
+                        )
+                    <|
+                        Dict.toList
+                            model.outputFiles
+                , outputModeSelect
+                ]
 
         inputCode =
             case activeInputFile of
@@ -116,7 +134,7 @@ view model events explanationText =
                         , onEdit =
                             Just <|
                                 \newContent caretPosition ->
-                                    events.onEditInput
+                                    EditedInput
                                         { filePath = File.inputFileToPath file
                                         , newContent = newContent
                                         , caretPosition = caretPosition

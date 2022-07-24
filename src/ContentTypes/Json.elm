@@ -165,7 +165,7 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                                 P.Loop { state | htmlTagParsingState = CollectingAttrs htmlTag [] }
                             )
                             |. P.token "<"
-                            |= (P.chompWhile Char.isAlpha |> P.getChompedString)
+                            |= (P.chompWhile (\c -> c /= ' ' && c /= '>') |> P.getChompedString)
                        , P.andThen
                             (\text ->
                                 if String.isEmpty text then

@@ -73,11 +73,10 @@ prop=A \\
             \_ ->
                 "a = <span _id=\"testId\">Test</span>"
                     |> expectParseTo [ ( "a", ( Html { tag = "span", id = "testId", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
-        , test "html without _id attribute fails to parse" <|
+        , test "html without _id attribute defaults to tag as id" <|
             \_ ->
                 "a = <span>Test</span>"
-                    |> Properties.parse
-                    |> Expect.err
+                    |> expectParseTo [ ( "a", ( Html { tag = "span", id = "span", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
         , test "html with attributes" <|
             \_ ->
                 "a = <span id=\"an id\" _id=\"spanId\">Test</span>"

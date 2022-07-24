@@ -168,7 +168,7 @@ blank lines"""
                         )
         , test "nested html message" <|
             \_ ->
-                Parser.run F.message """msg = some <b _id="bold">important</b> paragraph: <p _id="p"><img _id="image" src="{ $imgSrc }"></img></p>"""
+                Parser.run F.message """msg = some <b _id="bold">important</b> paragraph: <p><img _id="image" src="{ $imgSrc }"></img></p>"""
                     |> Expect.equal
                         (Ok
                             { identifier = F.MessageIdentifier "msg"

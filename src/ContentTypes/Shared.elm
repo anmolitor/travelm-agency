@@ -75,10 +75,25 @@ applyStepInnermost step state =
                                                         :: state.revSegments
                                             }
 
+                                Nothing ->
+                                    P.succeed <|
+                                        P.Loop
+                                            { state
+                                                | htmlTagParsingState = NoHtml
+                                                , revSegments =
+                                                    Segment.Html
+                                                        { tag = tag
+                                                        , id = tag
+                                                        , attrs = List.filter (not << isSpecialAttribute << Tuple.first) finalizedAttrs
+                                                        , content = content
+                                                        }
+                                                        :: state.revSegments
+                                            }
+
                                 _ ->
                                     P.problem <|
-                                        """Please define an '_id' attribute on your html elements.
-This makes it easy for you later when you want to style specific parts of your generated html.
+                                        """I found an '_id' attribute on an html element containing features other than plain text.
+Since the _id attribute is resolved at compile time, this is not allowed.
 
 Here is the html tag that misses the _id attribute: """
                                             ++ tag

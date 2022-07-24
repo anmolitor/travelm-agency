@@ -547,7 +547,7 @@ content ctx =
         [ succeed PlaceableContent |. token "{" |= placeable
         , (succeed Tuple.pair
             |. token "<"
-            |= (Parser.chompWhile (\c -> c /= ' ') |> Parser.getChompedString)
+            |= (Parser.chompWhile (\c -> c /= ' ' && c /= '>') |> Parser.getChompedString)
             |= loop [] attributeParser
           )
             |> Parser.andThen
@@ -560,12 +560,19 @@ content ctx =
                                         HtmlContent { tag = tag, id = id, attrs = otherAttrs, content = innerCnt }
                                     )
 
+                        ( Nothing, otherAttrs ) ->
+                            htmlContent tag
+                                |> Parser.map
+                                    (\innerCnt ->
+                                        HtmlContent { tag = tag, id = tag, attrs = otherAttrs, content = innerCnt }
+                                    )
+
                         _ ->
                             Parser.problem <|
-                                """Please define an '_id' attribute on your html elements.
-This makes it easy for you later when you want to style specific parts of your generated html.
+                                """I found an '_id' attribute on an html element containing features other than plain text.
+Since the _id attribute is resolved at compile time, this is not allowed.
 
-Here is the html tag that misses the _id attribute: """
+Here is the html tag that uses a wrong _id attribute: """
                                     ++ tag
                 )
         , normalText

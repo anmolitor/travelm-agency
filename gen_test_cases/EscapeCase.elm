@@ -26,7 +26,19 @@ state =
                                 { tag = "b"
                                 , id = "bold"
                                 , attrs = []
-                                , content = (Interpolation "interpolation", [])
+                                , content = ( Interpolation "interpolation", [] )
+                                }
+                          ]
+                        )
+                      )
+                    , ( "quotationMarkAndBackslash", ( Text "just a \\ and \"quotation mark\"", [ Interpolation "a" ] ) )
+                    , ( "quotationMarkAndBackslashHtml"
+                      , ( Text "just a \\ and \"quotation mark\""
+                        , [ Html
+                                { tag = "b"
+                                , id = "bold"
+                                , attrs = []
+                                , content = ( Interpolation "interpolation", [] )
                                 }
                           ]
                         )

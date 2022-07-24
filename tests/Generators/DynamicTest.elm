@@ -538,6 +538,34 @@ escapedCurlyBrackets =
         ]
 
 
+escapedQuotationMarks : Test
+escapedQuotationMarks =
+    describe "escaped quotation marks"
+        [ test "works without parsing problems for text" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.quotationMarkAndBackslash i18n "abc")
+                    |> Expect.equal (Ok "just a \\ and \"quotation mark\"abc")
+        , test "works without parsing problems for html" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.EscapeTranslations.quotationMarkAndBackslashHtml i18n "abc" []
+                                |> Html.div []
+                                |> Query.fromHtml
+                                |> Query.has
+                                    [ Selector.text "just a "
+                                    , Selector.text "\\"
+                                    , Selector.text " and \"quotation mark\""
+                                    , Selector.containing [ Selector.tag "b", Selector.text "abc" ]
+                                    ]
+                        )
+        ]
+
+
 expectOkWith : (a -> Expect.Expectation) -> Result x a -> Expect.Expectation
 expectOkWith expect result =
     case result of

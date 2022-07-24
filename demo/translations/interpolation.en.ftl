@@ -10,7 +10,7 @@ fluentHeadline = .ftl
 
 jsonSyntaxBody = JSON does not specify a placeholder syntax. We chose the familiar curly bracket syntax:
   If you want to insert a runtime value in <code _id="code">"Hello, !"</code> for the person you want to greet, you could write 
-  <code _id="code">"Hello, { "{person}!" }\"</code> for example. If you want an actual opening curly bracket, use backslash to escape it.
+  <code _id="code">"Hello, { "{person}!" }"</code> for example. If you want an actual opening curly bracket, use backslash to escape it.
 
 propertiesSyntaxBody = Properties does not specify a placeholder syntax either. Just like with JSON, we chose curly bracket syntax:
   If you want to insert a runtime value in <code _id="code">"Hello, !"</code> for the person you want to greet, you could write 

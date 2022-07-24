@@ -749,7 +749,10 @@ escapeCurlyBrackets =
                 ( True, result ++ "\\{" )
 
             else if char == '}' && needsEscape then
-                ( False, result ++ "\\}" )
+                ( True, result ++ "\\}" )
+
+            else if char == '\\' && needsEscape then
+                ( True, result ++ "\\\\" )
 
             else if char == '\\' && not needsEscape then
                 ( False, result )

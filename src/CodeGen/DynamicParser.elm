@@ -209,6 +209,38 @@ addReplacePlaceholderDeclaration =
                                                     , CG.parens <| CG.applyBinOp (CG.char '}') CG.cons (CG.val <| lookup "endSymbols")
                                                     ]
                                                 )
+                                    , Just <|
+                                        CG.letFunction
+                                            (lookup "escapeParsers")
+                                            [ CG.varPattern <| lookup "state" ]
+                                        <|
+                                            CG.apply
+                                                [ CG.fqFun [ "List" ] "map"
+                                                , CG.lambda [ CG.varPattern <| lookup "symbol" ]
+                                                    (p_succeed
+                                                        (CG.parens <|
+                                                            CG.apply
+                                                                [ p_Loop
+                                                                , CG.parens <|
+                                                                    CG.applyBinOp
+                                                                        (CG.val <| lookup "state")
+                                                                        CG.append
+                                                                        (CG.val <| lookup "symbol")
+                                                                ]
+                                                        )
+                                                        |> p_drop_infix
+                                                            (CG.apply
+                                                                [ CG.fqFun [ "Parser" ] "token"
+                                                                , CG.parens <|
+                                                                    CG.applyBinOp
+                                                                        (CG.string "\\")
+                                                                        CG.append
+                                                                        (CG.val <| lookup "symbol")
+                                                                ]
+                                                            )
+                                                    )
+                                                , CG.list <| List.map CG.string [ "{", "}", "\\" ]
+                                                ]
                                     , filterIntl <|
                                         CG.letFunction (lookup "numberFormatUnsafe")
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
@@ -287,86 +319,89 @@ addReplacePlaceholderDeclaration =
                                                 CG.applyBinOp (CG.apply [ CG.val <| lookup "endParsers", CG.val <| lookup "state" ])
                                                     CG.append
                                                 <|
-                                                    CG.list
-                                                        [ p_succeed
-                                                            (CG.parens <|
-                                                                CG.applyBinOp p_Loop CG.pipel <|
-                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.string "{")
-                                                            )
-                                                            |> p_drop_infix (p_token "\\{")
-                                                        , p_succeed
-                                                            (CG.parens <|
-                                                                CG.applyBinOp p_Loop CG.pipel <|
-                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.string "}")
-                                                            )
-                                                            |> p_drop_infix (p_token "\\}")
-                                                        , p_succeed
-                                                            (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ]) CG.composer p_Loop)
-                                                            |> p_drop_infix
-                                                                (p_token "{"
-                                                                    |> p_keep_infix
-                                                                        (p_oneOf <|
-                                                                            List.filterMap identity
-                                                                                [ Just (p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}")))
-                                                                                , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "numberFormatUnsafe")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "N"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
-                                                                                            )
-                                                                                    )
-                                                                                , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "dateFormatUnsafe")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "D"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
-                                                                                            )
-                                                                                    )
-                                                                                , filterByFeature Features.CaseInterpolation
-                                                                                    (p_succeed (CG.val <| lookup "matchStrings")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "S"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
-                                                                                                |> p_drop_infix (p_token "|")
-                                                                                                |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| CG.parens <| recursiveParserCall [ '|' ])
-                                                                                                |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
-                                                                                            )
-                                                                                    )
-                                                                                , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "matchNumbers")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "P"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
-                                                                                                |> p_drop_infix (p_token "|")
-                                                                                                |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveParserCall [ '|' ])
-                                                                                                |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
-                                                                                            )
-                                                                                    )
-                                                                                ]
-                                                                        )
+                                                    CG.applyBinOp (CG.apply [ CG.val <| lookup "escapeParsers", CG.val <| lookup "state" ])
+                                                        CG.append
+                                                    <|
+                                                        CG.list
+                                                            [ p_succeed
+                                                                (CG.parens <|
+                                                                    CG.applyBinOp p_Loop CG.pipel <|
+                                                                        CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.string "{")
                                                                 )
-                                                        , CG.pipe
-                                                            (CG.apply
-                                                                [ CG.fqFun [ "Parser" ] "chompWhile"
-                                                                , CG.parens <|
-                                                                    CG.lambda [ CG.varPattern <| lookup "c" ] <|
-                                                                        CG.pipe
-                                                                            (CG.binOpChain (CG.char '{')
-                                                                                CG.cons
-                                                                                [ CG.char '}', CG.char '\\', CG.val <| lookup "endSymbols" ]
+                                                                |> p_drop_infix (p_token "\\{")
+                                                            , p_succeed
+                                                                (CG.parens <|
+                                                                    CG.applyBinOp p_Loop CG.pipel <|
+                                                                        CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.string "}")
+                                                                )
+                                                                |> p_drop_infix (p_token "\\}")
+                                                            , p_succeed
+                                                                (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ]) CG.composer p_Loop)
+                                                                |> p_drop_infix
+                                                                    (p_token "{"
+                                                                        |> p_keep_infix
+                                                                            (p_oneOf <|
+                                                                                List.filterMap identity
+                                                                                    [ Just (p_succeed (CG.val <| lookup "getArg") |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}")))
+                                                                                    , filterIntl
+                                                                                        (p_succeed (CG.val <| lookup "numberFormatUnsafe")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "N"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                )
+                                                                                        )
+                                                                                    , filterIntl
+                                                                                        (p_succeed (CG.val <| lookup "dateFormatUnsafe")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "D"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                )
+                                                                                        )
+                                                                                    , filterByFeature Features.CaseInterpolation
+                                                                                        (p_succeed (CG.val <| lookup "matchStrings")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "S"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName)
+                                                                                                    |> p_drop_infix (p_token "|")
+                                                                                                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| CG.parens <| recursiveParserCall [ '|' ])
+                                                                                                    |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
+                                                                                                )
+                                                                                        )
+                                                                                    , filterIntl
+                                                                                        (p_succeed (CG.val <| lookup "matchNumbers")
+                                                                                            |> p_drop_infix
+                                                                                                (p_token "P"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName)
+                                                                                                    |> p_drop_infix (p_token "|")
+                                                                                                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveParserCall [ '|' ])
+                                                                                                    |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
+                                                                                                )
+                                                                                        )
+                                                                                    ]
                                                                             )
-                                                                            [ CG.apply [ CG.fqFun [ "List" ] "member", CG.val <| lookup "c" ]
-                                                                            , CG.fun "not"
-                                                                            ]
+                                                                    )
+                                                            , CG.pipe
+                                                                (CG.apply
+                                                                    [ CG.fqFun [ "Parser" ] "chompWhile"
+                                                                    , CG.parens <|
+                                                                        CG.lambda [ CG.varPattern <| lookup "c" ] <|
+                                                                            CG.pipe
+                                                                                (CG.binOpChain (CG.char '{')
+                                                                                    CG.cons
+                                                                                    [ CG.char '}', CG.char '\\', CG.val <| lookup "endSymbols" ]
+                                                                                )
+                                                                                [ CG.apply [ CG.fqFun [ "List" ] "member", CG.val <| lookup "c" ]
+                                                                                , CG.fun "not"
+                                                                                ]
+                                                                    ]
+                                                                )
+                                                                [ p_getChompedString
+                                                                , p_map <|
+                                                                    CG.parens <|
+                                                                        CG.chain (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ])
+                                                                            [ p_Loop ]
                                                                 ]
-                                                            )
-                                                            [ p_getChompedString
-                                                            , p_map <|
-                                                                CG.parens <|
-                                                                    CG.chain (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ])
-                                                                        [ p_Loop ]
                                                             ]
-                                                        ]
                                             ]
                             )
 
@@ -455,6 +490,38 @@ addReplacePlaceholderDeclaration =
                                                     , CG.parens <| CG.applyBinOp (CG.char '}') CG.cons (CG.val <| lookup "endSymbols")
                                                     ]
                                                 )
+                                    , Just <|
+                                        CG.letFunction
+                                            (lookup "escapeParsers")
+                                            [ CG.varPattern <| lookup "state" ]
+                                        <|
+                                            CG.apply
+                                                [ CG.fqFun [ "List" ] "map"
+                                                , CG.lambda [ CG.varPattern <| lookup "symbol" ]
+                                                    (p_succeed
+                                                        (CG.parens <|
+                                                            CG.apply
+                                                                [ p_Loop
+                                                                , CG.parens <|
+                                                                    CG.applyBinOp
+                                                                        (CG.val <| lookup "state")
+                                                                        CG.append
+                                                                        (CG.apply [ CG.fun <| lookup "stringToHtml", CG.val <| lookup "symbol" ])
+                                                                ]
+                                                        )
+                                                        |> p_drop_infix
+                                                            (CG.apply
+                                                                [ CG.fqFun [ "Parser" ] "token"
+                                                                , CG.parens <|
+                                                                    CG.applyBinOp
+                                                                        (CG.string "\\")
+                                                                        CG.append
+                                                                        (CG.val <| lookup "symbol")
+                                                                ]
+                                                            )
+                                                    )
+                                                , CG.list <| List.map CG.string [ "{", "}", "\\" ]
+                                                ]
                                     , filterIntl <|
                                         CG.letFunction (lookup "numberFormatUnsafe")
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
@@ -533,134 +600,123 @@ addReplacePlaceholderDeclaration =
                                                 CG.applyBinOp (CG.apply [ CG.val <| lookup "endParsers", CG.val <| lookup "state" ])
                                                     CG.append
                                                 <|
-                                                    CG.list
-                                                        [ p_succeed
-                                                            (CG.parens <|
-                                                                CG.applyBinOp p_Loop CG.pipel <|
-                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.apply [CG.fun <| lookup "stringToHtml", CG.string "{"])
-                                                            )
-                                                            |> p_drop_infix (p_token "\\{")
-                                                        , p_succeed
-                                                            (CG.parens <|
-                                                                CG.applyBinOp p_Loop CG.pipel <|
-                                                                    CG.applyBinOp (CG.val <| lookup "state") CG.append (CG.apply [CG.fun <| lookup "stringToHtml", CG.string "}"])
-                                                            )
-                                                            |> p_drop_infix (p_token "\\}")
-                                                        , p_succeed
-                                                            (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ]) CG.composer p_Loop)
-                                                            |> p_drop_infix
-                                                                (p_token "{"
-                                                                    |> p_keep_infix
-                                                                        (p_oneOf <|
-                                                                            List.filterMap identity
-                                                                                [ Just
-                                                                                    (p_succeed
-                                                                                        (CG.parens <| CG.chain (CG.val <| lookup "getArg") [ CG.fun <| lookup "stringToHtml" ])
-                                                                                        |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}"))
-                                                                                    )
-                                                                                , Just
-                                                                                    (p_succeed
-                                                                                        (CG.lambda
-                                                                                            [ CG.varPattern <| lookup "i"
-                                                                                            , CG.varPattern <| lookup "tag"
-                                                                                            , CG.varPattern <| lookup "content"
-                                                                                            , CG.varPattern <| lookup "attrs"
-                                                                                            ]
-                                                                                            (CG.list
-                                                                                                [ CG.apply
-                                                                                                    [ CG.fqFun [ "Html" ] "node"
-                                                                                                    , CG.val <| lookup "tag"
-                                                                                                    , CG.parens <|
-                                                                                                        CG.applyBinOp
-                                                                                                            (CG.parens <|
-                                                                                                                CG.pipe
-                                                                                                                    (CG.apply
-                                                                                                                        [ CG.fqFun [ "Dict" ] "map"
-                                                                                                                        , CG.fqFun [ "Html", "Attributes" ] "attribute"
-                                                                                                                        , CG.val <| lookup "attrs"
-                                                                                                                        ]
-                                                                                                                    )
-                                                                                                                    [ CG.fqFun [ "Dict" ] "values" ]
-                                                                                                            )
-                                                                                                            CG.append
-                                                                                                            (CG.apply [ CG.val <| lookup "getHtmlAttrs", CG.val <| lookup "i" ])
-                                                                                                    , CG.val <| lookup "content"
-                                                                                                    ]
+                                                    CG.applyBinOp (CG.apply [ CG.val <| lookup "escapeParsers", CG.val <| lookup "state" ]) CG.append <|
+                                                        CG.list
+                                                            [ p_succeed
+                                                                (CG.parens <| CG.applyBinOp (CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ]) CG.composer p_Loop)
+                                                                |> p_drop_infix
+                                                                    (p_token "{"
+                                                                        |> p_keep_infix
+                                                                            (p_oneOf <|
+                                                                                List.filterMap identity
+                                                                                    [ Just
+                                                                                        (p_succeed
+                                                                                            (CG.parens <| CG.chain (CG.val <| lookup "getArg") [ CG.fun <| lookup "stringToHtml" ])
+                                                                                            |> p_keep_infix (CG.val ctx.intParserName |> p_drop_infix (p_token "}"))
+                                                                                        )
+                                                                                    , Just
+                                                                                        (p_succeed
+                                                                                            (CG.lambda
+                                                                                                [ CG.varPattern <| lookup "i"
+                                                                                                , CG.varPattern <| lookup "tag"
+                                                                                                , CG.varPattern <| lookup "content"
+                                                                                                , CG.varPattern <| lookup "attrs"
                                                                                                 ]
+                                                                                                (CG.list
+                                                                                                    [ CG.apply
+                                                                                                        [ CG.fqFun [ "Html" ] "node"
+                                                                                                        , CG.val <| lookup "tag"
+                                                                                                        , CG.parens <|
+                                                                                                            CG.applyBinOp
+                                                                                                                (CG.parens <|
+                                                                                                                    CG.pipe
+                                                                                                                        (CG.apply
+                                                                                                                            [ CG.fqFun [ "Dict" ] "map"
+                                                                                                                            , CG.fqFun [ "Html", "Attributes" ] "attribute"
+                                                                                                                            , CG.val <| lookup "attrs"
+                                                                                                                            ]
+                                                                                                                        )
+                                                                                                                        [ CG.fqFun [ "Dict" ] "values" ]
+                                                                                                                )
+                                                                                                                CG.append
+                                                                                                                (CG.apply [ CG.val <| lookup "getHtmlAttrs", CG.val <| lookup "i" ])
+                                                                                                        , CG.val <| lookup "content"
+                                                                                                        ]
+                                                                                                    ]
+                                                                                                )
+                                                                                            )
+                                                                                            |> p_drop_infix (p_token "H")
+                                                                                            |> p_keep_infix (CG.val ctx.intParserName)
+                                                                                            |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
+                                                                                            |> p_drop_infix (p_token "|")
+                                                                                            |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
+                                                                                            |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
+                                                                                        )
+                                                                                    , filterIntl
+                                                                                        (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
+                                                                                            CG.pipel
+                                                                                            (p_succeed (CG.val <| lookup "numberFormatUnsafe")
+                                                                                                |> p_drop_infix
+                                                                                                    (p_token "N"
+                                                                                                        |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                    )
                                                                                             )
                                                                                         )
-                                                                                        |> p_drop_infix (p_token "H")
-                                                                                        |> p_keep_infix (CG.val ctx.intParserName)
-                                                                                        |> p_keep_infix (CG.parens <| CG.pipe (p_chompUntil "|") [ p_getChompedString ])
-                                                                                        |> p_drop_infix (p_token "|")
-                                                                                        |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
-                                                                                        |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveParserCall [ '|' ] ])
-                                                                                    )
-                                                                                , filterIntl
-                                                                                    (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
-                                                                                        CG.pipel
-                                                                                        (p_succeed (CG.val <| lookup "numberFormatUnsafe")
+                                                                                    , filterIntl
+                                                                                        (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
+                                                                                            CG.pipel
+                                                                                            (p_succeed (CG.val <| lookup "dateFormatUnsafe")
+                                                                                                |> p_drop_infix
+                                                                                                    (p_token "D"
+                                                                                                        |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                    )
+                                                                                            )
+                                                                                        )
+                                                                                    , filterByFeature Features.CaseInterpolation
+                                                                                        (p_succeed (CG.val <| lookup "matchStrings")
                                                                                             |> p_drop_infix
-                                                                                                (p_token "N"
-                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                (p_token "S"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName)
+                                                                                                    |> p_drop_infix (p_token "|")
+                                                                                                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
+                                                                                                    |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
                                                                                                 )
                                                                                         )
-                                                                                    )
-                                                                                , filterIntl
-                                                                                    (CG.applyBinOp (p_map <| CG.fun <| lookup "stringToHtml")
-                                                                                        CG.pipel
-                                                                                        (p_succeed (CG.val <| lookup "dateFormatUnsafe")
+                                                                                    , filterIntl
+                                                                                        (p_succeed (CG.val <| lookup "matchNumbers")
                                                                                             |> p_drop_infix
-                                                                                                (p_token "D"
-                                                                                                    |> p_keep_infix (CG.val ctx.intParserName |> p_keep_infix (CG.val <| lookup "argParser"))
+                                                                                                (p_token "P"
+                                                                                                    |> p_keep_infix (CG.val ctx.intParserName)
+                                                                                                    |> p_drop_infix (p_token "|")
+                                                                                                    |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
+                                                                                                    |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
                                                                                                 )
                                                                                         )
-                                                                                    )
-                                                                                , filterByFeature Features.CaseInterpolation
-                                                                                    (p_succeed (CG.val <| lookup "matchStrings")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "S"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
-                                                                                                |> p_drop_infix (p_token "|")
-                                                                                                |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
-                                                                                                |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
-                                                                                            )
-                                                                                    )
-                                                                                , filterIntl
-                                                                                    (p_succeed (CG.val <| lookup "matchNumbers")
-                                                                                        |> p_drop_infix
-                                                                                            (p_token "P"
-                                                                                                |> p_keep_infix (CG.val ctx.intParserName)
-                                                                                                |> p_drop_infix (p_token "|")
-                                                                                                |> p_keep_infix (CG.parens <| CG.applyBinOp (p_map (CG.fqFun [ "Tuple" ] "first")) CG.pipel <| recursiveHtmlParserCall [ '|' ])
-                                                                                                |> p_keep_infix (CG.apply [ CG.val ctx.dictParserName, CG.parens <| recursiveHtmlParserCall [ '|' ] ])
-                                                                                            )
-                                                                                    )
-                                                                                ]
-                                                                        )
-                                                                )
-                                                        , CG.pipe
-                                                            (CG.apply
-                                                                [ CG.fqFun [ "Parser" ] "chompWhile"
-                                                                , CG.parens <|
-                                                                    CG.lambda [ CG.varPattern <| lookup "c" ] <|
-                                                                        CG.pipe
-                                                                            (CG.binOpChain (CG.char '{')
-                                                                                CG.cons
-                                                                                [ CG.char '}', CG.char '\\', CG.val <| lookup "endSymbols" ]
+                                                                                    ]
                                                                             )
-                                                                            [ CG.apply [ CG.fqFun [ "List" ] "member", CG.val <| lookup "c" ]
-                                                                            , CG.fun "not"
-                                                                            ]
+                                                                    )
+                                                            , CG.pipe
+                                                                (CG.apply
+                                                                    [ CG.fqFun [ "Parser" ] "chompWhile"
+                                                                    , CG.parens <|
+                                                                        CG.lambda [ CG.varPattern <| lookup "c" ] <|
+                                                                            CG.pipe
+                                                                                (CG.binOpChain (CG.char '{')
+                                                                                    CG.cons
+                                                                                    [ CG.char '}', CG.char '\\', CG.val <| lookup "endSymbols" ]
+                                                                                )
+                                                                                [ CG.apply [ CG.fqFun [ "List" ] "member", CG.val <| lookup "c" ]
+                                                                                , CG.fun "not"
+                                                                                ]
+                                                                    ]
+                                                                )
+                                                                [ p_getChompedString
+                                                                , p_map <|
+                                                                    CG.parens <|
+                                                                        CG.chain (CG.val <| lookup "stringToHtml")
+                                                                            [ CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ], p_Loop ]
                                                                 ]
-                                                            )
-                                                            [ p_getChompedString
-                                                            , p_map <|
-                                                                CG.parens <|
-                                                                    CG.chain (CG.val <| lookup "stringToHtml")
-                                                                        [ CG.apply [ CG.fun "(++)", CG.val <| lookup "state" ], p_Loop ]
                                                             ]
-                                                        ]
                                             ]
                             )
 

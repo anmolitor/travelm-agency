@@ -106,9 +106,15 @@ select {
   color: white;
 }
 
-highlighted-code {
+.editor {
   height: calc(50% - var(--nav-height));
   overflow: auto;
+}
+
+.error-message {
+  background-color: rgb(152, 67, 67);
+  color: white;
+  padding: 1rem;
 }
 
 highlighted-code > pre[class*="language-"] {

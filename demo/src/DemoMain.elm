@@ -65,6 +65,7 @@ init flags url key =
             , outputFiles = Dict.empty
             , activeOutputFilePath = "Translations.elm"
             , caretPosition = 0
+            , errorMessage = Nothing
             }
     in
     initPage model
@@ -180,9 +181,9 @@ update msg model =
 
 runTravelmAgencyAndUpdateModel : Model -> Model
 runTravelmAgencyAndUpdateModel model =
-    case runTravelmAgency model of
-        Err _ ->
-            model
+    case runTravelmAgency model |> Types.Error.formatFail of
+        Err err ->
+            { model | errorMessage = Just err }
 
         Ok responseContent ->
             let
@@ -215,6 +216,7 @@ runTravelmAgencyAndUpdateModel model =
                     Dict.fromList <|
                         ( "Translations.elm", generatedElmFile )
                             :: List.filterMap optimizedJsonToFile responseContent.optimizedJson
+                , errorMessage = Nothing
             }
 
 
@@ -274,6 +276,7 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
             , activeOutputFilePath = activeOutputFilePath
             , caretPosition = caretPosition
             , basePath = basePath
+            , errorMessage = model.errorMessage
             }
         <|
             viewExplanation model

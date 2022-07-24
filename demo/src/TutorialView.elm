@@ -27,6 +27,7 @@ type alias TutorialModel =
     , outputFiles : Dict String OutputFile
     , activeOutputFilePath : String
     , basePath : String
+    , errorMessage : Maybe String
     }
 
 
@@ -145,8 +146,11 @@ view model explanationText =
                     Html.div [] []
 
         outputCode =
-            case activeOutputFile of
-                Just file ->
+            case ( activeOutputFile, model.errorMessage ) of
+                ( _, Just err ) ->
+                    Html.p [ class "editor error-message" ] [ Material.Icons.error 50 Inherit, Html.text err ]
+
+                ( Just file, Nothing ) ->
                     highlightedCode
                         { language = file.extension
                         , code = file.content
@@ -154,7 +158,7 @@ view model explanationText =
                         , onEdit = Nothing
                         }
 
-                Nothing ->
+                ( Nothing, Nothing ) ->
                     Html.div [] []
     in
     [ Html.div [ class "content" ]
@@ -190,6 +194,7 @@ highlightedCode { language, code, caretPosition, onEdit } =
     Html.node "highlighted-code"
         ([ Html.Attributes.attribute "lang" language
          , Html.Attributes.attribute "code" code
+         , class "editor"
          ]
             ++ Maybe.Extra.toList (Maybe.map (Html.Attributes.attribute "pos" << String.fromInt) caretPosition)
             ++ Maybe.withDefault []

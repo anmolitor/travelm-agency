@@ -39,6 +39,7 @@ type alias Model =
     , activeInputFilePath : String
     , outputFiles : Dict String OutputFile
     , activeOutputFilePath : String
+    , errorMessage : Maybe String
     }
 
 

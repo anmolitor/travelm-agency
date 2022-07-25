@@ -150,3 +150,20 @@ highlighted-code > pre[class*="language-"] {
   overflow: hidden;
   transition: all 0.5s ease;
 }
+
+@media only screen and (max-width: 600px) {
+  .content {
+    width: 200vw;
+    max-width: 200%;
+    position: relative;
+    transition: right 1s ease;
+  }
+
+  .left-sidebar {
+    width: 50%;
+  }
+
+  .playground {
+    width: 50%;
+  }
+}

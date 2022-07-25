@@ -67,6 +67,7 @@ viewExplanation ({ i18n } as model) =
         model
     , Html.h2 [] [ Html.text <| Translations.tutorialHowtoHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.tutorialHowtoBody i18n ]
+    , Html.p [] [ Html.text <| Translations.tutorialMobileAdditional i18n ]
     , Html.h2 [] [ Html.text <| Translations.textsFeatureHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.textsFeatureBody i18n ]
     ]

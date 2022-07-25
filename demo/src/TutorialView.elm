@@ -1,5 +1,6 @@
 module TutorialView exposing (TutorialModel, view)
 
+import Color
 import Dict exposing (Dict)
 import File exposing (InputFile, OutputFile)
 import Html exposing (Html)
@@ -68,14 +69,14 @@ view model explanationText =
                         Html.a [ href <| Routes.toUrl model.basePath previous, class "arrow" ] [ Material.Icons.arrow_back 50 Inherit ]
 
                     Nothing ->
-                        Material.Icons.arrow_back 50 Inherit
+                        Material.Icons.arrow_back 50 (Color <| Color.rgba 0.5 0.5 0.5 0.5)
                 , Html.text model.headline
                 , case Routes.next model.route of
                     Just next ->
                         Html.a [ href <| Routes.toUrl model.basePath next, class "arrow" ] [ Material.Icons.arrow_forward 50 Inherit ]
 
                     Nothing ->
-                        Material.Icons.arrow_forward 50 Inherit
+                        Material.Icons.arrow_forward 50 (Color <| Color.rgba 0.5 0.5 0.5 0.5)
                 ]
 
         inputTypeSelect =

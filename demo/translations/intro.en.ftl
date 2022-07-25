@@ -41,6 +41,9 @@ tutorialHowtoBody = This tutorial guides you through the features of Travelm-Age
   windows and one or multiple output windows showing you a particular feature with an accompanying explanation. You may edit
   the text in the input windows and observe how the output files change.
 
+tutorialMobileAdditional = You seem to be on a mobile device. While you cannot view text and examples at once,
+  you can scroll over to the right to view example input and output files. 
+
 textsFeatureHeadline = Simple texts
 textsFeatureBody = It may be weird to call this a feature, but this is the most common translation type that you will need.
   Observe how texts get copied into language records for inline mode and into a JSON array for dynamic mode.

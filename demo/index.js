@@ -1,4 +1,4 @@
-import { intl_proxy } from "intl-proxy";
+import intl_proxy from "intl-proxy";
 import "./main.css";
 import { registerCodeComponent } from "./src/code-component";
 import { Elm } from "./src/DemoMain.elm";
@@ -12,6 +12,6 @@ Elm.DemoMain.init({
     intl: intl_proxy,
     width: window.innerWidth,
     height: window.innerHeight,
-    basePath: __BASE_PATH__
+    basePath: __BASE_PATH__,
   },
 });

@@ -204,9 +204,9 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                         |. P.chompWhile ((==) ' ')
                         |. P.token "="
                         |. P.chompWhile ((==) ' ')
-                        |. P.token "\""
-                        |= (P.chompWhile ((/=) '"') |> P.getChompedString)
-                        |. P.token "\""
+                        |. P.token "\\\""
+                        |= (P.chompWhile ((/=) '\\') |> P.getChompedString)
+                        |. P.token "\\\""
                     ]
 
 

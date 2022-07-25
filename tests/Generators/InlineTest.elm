@@ -3,6 +3,7 @@ module Generators.InlineTest exposing (..)
 import Expect
 import Html
 import Html.Attributes
+import Inline.ComplexI18nFirstTranslations
 import Inline.DateFormatTranslations
 import Inline.HtmlInterpolationTranslations
 import Inline.HtmlIntlTranslations
@@ -361,4 +362,37 @@ namespacing =
                 Inline.NamespacingTranslations.init Inline.NamespacingTranslations.En
                     |> Inline.NamespacingTranslations.init_
                     |> Expect.equal "reserved name"
+        ]
+
+
+complexI18nFirst : Test
+complexI18nFirst =
+    describe "complex i18n first"
+        [ test "case interpolation" <|
+            \_ ->
+                Inline.ComplexI18nFirstTranslations.interpolationCase
+                    (Inline.ComplexI18nFirstTranslations.init Util.emptyIntl Inline.ComplexI18nFirstTranslations.En)
+                    "one"
+                    |> Expect.equal "One"
+        , test "html" <|
+            \_ ->
+                Inline.ComplexI18nFirstTranslations.html
+                    (Inline.ComplexI18nFirstTranslations.init Util.emptyIntl Inline.ComplexI18nFirstTranslations.En)
+                    "abc"
+                    [ Html.Attributes.class "swag" ]
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "a" ]
+                    |> Query.has
+                        [ Selector.class "swag"
+                        , Selector.attribute <| Html.Attributes.href "/"
+                        , Selector.text "abc"
+                        ]
+        , test "numberFormat" <|
+            \_ ->
+                Inline.ComplexI18nFirstTranslations.numberFormat
+                    (Inline.ComplexI18nFirstTranslations.init Util.emptyIntl Inline.ComplexI18nFirstTranslations.En)
+                    5.0
+                    -- as usual, we can only test for no compilation errors here, since Intl is mocked
+                    |> Expect.equal ""
         ]

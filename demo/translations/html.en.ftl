@@ -22,4 +22,7 @@ htmlSecurityBody = There is a good reason why Elm does not generate HTML from a 
   however, a parser is used that may create <b>ANY</b> HTML. Therefore, you need to be careful which contents you load into your I18n instance.
   If you just load your .json files from your own server, that should probably be fine. If you have a more complex setup, keep this risk in mind.
 
-  
+htmlEscapingHeadline = Escaping
+htmlEscapingBody = Since Travelm-Agency understands HTML, the parser gets confused every time it finds a { "<" } symbol with a different meaning.
+  Therefore, you have to escape the character with the usual techniques: Backslash <code>{ "\\<" }</code> for JSON, Quotes <code>{ "'<'" }</code> for Properties
+  and String literals <code>{ "{ \"<\" }" }</code> for Fluent.

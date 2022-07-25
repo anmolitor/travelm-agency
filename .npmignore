@@ -1,15 +1,16 @@
 elm-stuff/
 node_modules/
-.parcel-cache/
 /tests/
+/demo
 /docs
 /example/
+/gen_test_cases/
 /.github/
 /src
 /.coverage
-/intl
 
 /build.js
+/generate_test_cases.js
 
 tsconfig.json
 elm.json

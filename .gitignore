@@ -1,6 +1,5 @@
 node_modules
 elm-stuff
-.parcel-cache
 
 /.coverage
 /lib
@@ -8,5 +7,3 @@ elm-stuff
 !/generated/.gitkeep
 /gen_test_cases/Inline
 /gen_test_cases/Dynamic
-
-/example/dist

@@ -21,12 +21,17 @@ html {
 p,
 h1,
 h2,
-h3 {
+h3,
+a {
   line-height: 1.5;
 }
 
 h2 {
   margin-top: 1rem;
+}
+
+a {
+  color: lightblue;
 }
 
 select {

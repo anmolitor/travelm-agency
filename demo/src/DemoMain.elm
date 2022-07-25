@@ -330,8 +330,25 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
 
 
 inputTypesForRoute : Route -> List InputType
-inputTypesForRoute _ =
-    [ InputType.Json, InputType.Properties, InputType.Fluent ]
+inputTypesForRoute route =
+    case route of
+        Routes.Terms _ ->
+            [ InputType.Fluent ]
+
+        Routes.CaseInterpolation _ ->
+            [ InputType.Fluent ]
+
+        Routes.NumberFormat _ ->
+            [ InputType.Fluent ]
+
+        Routes.DateFormat _ ->
+            [ InputType.Fluent ]
+
+        Routes.PluralRules _ ->
+            [ InputType.Fluent ]
+
+        _ ->
+            [ InputType.Json, InputType.Properties, InputType.Fluent ]
 
 
 viewHeadline : Model -> String

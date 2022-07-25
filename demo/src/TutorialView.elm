@@ -79,21 +79,26 @@ view model explanationText =
                 ]
 
         inputTypeSelect =
-            Html.select
-                [ Html.Events.onInput
-                    (InputType.fromString
-                        >> Maybe.withDefault model.activeInputType
-                        >> ChangeInputType
-                    )
-                ]
-            <|
-                List.map
-                    (\inputType ->
-                        Html.option
-                            [ Html.Attributes.selected <| inputType == model.activeInputType ]
-                            [ Html.text <| InputType.toString inputType ]
-                    )
-                    model.inputTypes
+            if List.length model.inputTypes > 1 then
+                Just <|
+                    Html.select
+                        [ Html.Events.onInput
+                            (InputType.fromString
+                                >> Maybe.withDefault model.activeInputType
+                                >> ChangeInputType
+                            )
+                        ]
+                    <|
+                        List.map
+                            (\inputType ->
+                                Html.option
+                                    [ Html.Attributes.selected <| inputType == model.activeInputType ]
+                                    [ Html.text <| InputType.toString inputType ]
+                            )
+                            model.inputTypes
+
+            else
+                Nothing
 
         outputModeSelect =
             Html.select
@@ -113,25 +118,27 @@ view model explanationText =
                     [ Ports.Inline, Ports.Dynamic ]
 
         inputHeader =
-            Html.div [ class "file-header-container" ]
-                [ Html.div [ class "flex" ] <|
-                    List.map
-                        (\( path, file ) ->
-                            viewFileHeader
-                                { fileName = File.inputFileToPath file
-                                , isActive = path == model.activeInputFilePath
-                                , onClick = ChangeActiveInputFile <| File.inputFileToPath file
-                                }
-                        )
-                        (Dict.toList model.inputFiles)
-                        ++ [ Html.div
-                                [ class "file-header"
-                                , Html.Events.onClick <| AddFile <| generateFreeFileName model
-                                ]
-                                [ Html.text "+" ]
-                           ]
-                , inputTypeSelect
-                ]
+            Html.div [ class "file-header-container" ] <|
+                List.filterMap identity
+                    [ Just <|
+                        Html.div [ class "flex" ] <|
+                            List.map
+                                (\( path, file ) ->
+                                    viewFileHeader
+                                        { fileName = File.inputFileToPath file
+                                        , isActive = path == model.activeInputFilePath
+                                        , onClick = ChangeActiveInputFile <| File.inputFileToPath file
+                                        }
+                                )
+                                (Dict.toList model.inputFiles)
+                                ++ [ Html.div
+                                        [ class "file-header"
+                                        , Html.Events.onClick <| AddFile <| generateFreeFileName model
+                                        ]
+                                        [ Html.text "+" ]
+                                   ]
+                    , inputTypeSelect
+                    ]
 
         outputHeader =
             Html.div [ class "file-header-container" ]

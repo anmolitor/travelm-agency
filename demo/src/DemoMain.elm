@@ -12,10 +12,15 @@ import Main
 import Model exposing (Model)
 import Msg exposing (Msg(..))
 import Pages.Bundles
+import Pages.CaseInterpolation
 import Pages.Consistency
+import Pages.DateFormat
 import Pages.Html
 import Pages.Interpolation
 import Pages.Intro
+import Pages.NumberFormat
+import Pages.PluralRules
+import Pages.Terms
 import Ports
 import Routes exposing (Route)
 import State exposing (OptimizedJson)
@@ -101,6 +106,21 @@ initPage model =
 
         Routes.Html _ _ ->
             Pages.Html.init model
+
+        Routes.Terms _ ->
+            Pages.Terms.init model
+
+        Routes.CaseInterpolation _ ->
+            Pages.CaseInterpolation.init model
+
+        Routes.NumberFormat _ ->
+            Pages.NumberFormat.init model
+
+        Routes.DateFormat _ ->
+            Pages.DateFormat.init model
+
+        Routes.PluralRules _ ->
+            Pages.PluralRules.init model
 
         Routes.NotFound _ ->
             ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
@@ -332,6 +352,21 @@ viewHeadline model =
         Routes.Html _ _ ->
             Translations.htmlHeadline model.i18n
 
+        Routes.Terms _ ->
+            Translations.termsHeadline model.i18n
+
+        Routes.CaseInterpolation _ ->
+            Translations.caseInterpolationHeadline model.i18n
+
+        Routes.NumberFormat _ ->
+            Translations.numberFormatHeadline model.i18n
+
+        Routes.DateFormat _ ->
+            Translations.dateFormatHeadline model.i18n
+
+        Routes.PluralRules _ ->
+            Translations.pluralRulesHeadline model.i18n
+
         Routes.NotFound _ ->
             ""
 
@@ -353,6 +388,21 @@ viewExplanation model =
 
         Routes.Html _ _ ->
             Pages.Html.viewExplanation model
+
+        Routes.Terms _ ->
+            Pages.Terms.viewExplanation model
+
+        Routes.CaseInterpolation _ ->
+            Pages.CaseInterpolation.viewExplanation model
+
+        Routes.NumberFormat _ ->
+            Pages.NumberFormat.viewExplanation model
+
+        Routes.DateFormat _ ->
+            Pages.DateFormat.viewExplanation model
+
+        Routes.PluralRules _ ->
+            Pages.PluralRules.viewExplanation model
 
         Routes.NotFound _ ->
             []

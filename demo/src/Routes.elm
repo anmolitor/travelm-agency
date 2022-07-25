@@ -14,12 +14,32 @@ type Route
     | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Html (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Terms (Maybe Ports.GeneratorMode)
+    | CaseInterpolation (Maybe Ports.GeneratorMode)
+    | NumberFormat (Maybe Ports.GeneratorMode)
+    | DateFormat (Maybe Ports.GeneratorMode)
+    | PluralRules (Maybe Ports.GeneratorMode)
     | NotFound Url.Url
+
+
+fixedInputType : (Maybe Ports.GeneratorMode -> Route) -> Maybe Ports.GeneratorMode -> Maybe InputType -> Route
+fixedInputType route mode _ =
+    route mode
 
 
 order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
 order =
-    [ Intro, Interpolation, Consistency, Bundles, Html ]
+    [ Intro
+    , Interpolation
+    , Consistency
+    , Bundles
+    , Html
+    , fixedInputType Terms
+    , fixedInputType CaseInterpolation
+    , fixedInputType NumberFormat
+    , fixedInputType DateFormat
+    , fixedInputType PluralRules
+    ]
 
 
 next : Route -> Maybe Route
@@ -73,6 +93,11 @@ parser =
         , map Consistency (s "consistency" <?> modeParser <?> inputParser)
         , map Bundles (s "bundles" <?> modeParser <?> inputParser)
         , map Html (s "html" <?> modeParser <?> inputParser)
+        , map Terms (s "terms" <?> modeParser)
+        , map CaseInterpolation (s "case-interpolation" <?> modeParser)
+        , map NumberFormat (s "number-format" <?> modeParser)
+        , map DateFormat (s "date-format" <?> modeParser)
+        , map PluralRules (s "plural-rules" <?> modeParser)
         ]
 
 
@@ -90,6 +115,9 @@ toUrl basePath route =
                     [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
                     , Maybe.map (string "input" << InputType.toString) inputType
                     ]
+
+        fluentOnly path mode =
+            default path mode Nothing
     in
     case route of
         Intro mode inputType ->
@@ -106,6 +134,21 @@ toUrl basePath route =
 
         Html mode inputType ->
             default "html" mode inputType
+
+        Terms mode ->
+            fluentOnly "terms" mode
+
+        CaseInterpolation mode ->
+            fluentOnly "case-interpolation" mode
+
+        NumberFormat mode ->
+            fluentOnly "number-format" mode
+
+        DateFormat mode ->
+            fluentOnly "date-format" mode
+
+        PluralRules mode ->
+            fluentOnly "plural-rules" mode
 
         NotFound url ->
             Url.toString url
@@ -129,6 +172,21 @@ getParams route =
         Html mode inputType ->
             ( inputType, mode )
 
+        Terms mode ->
+            ( Nothing, mode )
+
+        CaseInterpolation mode ->
+            ( Nothing, mode )
+
+        NumberFormat mode ->
+            ( Nothing, mode )
+
+        DateFormat mode ->
+            ( Nothing, mode )
+
+        PluralRules mode ->
+            ( Nothing, mode )
+
         NotFound _ ->
             ( Nothing, Nothing )
 
@@ -151,6 +209,21 @@ setInputType inputType route =
         Html mode _ ->
             Html mode (Just inputType)
 
+        Terms _ ->
+            route
+
+        CaseInterpolation _ ->
+            route
+
+        NumberFormat _ ->
+            route
+
+        DateFormat _ ->
+            route
+
+        PluralRules _ ->
+            route
+
         NotFound _ ->
             route
 
@@ -172,6 +245,21 @@ setGeneratorMode mode route =
 
         Html _ inputType ->
             Html (Just mode) inputType
+
+        Terms _ ->
+            Terms (Just mode)
+
+        CaseInterpolation _ ->
+            CaseInterpolation (Just mode)
+
+        NumberFormat _ ->
+            NumberFormat (Just mode)
+
+        DateFormat _ ->
+            DateFormat (Just mode)
+
+        PluralRules _ ->
+            PluralRules (Just mode)
 
         NotFound _ ->
             route

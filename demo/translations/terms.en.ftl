@@ -7,7 +7,7 @@ termsPreamble = Text content tends to have quite a lot of repetitions. These can
 termsSyntaxHeadline = Syntax
 termsSyntaxBody = Terms are key value pairs whose key begins with a dash "-". In this example, <code>-email</code>
   is a term while the other pairs are normal messages. 
-  
+
 termsFluentOnlyHeadline = Fluent only
 termsFluentOnlyBody = Note that this feature is only supported in the <code>.ftl</code> file format, just like the next couple of
   features marked with the <code>Fluent:</code> prefix.

@@ -566,6 +566,35 @@ escapedQuotationMarks =
         ]
 
 
+
+escapedPipeSymbols : Test
+escapedPipeSymbols =
+    describe "escaped pipe symbol"
+        [ test "interpolation match works" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.pipeOperatorInterpolationCase i18n "abc")
+                    |> Expect.equal (Ok "just a | pipe")
+        , test "html works" <|
+            \_ ->
+                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                    |> expectOkWith
+                        (\i18n ->
+                            Dynamic.EscapeTranslations.pipeOperatorHtml i18n []
+                                |> Html.p []
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.tag "div" ]
+                                |> Query.has
+                                    [ Selector.text "just a "
+                                    , Selector.text "|"
+                                    , Selector.text "pipe"
+                                    ]
+                        )
+        ]
+
+
 expectOkWith : (a -> Expect.Expectation) -> Result x a -> Expect.Expectation
 expectOkWith expect result =
     case result of

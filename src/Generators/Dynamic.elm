@@ -744,24 +744,14 @@ encodeSegment segment =
 escapeCurlyBrackets : String -> String
 escapeCurlyBrackets =
     String.foldl
-        (\char ( needsEscape, result ) ->
-            if char == '{' && needsEscape then
-                ( True, result ++ "\\{" )
-
-            else if char == '}' && needsEscape then
-                ( True, result ++ "\\}" )
-
-            else if char == '\\' && needsEscape then
-                ( True, result ++ "\\\\" )
-
-            else if char == '\\' && not needsEscape then
-                ( False, result )
+        (\char result ->
+            if List.member char [ '{', '}', '\\', '|' ] then
+                result ++ "\\" ++ String.fromChar char
 
             else
-                ( True, result ++ String.fromChar char )
+                result ++ String.fromChar char
         )
-        ( True, "" )
-        >> Tuple.second
+        ""
 
 
 encodeArgs : List ( String, ArgValue ) -> String

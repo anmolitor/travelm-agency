@@ -43,6 +43,16 @@ state =
                           ]
                         )
                       )
+                    , ( "pipeOperatorInterpolationCase"
+                      , ( InterpolationCase "val" ( Text "just a | pipe", [] ) Dict.empty
+                        , []
+                        )
+                      )
+                    , ( "pipeOperatorHtml"
+                      , ( Html { tag = "div", id = "div", content = ( Text "just a | pipe", [] ), attrs = [] }
+                        , []
+                        )
+                      )
                     ]
             , fallback = Nothing
             , resources = ()

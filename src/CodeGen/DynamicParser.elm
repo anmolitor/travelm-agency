@@ -239,7 +239,7 @@ addReplacePlaceholderDeclaration =
                                                                 ]
                                                             )
                                                     )
-                                                , CG.list <| List.map CG.string [ "{", "}", "\\" ]
+                                                , CG.list <| List.map CG.string [ "{", "}", "\\", "|" ]
                                                 ]
                                     , filterIntl <|
                                         CG.letFunction (lookup "numberFormatUnsafe")
@@ -520,7 +520,7 @@ addReplacePlaceholderDeclaration =
                                                                 ]
                                                             )
                                                     )
-                                                , CG.list <| List.map CG.string [ "{", "}", "\\" ]
+                                                , CG.list <| List.map CG.string [ "{", "}", "\\", "|" ]
                                                 ]
                                     , filterIntl <|
                                         CG.letFunction (lookup "numberFormatUnsafe")

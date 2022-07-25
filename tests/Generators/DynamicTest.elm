@@ -30,8 +30,8 @@ import Dynamic.PluralServer
 import Dynamic.PluralTranslations
 import Dynamic.SimpleHtmlServer
 import Dynamic.SimpleHtmlTranslations
-import Dynamic.SimpleI18nLastServer
-import Dynamic.SimpleI18nLastTranslations
+import Dynamic.SimpleI18nFirstServer
+import Dynamic.SimpleI18nFirstTranslations
 import Dynamic.SingleInterpolationServer
 import Dynamic.SingleInterpolationTranslations
 import Dynamic.SingleTextServer
@@ -84,7 +84,7 @@ singleInterpolation =
             \_ ->
                 sendRequest Dynamic.SingleInterpolationServer.server "messages.en.json" Dynamic.SingleInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.SingleInterpolationTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.SingleInterpolationTranslations.text i18n "world")
+                    |> Result.map (Dynamic.SingleInterpolationTranslations.text "world")
                     |> Expect.equal (Ok "hello world!")
         ]
 
@@ -96,19 +96,19 @@ multiInterpolation =
             \_ ->
                 sendRequest Dynamic.MultiInterpolationServer.server "messages.en.json" Dynamic.MultiInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "morning", name = "my dear" })
+                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "my dear" })
                     |> Expect.equal (Ok "Good morning, my dear")
         , test "works for languages that do not use all interpolated values" <|
             \_ ->
                 sendRequest Dynamic.MultiInterpolationServer.server "messages.de.json" Dynamic.MultiInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "Morgen", name = "Doesn't matter" })
+                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "Morgen", name = "Doesn't matter" })
                     |> Expect.equal (Ok "Guten Morgen")
         , test "works if languages interpolate values in different orders" <|
             \_ ->
                 sendRequest Dynamic.MultiInterpolationServer.server "messages.yoda.json" Dynamic.MultiInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.MultiInterpolationTranslations.greeting i18n { timeOfDay = "morning", name = "Luke" })
+                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "Luke" })
                     |> Expect.equal (Ok "Luke, good morning")
         ]
 
@@ -118,21 +118,21 @@ i18nLastSimple =
     describe "generated code with i18nArgLast flag"
         [ test "single text" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
-                    |> Result.map Dynamic.SimpleI18nLastTranslations.singleText
+                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
+                    |> Result.map Dynamic.SimpleI18nFirstTranslations.singleText
                     |> Expect.equal (Ok "the text")
         , test "single interpolation" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
-                    |> Result.map (Dynamic.SimpleI18nLastTranslations.interpolation "world")
+                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.SimpleI18nFirstTranslations.interpolation i18n "world")
                     |> Expect.equal (Ok "Hello world!")
         , test "multi interpolation" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nLastServer.server "messages.en.json" Dynamic.SimpleI18nLastTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nLastTranslations.init)
-                    |> Result.map (Dynamic.SimpleI18nLastTranslations.greeting { timeOfDay = "evening", name = "Sir" })
+                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
+                    |> Result.map (\i18n -> Dynamic.SimpleI18nFirstTranslations.greeting i18n { timeOfDay = "evening", name = "Sir" })
                     |> Expect.equal (Ok "Good evening, Sir")
         ]
 
@@ -144,19 +144,19 @@ interpolationMatchCase =
             \_ ->
                 sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "female")
+                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "female")
                     |> Expect.equal (Ok "She bought a cat.")
         , test "interpolates the correct value for male gender" <|
             \_ ->
                 sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "male")
+                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "male")
                     |> Expect.equal (Ok "He bought a cat.")
         , test "interpolates the default value for other values" <|
             \_ ->
                 sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.InterpolationMatchTranslations.text i18n "anything else")
+                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "anything else")
                     |> Expect.equal (Ok "It bought a cat.")
         ]
 
@@ -174,17 +174,17 @@ nestedInterpolation =
         [ test "interpolates the correct values for 'Ich'" <|
             \_ ->
                 i18n
-                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Ich", objectsToBuy = "Gemüse" })
+                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Ich", objectsToBuy = "Gemüse" })
                     |> Expect.equal (Ok "Ich kaufe Gemüse.")
         , test "interpolates the correct values for 'Du'" <|
             \_ ->
                 i18n
-                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Du", objectsToBuy = "Obst" })
+                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Du", objectsToBuy = "Obst" })
                     |> Expect.equal (Ok "Du kaufst Obst.")
         , test "interpolates the default value for other values" <|
             \_ ->
                 i18n
-                    |> Result.map (\i -> Dynamic.NestedInterpolationTranslations.text i { pronoun = "Er", objectsToBuy = "Fleisch" })
+                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Er", objectsToBuy = "Fleisch" })
                     |> Expect.equal (Ok "Er kauft Fleisch.")
         ]
 
@@ -198,7 +198,7 @@ numberFormatCase =
                     "messages.en.json"
                     Dynamic.NumberFormatTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.NumberFormatTranslations.init Util.emptyIntl Dynamic.NumberFormatTranslations.En))
-                    |> Result.map (\i18n -> Dynamic.NumberFormatTranslations.text i18n 12.34)
+                    |> Result.map (Dynamic.NumberFormatTranslations.text 12.34)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
@@ -215,7 +215,7 @@ dateFormatCase =
                     "messages.en.json"
                     Dynamic.DateFormatTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.DateFormatTranslations.init Util.emptyIntl Dynamic.DateFormatTranslations.En))
-                    |> Result.map (\i18n -> Dynamic.DateFormatTranslations.text i18n <| Time.millisToPosix 9000)
+                    |> Result.map (Dynamic.DateFormatTranslations.text <| Time.millisToPosix 9000)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
@@ -230,7 +230,7 @@ pluralCase =
             \_ ->
                 sendRequest Dynamic.PluralServer.server "messages.en.json" Dynamic.PluralTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.PluralTranslations.init Util.emptyIntl Dynamic.PluralTranslations.En))
-                    |> Result.map (\i18n -> Dynamic.PluralTranslations.text i18n 4)
+                    |> Result.map (Dynamic.PluralTranslations.text 4)
                     -- Due to the absent intl api, we can only test the default case here
                     |> Expect.equal (Ok "I met many people.")
         ]
@@ -262,36 +262,33 @@ simpleHtml =
                 sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.SimpleHtmlTranslations.html i18n []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.has [ Selector.text "Click me" ]
+                        (Dynamic.SimpleHtmlTranslations.html []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.has [ Selector.text "Click me" ]
                         )
         , test "generates html attribute from translation file" <|
             \_ ->
                 sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.SimpleHtmlTranslations.html i18n []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.has [ Selector.attribute <| Html.Attributes.href "/" ]
+                        (Dynamic.SimpleHtmlTranslations.html []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.has [ Selector.attribute <| Html.Attributes.href "/" ]
                         )
         , test "passes extra attributes given at runtime" <|
             \_ ->
                 sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.SimpleHtmlTranslations.html i18n [ Html.Attributes.class "link" ]
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.has [ Selector.class "link" ]
+                        (Dynamic.SimpleHtmlTranslations.html [ Html.Attributes.class "link" ]
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.has [ Selector.class "link" ]
                         )
         ]
 
@@ -304,50 +301,47 @@ nestedHtml =
                 sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.NestedHtmlTranslations.html i18n { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.has
-                                    [ Selector.attribute <| Html.Attributes.href "/"
-                                    , Selector.text "!"
-                                    , Selector.class "nestedLink"
-                                    ]
+                        (Dynamic.NestedHtmlTranslations.html { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.has
+                                [ Selector.attribute <| Html.Attributes.href "/"
+                                , Selector.text "!"
+                                , Selector.class "nestedLink"
+                                ]
                         )
         , test "produces the correct inner span element" <|
             \_ ->
                 sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.NestedHtmlTranslations.html i18n { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.find [ Selector.tag "span" ]
-                                |> Query.has
-                                    [ Selector.attribute <| Html.Attributes.width 100
-                                    , Selector.attribute <| Html.Attributes.height 50
-                                    , Selector.text "Click me"
-                                    , Selector.class "theText"
-                                    ]
+                        (Dynamic.NestedHtmlTranslations.html { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.find [ Selector.tag "span" ]
+                            >> Query.has
+                                [ Selector.attribute <| Html.Attributes.width 100
+                                , Selector.attribute <| Html.Attributes.height 50
+                                , Selector.text "Click me"
+                                , Selector.class "theText"
+                                ]
                         )
         , test "produces the correct inner img element" <|
             \_ ->
                 sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.NestedHtmlTranslations.html i18n { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "a" ]
-                                |> Query.find [ Selector.tag "img" ]
-                                |> Query.has
-                                    [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
-                                    , Selector.class "nestedImage"
-                                    ]
+                        (Dynamic.NestedHtmlTranslations.html { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.find [ Selector.tag "img" ]
+                            >> Query.has
+                                [ Selector.attribute <| Html.Attributes.src "/imgUrl.png"
+                                , Selector.class "nestedImage"
+                                ]
                         )
         ]
 
@@ -360,49 +354,46 @@ mixedHtmlAndInterpolation =
                 sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "Thanks for logging in. "
-                                    , Selector.containing
-                                        [ Selector.tag "a"
-                                        , Selector.attribute <| Html.Attributes.href "/admin"
-                                        , Selector.text "A. Dmin"
-                                        ]
-                                    , Selector.containing
-                                        [ Selector.tag "a"
-                                        , Selector.attribute <| Html.Attributes.href "/admin"
-                                        , Selector.text "may click on this link"
-                                        ]
+                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "Thanks for logging in. "
+                                , Selector.containing
+                                    [ Selector.tag "a"
+                                    , Selector.attribute <| Html.Attributes.href "/admin"
+                                    , Selector.text "A. Dmin"
                                     ]
+                                , Selector.containing
+                                    [ Selector.tag "a"
+                                    , Selector.attribute <| Html.Attributes.href "/admin"
+                                    , Selector.text "may click on this link"
+                                    ]
+                                ]
                         )
         , test "shows expected content for normal role" <|
             \_ ->
                 sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "You ("
-                                    , Selector.text "Justin Normal"
-                                    , Selector.text ") are not an admin."
-                                    ]
+                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "You ("
+                                , Selector.text "Justin Normal"
+                                , Selector.text ") are not an admin."
+                                ]
                         )
         , test "shows expected content for default role" <|
             \_ ->
                 sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlInterpolationTranslations.text i18n { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has [ Selector.text "You are not logged in." ]
+                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has [ Selector.text "You are not logged in." ]
                         )
         ]
 
@@ -415,40 +406,37 @@ htmlAndIntl =
                 sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlIntlTranslations.formatNumber i18n 4.2 []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "Price: "
-                                    , Selector.containing [ Selector.tag "b" ]
-                                    ]
+                        (Dynamic.HtmlIntlTranslations.formatNumber 4.2 []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "Price: "
+                                , Selector.containing [ Selector.tag "b" ]
+                                ]
                         )
         , test "dateFormat typechecks" <|
             \_ ->
                 sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlIntlTranslations.formatDate i18n (Time.millisToPosix 1000) []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "Today is "
-                                    , Selector.containing [ Selector.tag "em" ]
-                                    ]
+                        (Dynamic.HtmlIntlTranslations.formatDate (Time.millisToPosix 1000) []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "Today is "
+                                , Selector.containing [ Selector.tag "em" ]
+                                ]
                         )
         , test "pluralRules typechecks" <|
             \_ ->
                 sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
                     |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.HtmlIntlTranslations.pluralRules i18n 5 []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "p" ]
-                                |> Query.has [ Selector.text "5" ]
+                        (Dynamic.HtmlIntlTranslations.pluralRules 5 []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "p" ]
+                            >> Query.has [ Selector.text "5" ]
                         )
         ]
 
@@ -516,24 +504,23 @@ escapedCurlyBrackets =
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.text i18n "interp")
+                    |> Result.map (Dynamic.EscapeTranslations.text "interp")
                     |> Expect.equal (Ok "escaped interpolation { $var }, actual interp")
         , test "works without parsing problems for html" <|
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.EscapeTranslations.html i18n "interp" []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "escaped interpolation "
-                                    , Selector.text "{"
-                                    , Selector.text "$var"
-                                    , Selector.text "}"
-                                    , Selector.containing [ Selector.tag "b", Selector.text "interp" ]
-                                    ]
+                        (Dynamic.EscapeTranslations.html "interp" []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "escaped interpolation "
+                                , Selector.text "{"
+                                , Selector.text "$var"
+                                , Selector.text "}"
+                                , Selector.containing [ Selector.tag "b", Selector.text "interp" ]
+                                ]
                         )
         ]
 
@@ -545,26 +532,24 @@ escapedQuotationMarks =
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.quotationMarkAndBackslash i18n "abc")
+                    |> Result.map (Dynamic.EscapeTranslations.quotationMarkAndBackslash "abc")
                     |> Expect.equal (Ok "just a \\ and \"quotation mark\"abc")
         , test "works without parsing problems for html" <|
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.EscapeTranslations.quotationMarkAndBackslashHtml i18n "abc" []
-                                |> Html.div []
-                                |> Query.fromHtml
-                                |> Query.has
-                                    [ Selector.text "just a "
-                                    , Selector.text "\\"
-                                    , Selector.text " and \"quotation mark\""
-                                    , Selector.containing [ Selector.tag "b", Selector.text "abc" ]
-                                    ]
+                        (Dynamic.EscapeTranslations.quotationMarkAndBackslashHtml "abc" []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.has
+                                [ Selector.text "just a "
+                                , Selector.text "\\"
+                                , Selector.text " and \"quotation mark\""
+                                , Selector.containing [ Selector.tag "b", Selector.text "abc" ]
+                                ]
                         )
         ]
-
 
 
 escapedPipeSymbols : Test
@@ -574,23 +559,22 @@ escapedPipeSymbols =
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.EscapeTranslations.pipeOperatorInterpolationCase i18n "abc")
+                    |> Result.map (Dynamic.EscapeTranslations.pipeOperatorInterpolationCase "abc")
                     |> Expect.equal (Ok "just a | pipe")
         , test "html works" <|
             \_ ->
                 sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
                     |> Result.map ((|>) Dynamic.EscapeTranslations.init)
                     |> expectOkWith
-                        (\i18n ->
-                            Dynamic.EscapeTranslations.pipeOperatorHtml i18n []
-                                |> Html.p []
-                                |> Query.fromHtml
-                                |> Query.find [ Selector.tag "div" ]
-                                |> Query.has
-                                    [ Selector.text "just a "
-                                    , Selector.text "|"
-                                    , Selector.text "pipe"
-                                    ]
+                        (Dynamic.EscapeTranslations.pipeOperatorHtml []
+                            >> Html.p []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "div" ]
+                            >> Query.has
+                                [ Selector.text "just a "
+                                , Selector.text "|"
+                                , Selector.text "pipe"
+                                ]
                         )
         ]
 

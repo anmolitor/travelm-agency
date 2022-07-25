@@ -1,4 +1,4 @@
-port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, generatorModeToString, requestDecoder, respond, subToRequests, generatorModeFromString)
+port module Ports exposing (FinishRequest, GeneratorMode(..), Request(..), ResponseContent, TranslationRequest, generatorModeFromString, generatorModeToString, requestDecoder, respond, subToRequests)
 
 import Json.Decode as D
 import Json.Decode.Pipeline as D
@@ -87,7 +87,7 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool, i18nArgLast : Bool }
+    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool, i18nArgFirst : Bool }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -140,7 +140,7 @@ finishRequestDecoder =
         |> D.required "elmModuleName" D.string
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
         |> D.optional "addContentHash" D.bool False
-        |> D.optional "i18nArgLast" D.bool False
+        |> D.optional "i18nArgFirst" D.bool False
 
 
 type alias InternalRequest =

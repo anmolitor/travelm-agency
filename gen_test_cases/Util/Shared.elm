@@ -22,19 +22,19 @@ type alias Generator =
 
 type alias GenOptions =
     { mode : GeneratorMode
-    , i18nArgLast : Bool
+    , i18nArgFirst : Bool
     , addContentHash : Bool
     }
 
 
 inlineOpts : GenOptions
 inlineOpts =
-    { mode = Inline, i18nArgLast = False, addContentHash = False }
+    { mode = Inline, i18nArgFirst = False, addContentHash = False }
 
 
 dynamicOpts : GenOptions
 dynamicOpts =
-    { mode = Dynamic, i18nArgLast = False, addContentHash = False }
+    { mode = Dynamic, i18nArgFirst = False, addContentHash = False }
 
 
 buildMain : List GenOptions -> NonEmptyState () -> Generator
@@ -67,7 +67,7 @@ generate name state opts =
                 [ Generators.Dynamic.toFile
                     { defaultContext
                         | moduleName = [ "Dynamic", moduleName ]
-                        , i18nArgLast = opts.i18nArgLast
+                        , i18nArgLast = not opts.i18nArgFirst
                     }
                     stateWithResources
                     |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")
@@ -80,7 +80,7 @@ generate name state opts =
             Generators.Inline.toFile
                 { defaultContext
                     | moduleName = [ "Inline", moduleName ]
-                    , i18nArgLast = opts.i18nArgLast
+                    , i18nArgLast = not opts.i18nArgFirst
                 }
                 state
                 |> writeFile ("gen_test_cases/Inline/" ++ moduleName ++ ".elm")

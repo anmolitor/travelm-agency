@@ -36,7 +36,7 @@ const { hideBin } = require("yargs/helpers");
             type: "boolean",
             default: false,
           })
-          .option("i18n_arg_last", {
+          .option("i18n_arg_first", {
             description:
               "Pass the i18n instance as the last parameter to the generated function (opposed to it being the first)",
             type: "boolean",
@@ -64,7 +64,7 @@ const { hideBin } = require("yargs/helpers");
     generatorMode: args.inline ? "inline" : "dynamic",
     addContentHash: args.hash,
     devMode: args.devMode,
-    i18nArgLast: args.i18n_arg_last,
+    i18nArgFirst: args.i18n_arg_first,
   });
 })();
 

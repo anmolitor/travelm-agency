@@ -1,4 +1,4 @@
-module SimpleI18nLastCase exposing (..)
+module SimpleI18nFirstCase exposing (..)
 
 import Dict
 import Dict.NonEmpty
@@ -9,7 +9,7 @@ import Util.Shared exposing (Generator, buildMain, dynamicOpts, inlineOpts)
 
 main : Generator
 main =
-    buildMain [ { inlineOpts | i18nArgLast = True }, { dynamicOpts | i18nArgLast = True } ] state
+    buildMain [ { inlineOpts | i18nArgFirst = True }, { dynamicOpts | i18nArgFirst = True } ] state
 
 
 state : NonEmptyState ()
@@ -19,8 +19,8 @@ state =
             { pairs =
                 Dict.fromList
                     [ ( "singleText", ( Text "the text", [] ) )
-                    , ( "interpolation", ( Text "Hello ", [Interpolation "planet", Text "!"] ) )
-                    , ( "greeting", ( Text "Good ", [Interpolation "timeOfDay", Text ", ", Interpolation "name"] ) )
+                    , ( "interpolation", ( Text "Hello ", [ Interpolation "planet", Text "!" ] ) )
+                    , ( "greeting", ( Text "Good ", [ Interpolation "timeOfDay", Text ", ", Interpolation "name" ] ) )
                     ]
             , fallback = Nothing
             , resources = ()

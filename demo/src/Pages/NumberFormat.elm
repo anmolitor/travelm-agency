@@ -20,9 +20,9 @@ init model =
 
 viewExplanation : Model -> List (Html Msg)
 viewExplanation { i18n } =
-    [ Html.map never <| Html.p [] <| Translations.numberFormatPreamble i18n [ class "highlighted" ]
+    [ Html.map never <| Html.p [] <| Translations.numberFormatPreamble [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.numberFormatIntlHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.numberFormatIntlBody i18n { a = [], code = [ class "highlighted" ] }
+    , Html.map never <| Html.p [] <| Translations.numberFormatIntlBody { a = [], code = [ class "highlighted" ] } i18n
     , Html.h2 [] [ Html.text <| Translations.numberFormatOptionsHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.numberFormatOptionsBody i18n { a = [], code = [ class "highlighted" ] }
+    , Html.map never <| Html.p [] <| Translations.numberFormatOptionsBody { a = [], code = [ class "highlighted" ] } i18n
     ]

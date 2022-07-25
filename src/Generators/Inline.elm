@@ -193,11 +193,14 @@ addI18nTypeDeclarations unCtx =
 addAccessorDeclarations : Unique.UniqueNameContext (WithAccessors (WithCtx ctx)) -> Unique.UniqueNameContext (WithAccessors (WithCtx ctx))
 addAccessorDeclarations =
     Unique.scoped <|
-        Unique.andThen3 "i18n" "intl" "data" <|
-            \_ ctx i18nName intlName dataName ->
+        Unique.andThen4 "i18n" "intl" "data" "htmlAttrs" <|
+            \_ ctx i18nName intlName dataName htmlAttrsName ->
                 let
                     interpolationMap =
                         State.interpolationMap <| State.collectiveTranslationSet ctx.state
+
+                    htmlMap =
+                        State.getHtmlIds ctx.state
 
                     accessorDeclForKey : TKey -> CG.Declaration
                     accessorDeclForKey key =
@@ -205,6 +208,11 @@ addAccessorDeclarations =
                             hasPlaceholders =
                                 Dict.get key interpolationMap
                                     |> Maybe.map (not << Dict.isEmpty)
+                                    |> Maybe.withDefault False
+
+                            hasHtml =
+                                Dict.get key htmlMap
+                                    |> Maybe.map (not << Set.isEmpty)
                                     |> Maybe.withDefault False
 
                             i18nPattern =
@@ -215,8 +223,14 @@ addAccessorDeclarations =
                                     CG.varPattern i18nName
 
                             patterns =
-                                if ctx.i18nArgLast && hasPlaceholders then
+                                if ctx.i18nArgLast && hasPlaceholders && hasHtml then
+                                    [ CG.varPattern dataName, CG.varPattern htmlAttrsName, i18nPattern ]
+
+                                else if ctx.i18nArgLast && hasPlaceholders then
                                     [ CG.varPattern dataName, i18nPattern ]
+
+                                else if ctx.i18nArgLast && hasHtml then
+                                    [ CG.varPattern htmlAttrsName, i18nPattern ]
 
                                 else
                                     [ i18nPattern ]
@@ -229,8 +243,14 @@ addAccessorDeclarations =
                                     CG.access (CG.val i18nName) (ctx.lookupAccessorProxy key)
 
                             declaration =
-                                if ctx.i18nArgLast && hasPlaceholders then
+                                if ctx.i18nArgLast && hasPlaceholders && hasHtml then
+                                    CG.apply [ declarationWithoutArgs, CG.val dataName, CG.val htmlAttrsName ]
+
+                                else if ctx.i18nArgLast && hasPlaceholders then
                                     CG.apply [ declarationWithoutArgs, CG.val dataName ]
+
+                                else if ctx.i18nArgLast && hasHtml then
+                                    CG.apply [ declarationWithoutArgs, CG.val htmlAttrsName ]
 
                                 else
                                     declarationWithoutArgs
@@ -572,7 +592,7 @@ addI18nInstances =
                                             (if Dict.isEmpty specificPlaceholdersForThisLanguage then
                                                 CG.allPattern
 
-                                              else
+                                             else
                                                 CG.varPattern dataName
                                             )
                                                 :: addHtmlAttrsIfNeeded []

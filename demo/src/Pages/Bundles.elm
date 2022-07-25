@@ -27,7 +27,7 @@ init model =
 
 viewExplanation : Model -> List (Html msg)
 viewExplanation { i18n } =
-    [ Html.map never <| Html.p [] <| Translations.bundlesPreamble i18n [ class "highlighted" ]
+    [ Html.map never <| Html.p [] <| Translations.bundlesPreamble [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.bundlesConsiderationsHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.bundlesConsiderationsBody i18n ]
     , Html.h2 [] [ Html.text <| Translations.bundlesExploreHeadline i18n ]

@@ -32,7 +32,7 @@ suite =
   "elmModuleName": "Test.elm",
   "generatorMode": "inline",
   "addContentHash": true,
-  "i18nArgLast": true
+  "i18nArgFirst": true
 }"""
                     |> Expect.equal
                         (Ok <|
@@ -40,7 +40,7 @@ suite =
                                 { elmModuleName = "Test.elm"
                                 , generatorMode = Inline
                                 , addContentHash = True
-                                , i18nArgLast = True
+                                , i18nArgFirst = True
                                 }
                         )
         ]

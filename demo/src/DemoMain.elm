@@ -284,7 +284,7 @@ runTravelmAgency model =
             }
 
         finishRequest =
-            { i18nArgLast = False
+            { i18nArgFirst = False
             , generatorMode = model.generatorMode
             , addContentHash = False
             , elmModuleName = "Translations"

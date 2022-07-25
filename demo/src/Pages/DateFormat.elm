@@ -22,7 +22,7 @@ viewExplanation : Model -> List (Html Msg)
 viewExplanation { i18n } =
     [ Html.p [] [ Html.text <| Translations.dateFormatPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.dateFormatIntlHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.dateFormatIntlBody i18n { a = [], code = [ class "highlighted" ] }
+    , Html.map never <| Html.p [] <| Translations.dateFormatIntlBody { a = [], code = [ class "highlighted" ] } i18n
     , Html.h2 [] [ Html.text <| Translations.dateFormatCompileTimeHeadline i18n ]
     , Html.map never <| Html.p [] [ Html.text <| Translations.dateFormatCompileTimeBody i18n ]
     ]

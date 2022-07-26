@@ -286,7 +286,7 @@ addAccessorDeclarations =
                                                 returnType
 
                             aliasPatternIfNotEmptyPlaceholders =
-                                if List.isEmpty placeholders then
+                                if List.isEmpty placeholders && Set.isEmpty htmlIds then
                                     identity
 
                                 else

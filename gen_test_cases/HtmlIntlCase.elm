@@ -52,6 +52,16 @@ state =
                         , []
                         )
                       )
+                    , ( "normalHtml"
+                      , ( Html
+                            { tag = "p"
+                            , attrs = []
+                            , id = "p"
+                            , content = ( Text "just some html", [] )
+                            }
+                        , []
+                        )
+                      )
                     ]
             , fallback = Nothing
             , resources = ()

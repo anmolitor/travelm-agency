@@ -438,6 +438,17 @@ htmlAndIntl =
                             >> Query.find [ Selector.tag "p" ]
                             >> Query.has [ Selector.text "5" ]
                         )
+        , test "normal html functions still work" <|
+            \_ ->
+                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
+                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                    |> expectOkWith
+                        (Dynamic.HtmlIntlTranslations.normalHtml []
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "p" ]
+                            >> Query.has [ Selector.text "just some html" ]
+                        )
         ]
 
 

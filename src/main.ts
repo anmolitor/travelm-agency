@@ -205,9 +205,9 @@ const elmPathToModuleName = (elmPath: string): string => {
     elmConfig = require(elmJsonPath);
   }
   const elmPathRelativeToElmJson = path.relative(elmJsonDir, absoluteElmPath);
-  const possibleSourceDirs = elmConfig!["source-directories"].filter((srcDir) =>
-    elmPathRelativeToElmJson.startsWith(srcDir)
-  );
+  const possibleSourceDirs = elmConfig!["source-directories"]
+    .map((srcDir) => srcDir.split(path.posix.sep).join(path.sep))
+    .filter((srcDir) => elmPathRelativeToElmJson.startsWith(srcDir));
   if (possibleSourceDirs.length == 0) {
     throw new Error("Could not determine elm module name");
   }

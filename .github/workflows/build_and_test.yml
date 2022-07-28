@@ -42,6 +42,7 @@ jobs:
           CI: true
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
       - name: deploy docs
+        if: ${{ github.event_name == 'push' }}
         run: |
           cd demo/dist
           echo $GITHUB_ACTOR

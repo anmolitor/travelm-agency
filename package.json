@@ -19,6 +19,7 @@
   "license": "ISC",
   "types": "./lib/main.d.ts",
   "dependencies": {
+    "elm": "^0.19.1-5",
     "elm-format": "^0.8.5",
     "intl-proxy": "^1.0.1",
     "yargs": "^17.4.0"

@@ -2,8 +2,6 @@ import { defineConfig } from "vite";
 import elmPlugin from "vite-plugin-elm";
 import { name, version } from "../package.json";
 
-console.log(name, version);
-
 export default defineConfig({
   base: `/${name}/`,
   define: {

@@ -10,6 +10,8 @@ bundlesConsiderationsBody = Make sure you need this feature before using it. It 
   since you need to remember to include the right bundles on the right pages. If a key is not loaded yet, the respective function
   will return an empty string. Right now, Travelm-Agency compiles all of your translation keys into a flat list of exports,
   which does not really help in particular to distinguish the corresponding files where the keys are contained.
+  Prefixing your translations might help, which is why you can run travelm-agency with <code>--prefix_file_identifier</code>. This will prefix the bundle name
+  to each of the exposed accessor functions, i.e. if you have a translation "headline" in the file "summary.en.ftl", you can access that translation via "summaryHeadline".
   If you benchmarked and found out that bundling improves your render time a lot, let me know. I'm open for pull requests and suggestions
   to improve the generated code.
 

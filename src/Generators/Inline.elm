@@ -28,6 +28,7 @@ type alias WithCtx ctx =
         , state : NonEmptyState ()
         , file : CG.File
         , i18nArgLast : Bool
+        , prefixFileIdentifier : Bool
     }
 
 
@@ -56,6 +57,7 @@ toFileUnique =
             , state = ctx.state
             , file = ctx.file
             , i18nArgLast = ctx.i18nArgLast
+            , prefixFileIdentifier = ctx.prefixFileIdentifier
             , lookupAccessor = lookupAccessor
             , lookupAccessorProxy = lookupAccessorProxy
             }
@@ -182,6 +184,7 @@ addI18nTypeDeclarations unCtx =
             , names = ctx.names
             , state = ctx.state
             , i18nArgLast = ctx.i18nArgLast
+            , prefixFileIdentifier = ctx.prefixFileIdentifier
             , lookupAccessor = ctx.lookupAccessor
             , lookupAccessorProxy = ctx.lookupAccessorProxy
             , i18nProxyName = wrappedI18nTypeName
@@ -619,6 +622,7 @@ toFile context state =
                 , file = Shared.emptyFile context
                 , names = names
                 , i18nArgLast = context.i18nArgLast
+                , prefixFileIdentifier = context.prefixFileIdentifier
                 }
             )
         |> toFileUnique

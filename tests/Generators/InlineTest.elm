@@ -16,6 +16,7 @@ import Inline.NestedHtmlTranslations
 import Inline.NestedInterpolationTranslations
 import Inline.NumberFormatTranslations
 import Inline.PluralTranslations
+import Inline.PrefixFileIdentifierTestTranslations
 import Inline.SimpleHtmlTranslations
 import Inline.SimpleI18nFirstTranslations
 import Inline.SingleInterpolationTranslations
@@ -25,7 +26,6 @@ import Test.Html.Query as Query
 import Test.Html.Selector as Selector
 import Time
 import Util
-import Inline.PrefixFileIdentifierTestTranslations
 
 
 singleText : Test
@@ -397,13 +397,3 @@ complexI18nFirst =
                     -- as usual, we can only test for no compilation errors here, since Intl is mocked
                     |> Expect.equal ""
         ]
-
-prefixFileIdentifier : Test
-prefixFileIdentifier =
-    describe "prefixFileIdentifier" [
-        test "prefixes first translation bundle"  <|
-            \_ ->
-                Inline.PrefixFileIdentifierTestTranslations.init Inline.PrefixFileIdentifierTestTranslations.En
-                    |> Inline.PrefixFileIdentifierTestTranslations.bundle1Text
-                    |> Expect.equal "text from bundle 1"
-    ]        

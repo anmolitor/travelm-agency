@@ -287,6 +287,7 @@ runTravelmAgency model =
             { i18nArgFirst = False
             , generatorMode = model.generatorMode
             , addContentHash = False
+            , prefixFileIdentifier = False
             , elmModuleName = "Translations"
             }
 

@@ -97,8 +97,14 @@ tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nAr
             , names = defaultNames
             , intl = model.intl
             , i18nArgLast = not i18nArgFirst
-            , prefixFileIdentifier = prefixFileIdentifier
             }
+
+        prefixTranslations =
+            if prefixFileIdentifier then
+                State.prefixTranslationsWithIdentifiers
+
+            else
+                identity
 
         generate validatedState =
             case generatorMode of
@@ -116,7 +122,7 @@ tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nAr
                     , optimizedJson = Dict.NonEmpty.toDict stateWithResources |> State.getAllResources
                     }
     in
-    State.validateState model.devMode model.state |> Result.map generate
+    State.validateState model.devMode model.state |> Result.map (prefixTranslations >> generate)
 
 
 parseTranslationContent : Intl -> Ports.TranslationRequest -> Failable (Translation ())

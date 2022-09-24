@@ -66,6 +66,7 @@ interface InlineOptions {
   addContentHash: boolean;
   devMode: boolean;
   i18nArgFirst: boolean;
+  prefixFileIdentifier: boolean;
 }
 
 interface DynamicOptions extends InlineOptions {
@@ -127,7 +128,7 @@ export const finishModule = ({
           generatorMode,
           addContentHash,
           i18nArgFirst,
-          prefixFileIdentifier
+          prefixFileIdentifier,
         });
       }),
     devMode
@@ -170,6 +171,7 @@ export const run = async (options: Options) => {
     addContentHash,
     devMode,
     i18nArgFirst,
+    prefixFileIdentifier
   } = options;
   const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
     path.resolve(translationDir, fileName)
@@ -186,6 +188,7 @@ export const run = async (options: Options) => {
     addContentHash,
     devMode,
     i18nArgFirst,
+    prefixFileIdentifier,
   });
 
   const elmPromise = writeFile(elmPath, elmFile);

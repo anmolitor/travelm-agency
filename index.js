@@ -71,6 +71,7 @@ const { hideBin } = require("yargs/helpers");
     addContentHash: args.hash,
     devMode: args.devMode,
     i18nArgFirst: args.i18n_arg_first,
+    prefixFileIdentifier: args.prefix_file_identifier,
   });
 })();
 

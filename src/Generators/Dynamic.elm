@@ -10,7 +10,6 @@ import Dict exposing (Dict)
 import Dict.NonEmpty
 import Elm.CodeGen as CG
 import FNV1a
-import Generators.Inline exposing (WithCtx)
 import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import Json.Encode as E
@@ -34,7 +33,6 @@ type alias WithCtx ctx =
         , state : NonEmptyState OptimizedJson
         , file : CG.File
         , i18nArgLast : Bool
-        , prefixFileIdentifier : Bool
     }
 
 
@@ -66,7 +64,6 @@ toFileUnique =
             , intl = ctx.intl
             , state = ctx.state
             , i18nArgLast = ctx.i18nArgLast
-            , prefixFileIdentifier = ctx.prefixFileIdentifier
             , file = ctx.file
             , lookupAccessor = lookup
             }
@@ -78,7 +75,6 @@ toFileUnique =
                 , state = ctx.state
                 , file = ctx.file
                 , i18nArgLast = ctx.i18nArgLast
-                , prefixFileIdentifier = ctx.prefixFileIdentifier
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = (++) "languageToFileName_" >> lookup
                 }
@@ -95,7 +91,6 @@ toFileUnique =
                 , state = ctx.state
                 , file = ctx.file
                 , i18nArgLast = ctx.i18nArgLast
-                , prefixFileIdentifier = ctx.prefixFileIdentifier
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
                 , replacePlaceholdersName = replacePlaceholdersName
@@ -112,7 +107,6 @@ toFileUnique =
                 , state = ctx.state
                 , file = ctx.file
                 , i18nArgLast = ctx.i18nArgLast
-                , prefixFileIdentifier = ctx.prefixFileIdentifier
                 , lookupAccessor = ctx.lookupAccessor
                 , lookupLanguageToFileName = ctx.lookupLanguageToFileName
                 , replacePlaceholdersName = ctx.replacePlaceholdersName
@@ -564,7 +558,6 @@ toFile context state =
                 , file = Shared.emptyFile context
                 , names = names
                 , i18nArgLast = context.i18nArgLast
-                , prefixFileIdentifier = context.prefixFileIdentifier
                 }
             )
         |> toFileUnique

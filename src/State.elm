@@ -10,7 +10,7 @@ import Types.Error as Error exposing (Failable)
 import Types.Features as Features exposing (Features)
 import Types.InterpolationKind as InterpolationKind exposing (InterpolationKind)
 import Types.Segment as Segment exposing (TKey)
-import Types.Translation exposing (Translation)
+import Types.Translation as Translation exposing (Translation)
 
 
 type alias OptimizedJson =
@@ -46,6 +46,11 @@ collectiveTranslationSet =
         >> List.NonEmpty.foldl1 combineTranslationSets
 
 
+prefixTranslationsWithIdentifiers : NonEmptyState any -> NonEmptyState any
+prefixTranslationsWithIdentifiers =
+    Dict.NonEmpty.map prefixTranslationSet
+
+
 combineTranslationSets : TranslationSet any -> TranslationSet any -> TranslationSet any
 combineTranslationSets t =
     Dict.NonEmpty.toList
@@ -55,7 +60,7 @@ combineTranslationSets t =
                     merge val =
                         case val of
                             Just existing ->
-                                Types.Translation.append existing new
+                                Translation.append existing new
 
                             Nothing ->
                                 new
@@ -63,6 +68,12 @@ combineTranslationSets t =
                 Dict.NonEmpty.update lang merge acc
             )
             t
+
+
+prefixTranslationSet : String -> TranslationSet any -> TranslationSet any
+prefixTranslationSet prefix =
+    Dict.NonEmpty.map
+        (\_ translations -> Translation.prefix prefix translations)
 
 
 getAllResources : State resources -> List resources
@@ -107,7 +118,7 @@ inferFeatures =
 
 inferFeaturesTranslationSet : TranslationSet any -> Features
 inferFeaturesTranslationSet =
-    Dict.NonEmpty.values >> Features.combineMap Types.Translation.inferFeatures
+    Dict.NonEmpty.values >> Features.combineMap Translation.inferFeatures
 
 
 getHtmlIds : NonEmptyState any -> Dict TKey (Set String)
@@ -185,13 +196,13 @@ validateTranslationSet translationSet =
         lookupTranslationForLang lang =
             Dict.NonEmpty.get lang translationSet
     in
-    Dict.NonEmpty.map (Types.Translation.completeFallback lookupTranslationForLang) translationSet
+    Dict.NonEmpty.map (Translation.completeFallback lookupTranslationForLang) translationSet
         |> Dict.NonEmpty.toList
         |> List.map Result.Extra.combineSecond
         |> Error.combineList
         |> Result.andThen
             (\translations ->
-                List.map2 Types.Translation.checkTranslationsForConsistency translations (List.drop 1 translations)
+                List.map2 Translation.checkTranslationsForConsistency translations (List.drop 1 translations)
                     |> Error.combineList
                     |> Result.map (always ())
             )

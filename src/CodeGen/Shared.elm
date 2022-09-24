@@ -21,7 +21,6 @@ type alias Context =
     , names : Names
     , intl : Intl
     , i18nArgLast : Bool
-    , prefixFileIdentifier : Bool
     }
 
 

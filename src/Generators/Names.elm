@@ -2,8 +2,8 @@ module Generators.Names exposing (Names, defaultNames, withUniqueNames)
 
 import Set
 import String.Extra
-import Types.Basic exposing (Identifier)
 import Types.UniqueName as Unique
+import Types.Segment exposing (TKey)
 
 
 type alias Names =
@@ -31,7 +31,7 @@ defaultNames =
     }
 
 
-withUniqueNames : List Identifier -> Names -> (Names -> a -> b) -> Unique.UniqueNameContext a -> Unique.UniqueNameContext b
+withUniqueNames : List TKey -> Names -> (Names -> a -> b) -> Unique.UniqueNameContext a -> Unique.UniqueNameContext b
 withUniqueNames identifiers names doWithNames =
     let
         newNameList =

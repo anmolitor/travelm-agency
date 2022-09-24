@@ -1,4 +1,4 @@
-module Types.Translation exposing (Translation, append, checkTranslationsForConsistency, completeFallback, concat, empty, fromPairs, inferFeatures, map)
+module Types.Translation exposing (Translation, append, checkTranslationsForConsistency, completeFallback, concat, empty, fromPairs, inferFeatures, map, prefix)
 
 import Dict exposing (Dict)
 import Maybe.Extra
@@ -7,6 +7,7 @@ import Types.Basic exposing (Language)
 import Types.Error as Error exposing (Failable)
 import Types.Features as Features exposing (Features)
 import Types.Segment as Segment exposing (TKey, TValue)
+import Util
 
 
 type alias Translation resources =
@@ -40,6 +41,16 @@ append first second =
     { pairs = Dict.union first.pairs second.pairs
     , fallback = Maybe.Extra.or first.fallback second.fallback
     , resources = first.resources
+    }
+
+
+prefix : String -> Translation any -> Translation any
+prefix pre translations =
+    { translations
+        | pairs =
+            Dict.toList translations.pairs
+                |> List.map (\( k, v ) -> ( Util.keyToName [ pre, k ], v ))
+                |> Dict.fromList
     }
 
 

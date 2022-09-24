@@ -16,7 +16,6 @@ import Inline.NestedHtmlTranslations
 import Inline.NestedInterpolationTranslations
 import Inline.NumberFormatTranslations
 import Inline.PluralTranslations
-import Inline.PrefixFileIdentifierTestTranslations
 import Inline.SimpleHtmlTranslations
 import Inline.SimpleI18nFirstTranslations
 import Inline.SingleInterpolationTranslations

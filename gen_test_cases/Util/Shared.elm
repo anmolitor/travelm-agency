@@ -24,17 +24,18 @@ type alias GenOptions =
     { mode : GeneratorMode
     , i18nArgFirst : Bool
     , addContentHash : Bool
+    , prefixFileIdentifier : Bool
     }
 
 
 inlineOpts : GenOptions
 inlineOpts =
-    { mode = Inline, i18nArgFirst = False, addContentHash = False }
+    { mode = Inline, i18nArgFirst = False, addContentHash = False, prefixFileIdentifier = False }
 
 
 dynamicOpts : GenOptions
 dynamicOpts =
-    { mode = Dynamic, i18nArgFirst = False, addContentHash = False }
+    { mode = Dynamic, i18nArgFirst = False, addContentHash = False, prefixFileIdentifier = False }
 
 
 buildMain : List GenOptions -> NonEmptyState () -> Generator
@@ -68,6 +69,7 @@ generate name state opts =
                     { defaultContext
                         | moduleName = [ "Dynamic", moduleName ]
                         , i18nArgLast = not opts.i18nArgFirst
+                        , prefixFileIdentifier = opts.prefixFileIdentifier
                     }
                     stateWithResources
                     |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")
@@ -93,6 +95,7 @@ defaultContext =
     , names = defaultNames
     , intl = Util.emptyIntl
     , i18nArgLast = False
+    , prefixFileIdentifier = False
     }
 
 

@@ -38,7 +38,13 @@ const { hideBin } = require("yargs/helpers");
           })
           .option("i18n_arg_first", {
             description:
-              "Pass the i18n instance as the last parameter to the generated function (opposed to it being the first)",
+              "Pass the i18n instance as the last parameter to the generated function (opposed to it being the first).",
+            type: "boolean",
+            default: false,
+          })
+          .option("prefix_file_identifier", {
+            description:
+              "Prefix the identifier of the files containing the translation keys to the generated translation functions.",
             type: "boolean",
             default: false,
           })

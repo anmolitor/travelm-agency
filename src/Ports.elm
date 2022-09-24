@@ -87,7 +87,12 @@ generatorModeDecoder =
 
 
 type alias FinishRequest =
-    { elmModuleName : String, generatorMode : GeneratorMode, addContentHash : Bool, i18nArgFirst : Bool }
+    { elmModuleName : String
+    , generatorMode : GeneratorMode
+    , addContentHash : Bool
+    , i18nArgFirst : Bool
+    , prefixFileIdentifier : Bool
+    }
 
 
 subToRequests : (Result D.Error Request -> msg) -> Sub msg
@@ -141,6 +146,7 @@ finishRequestDecoder =
         |> D.optional "generatorMode" generatorModeDecoder Dynamic
         |> D.optional "addContentHash" D.bool False
         |> D.optional "i18nArgFirst" D.bool False
+        |> D.optional "prefixFileIdentifier" D.bool False
 
 
 type alias InternalRequest =

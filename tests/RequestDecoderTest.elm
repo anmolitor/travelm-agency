@@ -32,7 +32,8 @@ suite =
   "elmModuleName": "Test.elm",
   "generatorMode": "inline",
   "addContentHash": true,
-  "i18nArgFirst": true
+  "i18nArgFirst": true,
+  "prefixFileIdentifier": true
 }"""
                     |> Expect.equal
                         (Ok <|
@@ -41,6 +42,7 @@ suite =
                                 , generatorMode = Inline
                                 , addContentHash = True
                                 , i18nArgFirst = True
+                                , prefixFileIdentifier = True
                                 }
                         )
         ]

@@ -96,12 +96,14 @@ export const finishModule = ({
   addContentHash,
   devMode = false,
   i18nArgFirst = false,
+  prefixFileIdentifier = false,
 }: {
   elmPath: string;
   generatorMode?: GeneratorMode | null;
   addContentHash: boolean;
   devMode?: boolean;
   i18nArgFirst?: boolean;
+  prefixFileIdentifier?: boolean;
 }): Promise<ResponseContent> =>
   withElmApp(
     async (ports) =>
@@ -125,6 +127,7 @@ export const finishModule = ({
           generatorMode,
           addContentHash,
           i18nArgFirst,
+          prefixFileIdentifier
         });
       }),
     devMode

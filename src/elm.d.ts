@@ -15,6 +15,7 @@ declare module "*elm.min.js" {
     generatorMode: GeneratorMode | null;
     addContentHash: boolean | null;
     i18nArgFirst: boolean | null;
+    prefixFileIdentifier: boolean | null;
   }
 
   export interface Response {

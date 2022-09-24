@@ -1,4 +1,4 @@
-module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls, applyWithParensIfNecessary)
+module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, applyWithParensIfNecessary, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls)
 
 import CodeGen.Utils
 import Elm.CodeGen as CG
@@ -21,6 +21,7 @@ type alias Context =
     , names : Names
     , intl : Intl
     , i18nArgLast : Bool
+    , prefixFileIdentifier : Bool
     }
 
 

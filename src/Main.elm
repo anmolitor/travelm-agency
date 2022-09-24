@@ -89,7 +89,7 @@ defaultFileWidth =
 
 
 tryFinishModule : Int -> Ports.FinishRequest -> Model -> Failable Ports.ResponseContent
-tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nArgFirst } model =
+tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nArgFirst, prefixFileIdentifier } model =
     let
         context =
             { moduleName = Util.moduleName elmModuleName
@@ -97,6 +97,7 @@ tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nAr
             , names = defaultNames
             , intl = model.intl
             , i18nArgLast = not i18nArgFirst
+            , prefixFileIdentifier = prefixFileIdentifier
             }
 
         generate validatedState =

@@ -294,6 +294,11 @@ toInternalRepConverterTests =
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some text", [] ) } ]
                     |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "msg", ( Text "some text", [] ) ) ])
+        ,test "message with minus in key" <|
+            \_ ->
+                [ F.noAttrs { identifier = F.MessageIdentifier "msg-with-minus", content = ( F.TextContent "some text", [] ) } ]
+                    |> F.fluentToInternalRep emptyIntl "en"
+                    |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "msgWithMinus", ( Text "some text", [] ) ) ])
         , test "single message with interpolation" <|
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some ", [ F.PlaceableContent (F.VarRef "name") ] ) } ]

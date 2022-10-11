@@ -85,7 +85,7 @@ type Content
 fluentToInternalRep : Intl -> String -> AST -> Failable (Translation ())
 fluentToInternalRep intl language ast_ =
     let
-        identifierToKey : Identifier -> TKey
+        identifierToKey : Identifier -> String
         identifierToKey id =
             case id of
                 TermIdentifier t ->
@@ -298,7 +298,7 @@ fluentToInternalRep intl language ast_ =
                 |> Result.map
                     (List.NonEmpty.concat
                         >> Segment.concatenateTextSegments
-                        >> Tuple.pair attr.identifier
+                        >> Tuple.pair (Util.keyToName [ attr.identifier ])
                     )
 
         msgToAttrs : Message -> NonEmpty Attribute

@@ -10,7 +10,7 @@ import Test exposing (Test, describe, fuzz, fuzz2, fuzz3)
 fuzzDict : Fuzzer comparable -> Fuzzer v -> Fuzzer (Dict comparable v)
 fuzzDict fuzzK fuzzV =
     Fuzz.map Dict.fromList
-        (Fuzz.list <| Fuzz.tuple ( fuzzK, fuzzV ))
+        (Fuzz.list <| Fuzz.pair fuzzK fuzzV)
 
 
 fuzzNonEmptyDict : Fuzzer comparable -> Fuzzer v -> Fuzzer (DNE.NonEmpty comparable v)
@@ -18,7 +18,7 @@ fuzzNonEmptyDict fuzzK fuzzV =
     Fuzz.map3 (\k v lst -> DNE.fromList ( ( k, v ), lst ))
         fuzzK
         fuzzV
-        (Fuzz.list <| Fuzz.tuple ( fuzzK, fuzzV ))
+        (Fuzz.list <| Fuzz.pair fuzzK fuzzV)
 
 
 suite : Test
@@ -77,5 +77,6 @@ suite =
             \dict ->
                 DNE.toList dict
                     |> List.member (DNE.getFirstEntry dict)
-                    |> Expect.true "Expected first entry to be included in all entries"
+                    |> Expect.equal True
+                    |> Expect.onFail "Expected first entry to be included in all entries"
         ]

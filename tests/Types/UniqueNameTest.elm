@@ -17,7 +17,8 @@ suite =
                     |> Unique.andThen name (\_ -> Tuple.pair)
                     |> Unique.unwrap
                     |> (\( name1, name2 ) -> name1 /= name2)
-                    |> Expect.true "Expect generated names to be unique"
+                    |> Expect.equal True
+                    |> Expect.onFail "Expect generated names to be unique"
         , fuzz Fuzz.string "the new name always contains the given suggestion as a prefix" <|
             \name ->
                 Unique.new ()
@@ -41,7 +42,8 @@ suite =
                     |> Unique.combineAndThen (always Set.empty) (\_ _ -> identity)
                     |> Unique.unwrap
                     |> ((|>) name >> String.contains "This should not happen")
-                    |> Expect.true "Expected error string"
+                    |> Expect.equal True
+                    |> Expect.onFail "Expected error string"
         , test "normal words do not need any modification" <|
             \_ ->
                 Unique.new ()
@@ -61,10 +63,13 @@ suite =
                     |> Unique.scoped (Unique.andThen name <| \_ -> Tuple.pair)
                     |> Unique.unwrap
                     |> (\( n1, n2 ) -> n1 == n2)
-                    |> Expect.true "The names should be equal because they are in seperate scopes"
+                    |> Expect.equal True
+                    |> Expect.onFail "The names should be equal because they are in seperate scopes"
         ]
 
 
 expectToStartWith : String -> String -> Expectation
 expectToStartWith prefix str =
-    String.startsWith prefix str |> Expect.true ("Expected '" ++ str ++ "' to start with '" ++ prefix ++ "'")
+    String.startsWith prefix str
+        |> Expect.equal True
+        |> Expect.onFail ("Expected '" ++ str ++ "' to start with '" ++ prefix ++ "'")

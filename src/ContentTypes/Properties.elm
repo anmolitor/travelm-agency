@@ -142,7 +142,7 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                         (\key value ->
                             P.Loop
                                 { state
-                                    | htmlTagParsingState = CollectingAttrs tag (( key, [ Segment.Text value ] ) :: attrs)
+                                    | htmlTagParsingState = CollectingAttrs tag (( key, value ) :: attrs)
                                 }
                         )
                         |= (P.chompWhile (\char -> char /= ' ' && char /= '=') |> P.getChompedString)
@@ -150,8 +150,27 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                         |. P.token "="
                         |. P.chompWhile ((==) ' ')
                         |. P.token "\""
-                        |= (P.chompWhile ((/=) '"') |> P.getChompedString)
-                        |. P.token "\""
+                        |= P.loop []
+                            (\revAttrSegments ->
+                                P.oneOf
+                                    [ (P.succeed <| P.Done revAttrSegments)
+                                        |. P.token "\""
+                                    , P.map (ContentTypes.Shared.addText revAttrSegments >> P.Loop)
+                                        (ContentTypes.Shared.bracket "'" "'")
+                                    , P.map (\interp -> P.Loop <| interp :: revAttrSegments)
+                                        interpolationParser
+                                    , P.andThen
+                                        (\text ->
+                                            if String.isEmpty text then
+                                                P.problem "Invalid Attribute. It seems like you did not finish your value with a '\"'."
+
+                                            else
+                                                P.succeed <| P.Loop <| ContentTypes.Shared.addText revAttrSegments text
+                                        )
+                                      <|
+                                        ContentTypes.Shared.chompAllExcept [ '"', '{', '\\', '\'' ]
+                                    ]
+                            )
                     ]
 
 

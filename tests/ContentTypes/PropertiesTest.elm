@@ -134,6 +134,40 @@ prop=A \\
                             )
                           )
                         ]
+        , test "placeholders in html attributes" <|
+            \_ ->
+                "a = <a href=\"pre {link} post\">Text</a>"
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "a"
+                                , id = "a"
+                                , attrs =
+                                    [ ( "href", ( Text "pre ", [ Interpolation "link", Text " post" ] ) ) ]
+                                , content =
+                                    ( Text "Text", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
+        , test "html attributes with escaped chars" <|
+            \_ ->
+                "a = <a href=\"escaping '{' bracket\">Text</a>"
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "a"
+                                , id = "a"
+                                , attrs =
+                                    [ ( "href", ( Text "escaping { bracket", [] ) ) ]
+                                , content =
+                                    ( Text "Text", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
         , test "fallback directive" <|
             \_ ->
                 """

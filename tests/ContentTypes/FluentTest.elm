@@ -166,6 +166,28 @@ blank lines"""
                                 )
                             }
                         )
+        , test "html message with interpolation in attributes" <|
+            \_ ->
+                Parser.run F.message """msg = <a href="pre {$link} post" _id="link">content</a>"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "msg"
+                            , attrs = []
+                            , content =
+                                ( F.HtmlContent
+                                    { tag = "a"
+                                    , id = "link"
+                                    , attrs =
+                                        [ ( "href"
+                                          , ( F.TextContent "pre ", [ F.PlaceableContent <| F.VarRef "link", F.TextContent " post" ] )
+                                          )
+                                        ]
+                                    , content = ( F.TextContent "content", [] )
+                                    }
+                                , []
+                                )
+                            }
+                        )
         , test "nested html message" <|
             \_ ->
                 Parser.run F.message """msg = some <b _id="bold">important</b> paragraph: <p><img _id="image" src="{ $imgSrc }"></img></p>"""
@@ -294,7 +316,7 @@ toInternalRepConverterTests =
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg", content = ( F.TextContent "some text", [] ) } ]
                     |> F.fluentToInternalRep emptyIntl "en"
                     |> Expect.equal (Ok <| Types.Translation.fromPairs [ ( "msg", ( Text "some text", [] ) ) ])
-        ,test "message with minus in key" <|
+        , test "message with minus in key" <|
             \_ ->
                 [ F.noAttrs { identifier = F.MessageIdentifier "msg-with-minus", content = ( F.TextContent "some text", [] ) } ]
                     |> F.fluentToInternalRep emptyIntl "en"

@@ -117,6 +117,16 @@ onEnd state =
             P.succeed <| finalizeRevSegments state.revSegments
 
 
+addText : List Segment.TSegment -> String -> List Segment.TSegment
+addText revSegments text =
+    case revSegments of
+        (Segment.Text previousText) :: otherSegs ->
+            Segment.Text (previousText ++ text) :: otherSegs
+
+        _ ->
+            Segment.Text text :: revSegments
+
+
 bracket : String -> String -> P.Parser String
 bracket start end =
     P.succeed identity

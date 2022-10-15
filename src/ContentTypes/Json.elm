@@ -126,12 +126,7 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
     let
         addText : String -> P.Step ParsingState Segment.TValue
         addText text =
-            case revSegments of
-                (Segment.Text previousText) :: otherSegs ->
-                    P.Loop { state | revSegments = Segment.Text (previousText ++ text) :: otherSegs }
-
-                _ ->
-                    P.Loop { state | revSegments = Segment.Text text :: revSegments }
+            P.Loop { state | revSegments = ContentTypes.Shared.addText revSegments text }
     in
     case htmlTagParsingState of
         CollectingContent _ _ _ ->
@@ -197,7 +192,7 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                         (\key value ->
                             P.Loop
                                 { state
-                                    | htmlTagParsingState = CollectingAttrs tag (( key, [ Segment.Text value ] ) :: attrs)
+                                    | htmlTagParsingState = CollectingAttrs tag (( key, value ) :: attrs)
                                 }
                         )
                         |= (P.chompWhile (\char -> char /= ' ' && char /= '=') |> P.getChompedString)
@@ -205,8 +200,31 @@ valueParserHelper ({ htmlTagParsingState, revSegments, nesting } as state) =
                         |. P.token "="
                         |. P.chompWhile ((==) ' ')
                         |. P.token "\\\""
-                        |= (P.chompWhile ((/=) '\\') |> P.getChompedString)
-                        |. P.token "\\\""
+                        |= P.loop []
+                            (\revAttrSegments ->
+                                P.oneOf
+                                    [ (P.succeed <| P.Done revAttrSegments)
+                                        |. P.token "\\\""
+                                    , P.succeed (ContentTypes.Shared.addText revAttrSegments >> P.Loop)
+                                        |. P.token "\\"
+                                        |= P.oneOf
+                                            (List.map (\( sequence, result ) -> P.token sequence |> P.map (\_ -> result)) validEscapeSequences
+                                                ++ [ P.problem "Invalid escaped char" ]
+                                            )
+                                    , P.map (\interp -> P.Loop <| interp :: revAttrSegments)
+                                        interpolationParser
+                                    , P.andThen
+                                        (\text ->
+                                            if String.isEmpty text then
+                                                P.problem "Invalid Attribute. It seems like you did not finish your value with a '\"'."
+
+                                            else
+                                                P.succeed <| P.Loop <| ContentTypes.Shared.addText revAttrSegments text
+                                        )
+                                      <|
+                                        ContentTypes.Shared.chompAllExcept [ '"', '{', '\\' ]
+                                    ]
+                            )
                     ]
 
 

@@ -122,6 +122,36 @@ parserTests =
                             )
                           )
                         ]
+        , test "html attributes with placeholders" <|
+            \_ ->
+                """{ "a": "<a href=\\"pre {link} post\\">Text</a>" }"""
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "a"
+                                , id = "a"
+                                , attrs = [ ( "href", ( Text "pre ", [ Interpolation "link", Text " post" ] ) ) ]
+                                , content = ( Text "Text", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
+        , test "html attributes with escaped chars" <|
+            \_ ->
+                """{ "a": "<a href=\\"escaping \\\\{ for real\\">Text</a>" }"""
+                    |> expectParseTo
+                        [ ( "a"
+                          , ( Html
+                                { tag = "a"
+                                , id = "a"
+                                , attrs = [ ( "href", ( Text "escaping { for real", [] ) ) ]
+                                , content = ( Text "Text", [] )
+                                }
+                            , []
+                            )
+                          )
+                        ]
         , test "fallback directive" <|
             \_ ->
                 """{ "--fallback-language": "en", "other": "test" }"""

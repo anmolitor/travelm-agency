@@ -641,7 +641,7 @@ translationToRecordTypeAnn state key =
                 |> Maybe.withDefault Set.empty
 
         htmlReturnType nonEmptyIds =
-            CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
+            CG.funAnn (Shared.htmlRecordTypeAnnNever nonEmptyIds)
                 (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
     in
     case ( placeholders, List.NonEmpty.fromList <| Set.toList htmlIds ) of

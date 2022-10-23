@@ -254,7 +254,7 @@ addAccessorDeclarations =
 
                                     Just nonEmptyIds ->
                                         CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
-                                            (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
+                                            (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ])
 
                             orderTypeSignature signatureWithoutI18n =
                                 (if ctx.i18nArgLast then

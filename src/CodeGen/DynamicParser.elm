@@ -86,11 +86,11 @@ addReplacePlaceholderDeclaration =
                         <|
                             CG.funAnn (CG.listAnn CG.charAnn) <|
                                 CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ]) <|
-                                    CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ] ]) <|
+                                    CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ] ]) <|
                                         CG.fqTyped [ "Parser" ]
                                             "Parser"
                                             [ CG.tupleAnn
-                                                [ CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ]
+                                                [ CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ]
                                                 , CG.maybeAnn CG.charAnn
                                                 ]
                                             ]
@@ -772,8 +772,8 @@ addReplacePlaceholderDeclaration =
                         )
                         <|
                             CG.funAnn (CG.listAnn CG.stringAnn) <|
-                                CG.funAnn (CG.listAnn <| CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]) <|
-                                    CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typed "Never" [] ])
+                                CG.funAnn (CG.listAnn <| CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ]) <|
+                                    CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ])
 
                     replaceHtmlPlaceholdersArgs =
                         List.filterMap identity

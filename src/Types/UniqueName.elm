@@ -1,4 +1,18 @@
-module Types.UniqueName exposing (UniqueNameContext, andThen, andThen2, andThen3, andThen4, andThen6, combineAndThen, map, mapWithScope, new, scoped, unwrap, andThen5)
+module Types.UniqueName exposing
+    ( UniqueNameContext
+    , andThen
+    , andThen2
+    , andThen3
+    , andThen4
+    , andThen5
+    , andThen6
+    , combineAndThen
+    , map
+    , mapWithScope
+    , new
+    , scoped
+    , unwrap
+    )
 
 {-| This module provides a monad for unique name generation given a context of already taken names.
 Elm keywords are automatically added to the set of taken names.

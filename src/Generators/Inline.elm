@@ -19,6 +19,7 @@ import Types.Segment as Segment exposing (TKey, TSegment, TValue)
 import Types.Translation exposing (Translation)
 import Types.UniqueName as Unique
 import Util
+import CodeGen.AST exposing (addASTDeclarations)
 
 
 type alias WithCtx ctx =
@@ -68,6 +69,7 @@ toFileUnique =
         >> addInitDeclaration
         >> addLoadLanguageDeclaration
         >> addI18nTypeDeclarations
+        >> addASTDeclarations
         >> addAccessorDeclarations
         >> addI18nInstances
         >> Shared.addLanguageRelatedDeclsUnique

@@ -20,13 +20,13 @@ init model =
 
 viewExplanation : Model -> List (Html Msg)
 viewExplanation { i18n } =
-    [ Html.map never <| Html.p [] <| Translations.htmlPreamble [ class "highlighted" ] i18n
+    [ Html.p [] <| Translations.htmlPreamble [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.htmlBasicsHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.htmlBasicsBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.htmlBasicsBody [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.htmlIdHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.htmlIdBody i18n ]
     , Html.h2 [] [ Html.text <| Translations.htmlSecurityHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.htmlSecurityBody [] i18n
+    , Html.p [] <| Translations.htmlSecurityBody [] i18n
     , Html.h2 [] [ Html.text <| Translations.htmlEscapingHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.htmlEscapingBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.htmlEscapingBody [ class "highlighted" ] i18n
     ]

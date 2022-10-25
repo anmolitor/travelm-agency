@@ -25,24 +25,24 @@ viewExplanation ({ i18n } as model) =
     , Html.h2 [] [ Html.text <| Translations.syntaxHeadline i18n ]
     , Accordion.view
         { headline = Translations.jsonHeadline i18n
-        , content = List.map (Html.map never) <| Translations.interpolationJsonSyntaxBody [ class "highlighted" ] i18n
+        , content = Translations.interpolationJsonSyntaxBody [ class "highlighted" ] i18n
         , id = "json_syntax"
         }
         model
     , Accordion.view
         { headline = Translations.propertiesHeadline i18n
-        , content = List.map (Html.map never) <| Translations.interpolationPropertiesSyntaxBody [ class "highlighted" ] i18n
+        , content = Translations.interpolationPropertiesSyntaxBody [ class "highlighted" ] i18n
         , id = "properties_syntax"
         }
         model
     , Accordion.view
         { headline = Translations.fluentHeadline i18n
-        , content = List.map (Html.map never) <| Translations.interpolationFluentSyntaxBody [ class "highlighted" ] i18n
+        , content = Translations.interpolationFluentSyntaxBody [ class "highlighted" ] i18n
         , id = "fluent_syntax"
         }
         model
     , Html.h2 [] [ Html.text <| Translations.interpolationGeneratedCodeHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.interpolationGeneratedCodeBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.interpolationGeneratedCodeBody [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.interpolationInconsistentKeysHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.interpolationInconsistentKeysBody i18n ]
     ]

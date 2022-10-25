@@ -22,7 +22,7 @@ viewExplanation : Model -> List (Html Msg)
 viewExplanation { i18n } =
     [ Html.p [] [ Html.text <| Translations.termsPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.termsSyntaxHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.termsSyntaxBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.termsSyntaxBody [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.termsFluentOnlyHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.termsFluentOnlyBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.termsFluentOnlyBody [ class "highlighted" ] i18n
     ]

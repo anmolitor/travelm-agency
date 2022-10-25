@@ -30,25 +30,19 @@ viewExplanation ({ i18n } as model) =
     , Html.h2 [] [ Html.text <| Translations.advantagesHeadline i18n ]
     , Accordion.view
         { headline = Translations.advantageReadabilityHeadline i18n
-        , content = List.map (Html.map never) <| Translations.advantageReadabilityBody [ class "highlighted" ] i18n
+        , content = Translations.advantageReadabilityBody [ class "highlighted" ] i18n
         , id = "readability"
         }
         model
     , Accordion.view
         { headline = Translations.advantageTypeSafetyHeadline i18n
-        , content =
-            List.map (Html.map never) <|
-                Translations.advantageTypeSafetyBody
-                    { code = [ class "highlighted" ], list = [], item = [] }
-                    i18n
+        , content = Translations.advantageTypeSafetyBody { code = [ class "highlighted" ], list = [], item = [] } i18n
         , id = "type_safety"
         }
         model
     , Accordion.view
         { headline = Translations.advantagePerformanceHeadline i18n
-        , content =
-            List.map (Html.map never) <|
-                Translations.advantagePerformanceBody [ class "highlighted" ] i18n
+        , content = Translations.advantagePerformanceBody [ class "highlighted" ] i18n
         , id = "performance"
         }
         model

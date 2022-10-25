@@ -33,24 +33,24 @@ viewExplanation : Model -> List (Html Msg)
 viewExplanation ({ i18n } as model) =
     [ Html.p [] [ Html.text <| Translations.consistencyPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.consistencyMissingKeysHeadline i18n ]
-    , Html.map never <| Html.p [] <| Translations.consistencyMissingKeysBody [ class "highlighted" ] i18n
+    , Html.p [] <| Translations.consistencyMissingKeysBody [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.consistencyFallbackHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.consistencyFallbackBody i18n ]
     , Accordion.view
         { headline = Translations.jsonHeadline i18n
-        , content = List.map (Html.map never) <| Translations.consistencyFallbackSyntaxJson [ class "highlighted" ] i18n
+        , content = Translations.consistencyFallbackSyntaxJson [ class "highlighted" ] i18n
         , id = "json_syntax"
         }
         model
     , Accordion.view
         { headline = Translations.propertiesHeadline i18n
-        , content = List.map (Html.map never) <| Translations.consistencyFallbackSyntaxProperties [ class "highlighted" ] i18n
+        , content = Translations.consistencyFallbackSyntaxProperties [ class "highlighted" ] i18n
         , id = "properties_syntax"
         }
         model
     , Accordion.view
         { headline = Translations.fluentHeadline i18n
-        , content = List.map (Html.map never) <| Translations.consistencyFallbackSyntaxFluent [ class "highlighted" ] i18n
+        , content = Translations.consistencyFallbackSyntaxFluent [ class "highlighted" ] i18n
         , id = "fluent_syntax"
         }
         model

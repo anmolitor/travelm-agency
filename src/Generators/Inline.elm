@@ -17,9 +17,7 @@ import Types.Basic exposing (Language)
 import Types.Features as Features
 import Types.InterpolationKind as InterpolationKind
 import Types.Segment as Segment exposing (TKey, TSegment, TValue)
-import Types.Translation exposing (Translation)
 import Types.UniqueName as Unique
-import Util
 
 
 type alias WithCtx ctx =
@@ -192,7 +190,7 @@ addAccessorDeclarations =
                                     |> Maybe.map Set.toList
                                     |> Maybe.withDefault []
 
-                            hasHtml =
+                            _ =
                                 not <| List.isEmpty htmlIds
 
                             i18nPattern =
@@ -270,7 +268,7 @@ addAccessorDeclarations =
                             needsHtmlConversion seg =
                                 Set.isEmpty (Segment.htmlIdsForSegment seg) && not (Set.isEmpty htmlIds)
 
-                            specificPlaceholdersForThisLanguage =
+                            _ =
                                 Segment.interpolationVars value
 
                             accessParam =

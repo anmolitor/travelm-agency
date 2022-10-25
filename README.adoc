@@ -1,5 +1,5 @@
 :toc:
-= 🌎 Travelm Agency  image:https://github.com/andreasewering/travelm-agency/actions/workflows/build_and_test.yml/badge.svg[link="https://github.com/andreasewering/travelm-agency/actions",title="build status"]
+= 🌎 Travelm Agency  image:https://github.com/andreasewering/travelm-agency/actions/workflows/build_and_test.yml/badge.svg[link="https://github.com/andreasewering/travelm-agency/actions",title="build status"] image:https://img.shields.io/npm/v/travelm-agency[link="https://www.npmjs.com/package/travelm-agency"]
 
 This package is a library and an executable to generate Elm Modules from different common I18n formats.
 You can see what the package does and how to use it in the https://andreasewering.github.io/travelm-agency[interactive tutorial].

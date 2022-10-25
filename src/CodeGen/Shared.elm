@@ -1,4 +1,20 @@
-module CodeGen.Shared exposing (Context, addDeclaration, addDeclarations, addExposing, addExposings, addLanguageRelatedDeclsUnique, appendAll, applyWithParensIfNecessary, concatenateLists, emptyFile, endoAnn, finishFile, htmlRecordTypeAnn, intlAnn, languageRelatedDecls, htmlRecordTypeAnnNever)
+module CodeGen.Shared exposing
+    ( Context
+    , addDeclaration
+    , addDeclarations
+    , addExposing
+    , addExposings
+    , addLanguageRelatedDeclsUnique
+    , appendAll
+    , applyWithParensIfNecessary
+    , concatenateLists
+    , emptyFile
+    , endoAnn
+    , finishFile
+    , htmlRecordTypeAnn
+    , intlAnn
+    , languageRelatedDecls
+    )
 
 import CodeGen.Utils
 import Elm.CodeGen as CG
@@ -192,22 +208,6 @@ This will map languages based on the prefix i.e. 'en-US' and 'en' will both map 
             CG.apply [ CG.val <| lookup "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]
 
 
-htmlRecordTypeAnnNever : NonEmpty String -> CG.TypeAnnotation
-htmlRecordTypeAnnNever nonEmptyIds =
-    if List.NonEmpty.isSingleton nonEmptyIds then
-        htmlAttrsTypeAnnNever
-
-    else
-        CG.recordAnn <|
-            List.map
-                (\id ->
-                    ( id
-                    , htmlAttrsTypeAnnNever
-                    )
-                )
-                (List.NonEmpty.toList nonEmptyIds)
-
-
 htmlRecordTypeAnn : NonEmpty String -> CG.TypeAnnotation
 htmlRecordTypeAnn nonEmptyIds =
     if List.NonEmpty.isSingleton nonEmptyIds then
@@ -237,11 +237,6 @@ concatenateLists e1 e2 =
 htmlAttrsTypeAnn : CG.TypeAnnotation
 htmlAttrsTypeAnn =
     CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ]
-
-
-htmlAttrsTypeAnnNever : CG.TypeAnnotation
-htmlAttrsTypeAnnNever =
-    CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typed "Never" [] ]
 
 
 applyWithParensIfNecessary : CG.Expression -> CG.Expression -> CG.Expression

@@ -1,6 +1,5 @@
 module Generators.Inline exposing (..)
 
-import CodeGen.AST exposing (addASTDeclarations)
 import CodeGen.Shared as Shared exposing (Context, endoAnn, intlAnn)
 import CodeGen.Utils
 import Dict

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "vite",
-    "prebuild": "node ../index.js translations --json_path=public/i18n --hash",
+    "prebuild": "node ../index.js translations --json_path=public/i18n --prefix_file_identifier --hash",
     "build": "cross-env NODE_ENV=production vite build",
     "preview": "vite preview"
   },

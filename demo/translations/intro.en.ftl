@@ -1,8 +1,8 @@
-introHeadline = Introduction
-introPreamble = Welcome to the Travelm-Agency tutorial. Here, you get to see all the features of Travelm-Agency, presented in examples
+headline = Introduction
+preamble = Welcome to the Travelm-Agency tutorial. Here, you get to see all the features of Travelm-Agency, presented in examples
   in a playground setting.
-introExplanationHeadline = What is Travelm-Agency?
-introExplanationBody = Travelm-Agency is a compiler that simplifies working with internationalized texts in the Elm programming language.
+explanationHeadline = What is Travelm-Agency?
+explanationBody = Travelm-Agency is a compiler that simplifies working with internationalized texts in the Elm programming language.
   Instead of writing Elm files containing all of your texts for all languages, and writing functions to access the
   correct texts depending on the current language, you can write your texts in one of several data formats.
   Travelm-Agency then reads in these files and generates the Elm code you may have otherwise written yourself.

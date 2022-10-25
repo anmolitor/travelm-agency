@@ -27,41 +27,41 @@ viewExplanation ({ i18n } as model) =
     [ Html.p [] [ Html.text <| Translations.introPreamble i18n ]
     , Html.h2 [] [ Html.text <| Translations.introExplanationHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.introExplanationBody i18n ]
-    , Html.h2 [] [ Html.text <| Translations.advantagesHeadline i18n ]
+    , Html.h2 [] [ Html.text <| Translations.introAdvantagesHeadline i18n ]
     , Accordion.view
-        { headline = Translations.advantageReadabilityHeadline i18n
-        , content = Translations.advantageReadabilityBody [ class "highlighted" ] i18n
+        { headline = Translations.introAdvantageReadabilityHeadline i18n
+        , content = Translations.introAdvantageReadabilityBody [ class "highlighted" ] i18n
         , id = "readability"
         }
         model
     , Accordion.view
-        { headline = Translations.advantageTypeSafetyHeadline i18n
-        , content = Translations.advantageTypeSafetyBody { code = [ class "highlighted" ], list = [], item = [] } i18n
+        { headline = Translations.introAdvantageTypeSafetyHeadline i18n
+        , content = Translations.introAdvantageTypeSafetyBody { code = [ class "highlighted" ], list = [], item = [] } i18n
         , id = "type_safety"
         }
         model
     , Accordion.view
-        { headline = Translations.advantagePerformanceHeadline i18n
-        , content = Translations.advantagePerformanceBody [ class "highlighted" ] i18n
+        { headline = Translations.introAdvantagePerformanceHeadline i18n
+        , content = Translations.introAdvantagePerformanceBody [ class "highlighted" ] i18n
         , id = "performance"
         }
         model
-    , Html.h2 [] [ Html.text <| Translations.disadvantagesHeadline i18n ]
+    , Html.h2 [] [ Html.text <| Translations.introDisadvantagesHeadline i18n ]
     , Accordion.view
-        { headline = Translations.disadvantageProgrammabilityHeadline i18n
-        , content = [ Html.text <| Translations.disadvantageProgrammabilityBody i18n ]
+        { headline = Translations.introDisadvantageProgrammabilityHeadline i18n
+        , content = [ Html.text <| Translations.introDisadvantageProgrammabilityBody i18n ]
         , id = "programmability"
         }
         model
     , Accordion.view
-        { headline = Translations.disadvantageToolchainHeadline i18n
-        , content = [ Html.text <| Translations.disadvantageToolchainBody i18n ]
+        { headline = Translations.introDisadvantageToolchainHeadline i18n
+        , content = [ Html.text <| Translations.introDisadvantageToolchainBody i18n ]
         , id = "toolchain"
         }
         model
-    , Html.h2 [] [ Html.text <| Translations.tutorialHowtoHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.tutorialHowtoBody i18n ]
-    , Html.p [] [ Html.text <| Translations.tutorialMobileAdditional i18n ]
-    , Html.h2 [] [ Html.text <| Translations.textsFeatureHeadline i18n ]
-    , Html.p [] [ Html.text <| Translations.textsFeatureBody i18n ]
+    , Html.h2 [] [ Html.text <| Translations.introTutorialHowtoHeadline i18n ]
+    , Html.p [] [ Html.text <| Translations.introTutorialHowtoBody i18n ]
+    , Html.p [] [ Html.text <| Translations.introTutorialMobileAdditional i18n ]
+    , Html.h2 [] [ Html.text <| Translations.introTextsFeatureHeadline i18n ]
+    , Html.p [] [ Html.text <| Translations.introTextsFeatureBody i18n ]
     ]

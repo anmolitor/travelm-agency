@@ -9,7 +9,6 @@ import Material.Icons
 import Material.Icons.Types exposing (Coloring(..))
 import Model exposing (Model)
 import Msg exposing (Msg(..))
-import Translations exposing (I18n)
 
 
 onClick : (Int -> msg) -> Html.Attribute msg

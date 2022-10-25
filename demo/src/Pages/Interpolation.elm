@@ -22,21 +22,21 @@ init model =
 viewExplanation : Model -> List (Html Msg)
 viewExplanation ({ i18n } as model) =
     [ Html.p [] [ Html.text <| Translations.interpolationPreamble i18n ]
-    , Html.h2 [] [ Html.text <| Translations.syntaxHeadline i18n ]
+    , Html.h2 [] [ Html.text <| Translations.sharedSyntaxHeadline i18n ]
     , Accordion.view
-        { headline = Translations.jsonHeadline i18n
+        { headline = Translations.sharedJsonHeadline i18n
         , content = Translations.interpolationJsonSyntaxBody [ class "highlighted" ] i18n
         , id = "json_syntax"
         }
         model
     , Accordion.view
-        { headline = Translations.propertiesHeadline i18n
+        { headline = Translations.sharedPropertiesHeadline i18n
         , content = Translations.interpolationPropertiesSyntaxBody [ class "highlighted" ] i18n
         , id = "properties_syntax"
         }
         model
     , Accordion.view
-        { headline = Translations.fluentHeadline i18n
+        { headline = Translations.sharedFluentHeadline i18n
         , content = Translations.interpolationFluentSyntaxBody [ class "highlighted" ] i18n
         , id = "fluent_syntax"
         }

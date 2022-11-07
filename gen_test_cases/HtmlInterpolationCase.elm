@@ -2,7 +2,7 @@ module HtmlInterpolationCase exposing (..)
 
 import Dict
 import Dict.NonEmpty
-import State exposing (NonEmptyState)
+import State exposing (State)
 import Types.Segment exposing (TSegment(..))
 import Util.Shared exposing (Generator, buildMain, dynamicOpts, inlineOpts)
 
@@ -12,7 +12,7 @@ main =
     buildMain [ inlineOpts, dynamicOpts ] state
 
 
-state : NonEmptyState ()
+state : State ()
 state =
     let
         htmlContentAdmin =
@@ -38,7 +38,7 @@ state =
         publicView =
             ( Text "You are not logged in.", [] )
     in
-    Dict.NonEmpty.singleton "messages" <|
+    Dict.singleton "messages" <|
         Dict.NonEmpty.singleton "en"
             { pairs =
                 Dict.fromList

@@ -4,6 +4,8 @@ import Dynamic.DateFormatServer
 import Dynamic.DateFormatTranslations
 import Dynamic.EscapeServer
 import Dynamic.EscapeTranslations
+import Dynamic.FallbackServer
+import Dynamic.FallbackTranslations
 import Dynamic.HashServer
 import Dynamic.HashTranslations
 import Dynamic.HtmlInterpolationServer
@@ -587,6 +589,24 @@ escapedPipeSymbols =
                                 , Selector.text "pipe"
                                 ]
                         )
+        ]
+
+
+fallback : Test
+fallback =
+    describe "fallback to another language"
+        [ test "falls back to the fallback language successfully" <|
+            \_ ->
+                sendRequest Dynamic.FallbackServer.server "messages.en.json" Dynamic.FallbackTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.FallbackTranslations.init)
+                    |> Result.map Dynamic.FallbackTranslations.justInGerman
+                    |> Expect.equal (Ok "more german text")
+        , test "still uses other existing values" <|
+            \_ ->
+                sendRequest Dynamic.FallbackServer.server "messages.en.json" Dynamic.FallbackTranslations.decodeMessages
+                    |> Result.map ((|>) Dynamic.FallbackTranslations.init)
+                    |> Result.map Dynamic.FallbackTranslations.text
+                    |> Expect.equal (Ok "english text")
         ]
 
 

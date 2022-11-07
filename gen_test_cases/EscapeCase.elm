@@ -2,7 +2,7 @@ module EscapeCase exposing (..)
 
 import Dict
 import Dict.NonEmpty
-import State exposing (NonEmptyState)
+import State exposing (State)
 import Types.Segment exposing (TSegment(..))
 import Util.Shared exposing (Generator, buildMain, dynamicOpts)
 
@@ -12,9 +12,9 @@ main =
     buildMain [ dynamicOpts ] state
 
 
-state : NonEmptyState ()
+state : State ()
 state =
-    Dict.NonEmpty.singleton "messages" <|
+    Dict.singleton "messages" <|
         Dict.NonEmpty.singleton
             "en"
             { pairs =

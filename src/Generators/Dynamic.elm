@@ -574,9 +574,6 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
             Types.Translation.map
                 (\_ ->
                     let
-                        getTranslationForLang lang =
-                            Dict.NonEmpty.get lang translationSet
-
                         interpolationMap =
                             State.interpolationMap translationSet
 
@@ -584,9 +581,7 @@ optimizeJsonAllLanguages addContentHash identifier translationSet =
                             State.getHtmlIdsForTranslationSet translationSet
 
                         content =
-                            Types.Translation.completeFallback getTranslationForLang language translation
-                                |> Result.withDefault translation
-                                |> .pairs
+                            translation.pairs
                                 |> optimizeJson interpolationMap htmlMap
                                 |> E.encode 0
                     in

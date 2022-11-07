@@ -5,6 +5,7 @@ import Html
 import Html.Attributes
 import Inline.ComplexI18nFirstTranslations
 import Inline.DateFormatTranslations
+import Inline.FallbackTranslations
 import Inline.HtmlInterpolationTranslations
 import Inline.HtmlIntlTranslations
 import Inline.InterpolationMatchTranslations
@@ -395,4 +396,20 @@ complexI18nFirst =
                     5.0
                     -- as usual, we can only test for no compilation errors here, since Intl is mocked
                     |> Expect.equal ""
+        ]
+
+
+fallback : Test
+fallback =
+    describe "fallback to another language"
+        [ test "falls back to the fallback language successfully" <|
+            \_ ->
+                Inline.FallbackTranslations.init Inline.FallbackTranslations.En
+                    |> Inline.FallbackTranslations.justInGerman
+                    |> Expect.equal "more german text"
+        , test "still uses other existing values" <|
+            \_ ->
+                Inline.FallbackTranslations.init Inline.FallbackTranslations.En
+                    |> Inline.FallbackTranslations.text
+                    |> Expect.equal "english text"
         ]

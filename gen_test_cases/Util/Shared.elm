@@ -11,7 +11,8 @@ import Generators.Names exposing (defaultNames)
 import Json.Decode as D
 import Json.Encode as E
 import Ports exposing (GeneratorMode(..))
-import State exposing (NonEmptyState, OptimizedJson)
+import Result.Extra
+import State exposing (NonEmptyState, OptimizedJson, State)
 import Util
 import Util.FilePort
 
@@ -37,7 +38,7 @@ dynamicOpts =
     { mode = Dynamic, i18nArgFirst = False, addContentHash = False }
 
 
-buildMain : List GenOptions -> NonEmptyState () -> Generator
+buildMain : List GenOptions -> State () -> Generator
 buildMain opts state =
     Platform.worker
         { init =
@@ -51,7 +52,7 @@ buildMain opts state =
         }
 
 
-generate : String -> NonEmptyState () -> GenOptions -> Cmd msg
+generate : String -> State () -> GenOptions -> Cmd msg
 generate name state opts =
     let
         moduleName =
@@ -61,7 +62,10 @@ generate name state opts =
         Dynamic ->
             let
                 stateWithResources =
-                    Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages opts.addContentHash) state
+                    State.validateState False state
+                        |> Result.mapError (\err -> Debug.todo <| "State validation failed!" ++ Debug.toString err)
+                        |> Result.Extra.merge
+                        |> Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages opts.addContentHash)
             in
             Cmd.batch
                 [ Generators.Dynamic.toFile
@@ -77,12 +81,14 @@ generate name state opts =
                 ]
 
         Inline ->
-            Generators.Inline.toFile
-                { defaultContext
-                    | moduleName = [ "Inline", moduleName ]
-                    , i18nArgLast = not opts.i18nArgFirst
-                }
-                state
+            State.validateState False state
+                |> Result.mapError (\err -> Debug.todo <| "State validation failed!" ++ Debug.toString err)
+                |> Result.Extra.merge
+                |> Generators.Inline.toFile
+                    { defaultContext
+                        | moduleName = [ "Inline", moduleName ]
+                        , i18nArgLast = not opts.i18nArgFirst
+                    }
                 |> writeFile ("gen_test_cases/Inline/" ++ moduleName ++ ".elm")
 
 

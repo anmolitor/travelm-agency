@@ -46,6 +46,22 @@ collectiveTranslationSet =
         >> List.NonEmpty.foldl1 combineTranslationSets
 
 
+completeFallback : NonEmptyState any -> NonEmptyState any
+completeFallback =
+    Dict.NonEmpty.map
+        (\_ translationSet ->
+            let
+                getTranslationForLang lang =
+                    Dict.NonEmpty.get lang translationSet
+            in
+            Dict.NonEmpty.map
+                (\lang translations ->
+                    Translation.completeFallback getTranslationForLang lang translations |> Result.withDefault translations
+                )
+                translationSet
+        )
+
+
 prefixTranslationsWithIdentifiers : NonEmptyState any -> NonEmptyState any
 prefixTranslationsWithIdentifiers =
     Dict.NonEmpty.map prefixTranslationSet
@@ -179,19 +195,38 @@ validateState devMode =
         >> Maybe.map
             (\nonEmptyState ->
                 if devMode then
-                    Ok nonEmptyState
+                    nonEmptyState
+                        |> Dict.NonEmpty.map
+                            (\_ translationSet ->
+                                case completeFallbacks translationSet of
+                                    Ok (first :: rest) ->
+                                        Dict.NonEmpty.fromList ( first, rest )
+
+                                    _ ->
+                                        translationSet
+                            )
+                        |> Ok
 
                 else
                     Dict.NonEmpty.toList nonEmptyState
-                        |> List.map (\( key, value ) -> validateTranslationSet value |> Error.addTranslationFileNameCtx key)
+                        |> List.map (\( key, value ) -> ( key, validateTranslationSet value |> Error.addTranslationFileNameCtx key ))
+                        |> List.map Result.Extra.combineSecond
                         |> Error.combineList
-                        |> Result.map (always nonEmptyState)
+                        |> Result.andThen
+                            (\translationSets ->
+                                case translationSets of
+                                    first :: rest ->
+                                        Ok <| Dict.NonEmpty.fromList ( first, rest )
+
+                                    [] ->
+                                        Error.noTranslationFiles
+                            )
             )
         >> Maybe.withDefault Error.noTranslationFiles
 
 
-validateTranslationSet : TranslationSet any -> Failable ()
-validateTranslationSet translationSet =
+completeFallbacks : TranslationSet any -> Failable (List ( Language, Translation any ))
+completeFallbacks translationSet =
     let
         lookupTranslationForLang lang =
             Dict.NonEmpty.get lang translationSet
@@ -200,9 +235,22 @@ validateTranslationSet translationSet =
         |> Dict.NonEmpty.toList
         |> List.map Result.Extra.combineSecond
         |> Error.combineList
-        |> Result.andThen
+
+
+validateTranslationSet : TranslationSet any -> Failable (TranslationSet any)
+validateTranslationSet =
+    completeFallbacks
+        >> Result.andThen
             (\translations ->
                 List.map2 Translation.checkTranslationsForConsistency translations (List.drop 1 translations)
                     |> Error.combineList
-                    |> Result.map (always ())
+                    |> Result.andThen
+                        (always <|
+                            case translations of
+                                first :: rest ->
+                                    Ok <| Dict.NonEmpty.fromList ( first, rest )
+
+                                [] ->
+                                    Error.noTranslationFiles
+                        )
             )

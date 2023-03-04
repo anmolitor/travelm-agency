@@ -413,3 +413,20 @@ fallback =
                     |> Inline.FallbackTranslations.text
                     |> Expect.equal "english text"
         ]
+
+
+getCurrentLanguage : Test
+getCurrentLanguage =
+    describe "get current language"
+        [ test "is correct for initial language" <|
+            \_ ->
+                Inline.MultiLanguageTextTranslations.init Inline.MultiLanguageTextTranslations.En
+                    |> Inline.MultiLanguageTextTranslations.currentLanguage
+                    |> Expect.equal Inline.MultiLanguageTextTranslations.En
+        , test "is correct after switching" <|
+            \_ ->
+                Inline.MultiLanguageTextTranslations.init Inline.MultiLanguageTextTranslations.En
+                    |> Inline.MultiLanguageTextTranslations.load Inline.MultiLanguageTextTranslations.De
+                    |> Inline.MultiLanguageTextTranslations.currentLanguage
+                    |> Expect.equal Inline.MultiLanguageTextTranslations.De
+        ]

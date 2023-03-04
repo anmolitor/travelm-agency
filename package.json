@@ -2,22 +2,22 @@
   "name": "travelm-agency",
   "version": "3.4.0",
   "description": "Generate type-safe accessors and decoders for your i18n files",
-  "main": "./lib/main.js",
-  "bin": "index.js",
-  "scripts": {
-    "build": "tsc && cross-env NODE_ENV=production node build.js",
-    "build:dev": "node build.js",
-    "test": "node generate_test_cases.js && elm-test"
-  },
   "keywords": [
     "Elm",
     "I18n",
     "JSON",
     "Codegen"
   ],
-  "author": "Andreas Molitor",
   "license": "ISC",
+  "author": "Andreas Molitor",
+  "main": "./lib/main.js",
   "types": "./lib/main.d.ts",
+  "bin": "index.js",
+  "scripts": {
+    "build": "tsc && cross-env NODE_ENV=production node build.js",
+    "build:dev": "node build.js",
+    "test": "node generate_test_cases.js && elm-test"
+  },
   "dependencies": {
     "elm": "^0.19.1-5",
     "elm-format": "^0.8.5",

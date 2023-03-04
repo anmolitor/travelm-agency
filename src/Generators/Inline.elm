@@ -65,6 +65,7 @@ toFileUnique =
     Unique.combineAndThen getKeySet (\_ -> Tuple.pair)
         >> Unique.combineAndThen (Tuple.first >> getKeySet) (\_ -> addAccessorsToContext)
         >> addInitDeclaration
+        >> addCurrentLanguageDeclaration
         >> addLoadLanguageDeclaration
         >> addI18nTypeDeclarations
         >> addAccessorDeclarations
@@ -97,6 +98,35 @@ addInitDeclaration =
                             (CG.val ctx.names.i18nTypeName)
             in
             { ctx | file = ctx.file |> Shared.addDeclaration initDecl |> Shared.addExposing (CG.funExpose ctx.names.initFunName) }
+
+
+addCurrentLanguageDeclaration : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
+addCurrentLanguageDeclaration =
+    Unique.andThen "currentLanguage" <|
+        \lookup ctx currentLanguageName ->
+            let
+                currentLanguageAnn =
+                    Just <|
+                        CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+                            (CG.typed ctx.names.languageTypeName [])
+
+                pattern =
+                    CG.namedPattern ctx.names.i18nTypeName <|
+                        if Features.needsIntl <| State.inferFeatures ctx.state then
+                            [ CG.allPattern, CG.varPattern <| lookup "lang" ]
+
+                        else
+                            [ CG.varPattern <| lookup "lang" ]
+
+                currentLanguageDecl =
+                    CG.funDecl
+                        (Just (CG.emptyDocComment |> CG.markdown "Get the currently active language."))
+                        currentLanguageAnn
+                        currentLanguageName
+                        [ pattern ]
+                        (CG.val <| lookup "lang")
+            in
+            { ctx | file = ctx.file |> Shared.addDeclaration currentLanguageDecl |> Shared.addExposing (CG.funExpose currentLanguageName) }
 
 
 addLoadLanguageDeclaration : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)

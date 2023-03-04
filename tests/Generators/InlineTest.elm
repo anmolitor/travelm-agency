@@ -429,4 +429,9 @@ getCurrentLanguage =
                     |> Inline.MultiLanguageTextTranslations.load Inline.MultiLanguageTextTranslations.De
                     |> Inline.MultiLanguageTextTranslations.currentLanguage
                     |> Expect.equal Inline.MultiLanguageTextTranslations.De
+        , test "works for intl case" <|
+            \_ ->
+                Inline.HtmlIntlTranslations.init Util.emptyIntl Inline.HtmlIntlTranslations.En
+                    |> Inline.HtmlIntlTranslations.currentLanguage
+                    |> Expect.equal Inline.HtmlIntlTranslations.En
         ]

@@ -1,0 +1,74 @@
+= 4.0 Release
+
+Assumption: 
+There is no reason why you want to have multiple languages active at the same time.
+If you do want that, you could use multiple I18n instances.
+
+Planned changes:
+
+* Require a language on init for all I18n constructors
+* Load bundles without specifying the language or path
+* Set the current language for dynamic mode, returning (I18n, Cmd msg)
+* Get the current language for dynamic mode by storing it inside of I18n
+
+== Required Language on init
+
+There really is not much of a reason to use travelm-agency if you do not have some language ready.
+If you have some kind of initialization logic and don't want to bother with `Maybe I18n` in your model,
+you can just use a default language and have a seperate loading flag.
+
+== Load bundle without specifying language or path
+
+In inline mode, we can just set the language and all translations automatically update.
+In dynamic mode, we potentially have multiple bundles, some of which are loaded and some of which aren't.
+
+Currently, we generate this kind of code
+
+----
+loadMessages : { language : Language, path : String, onLoad : Result Http.Error (I18n -> I18n) -> msg } -> Cmd msg
+loadMessages opts =
+    Http.get
+        { expect = Http.expectJson opts.onLoad decodeMessages
+        , url = opts.path ++ "/" ++ languageToFileName_messages opts.language
+        }
+----
+
+which requires the user to pass language, base path and a callback.
+Ideally, the user could only pass the callback. Why?
+The base path should be consistent across bundles - we can just force the user to pass that on initialization.
+The language should also be consistent - we don't want to end up with parts of the application in English and parts in French.
+
+Thus, in the future we could generate this code instead:
+
+----
+loadMessages : (Result Http.Error (I18n -> I18n) -> msg) -> I18n -> Cmd msg
+loadMessages onLoad (I18n { path, language } _) =
+    Http.get
+        { expect = Http.expectJson onLoad decodeMessages
+        , url = path ++ "/" ++ languageToFileName_messages language
+        }
+----
+
+== Set current language in dynamic mode
+
+The previous idea has the benefit that we can automatically get all loaded bundles in a different language if requested.
+
+----
+setLanguage : Language -> (Result Http.Error (I18n -> I18n) -> msg) -> I18n -> (I18n, Cmd msg)
+setLanguage lang onLoad (I18n opts bundles) =
+  let
+    i18nNewLang = I18n { opts | language = lang } bundles
+  in
+  [ (bundle1, loadBundle1)
+  , (bundle2, loadBundle2)
+  , (bundle3, loadBundle3)
+  ] |> List.filter (\(bundle, _) -> not <| Array.isEmpty bundle)
+    |> List.map Tuple.second
+    |> List.map (\load -> load onLoad i18nNewLang)
+    |> Cmd.batch
+    |> Tuple.pair i18nNewLang
+----
+
+== Get current language in dynamic mode
+
+Since we now store the language in the I18n type, we can implement the `currentLanguage` function just like in the inline case.

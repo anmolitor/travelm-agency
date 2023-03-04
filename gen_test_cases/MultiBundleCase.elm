@@ -2,7 +2,7 @@ module MultiBundleCase exposing (..)
 
 import Dict
 import Dict.NonEmpty
-import State exposing (NonEmptyState, State)
+import State exposing (State)
 import Types.Segment exposing (TSegment(..))
 import Util.Shared exposing (Generator, buildMain, dynamicOpts, inlineOpts)
 

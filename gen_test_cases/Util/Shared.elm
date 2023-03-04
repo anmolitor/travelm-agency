@@ -12,7 +12,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Ports exposing (GeneratorMode(..))
 import Result.Extra
-import State exposing (NonEmptyState, OptimizedJson, State)
+import State exposing (OptimizedJson, State)
 import Util
 import Util.FilePort
 

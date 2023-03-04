@@ -9,7 +9,6 @@ import Generators.Names as Names exposing (Names)
 import Intl exposing (Intl)
 import List.Extra
 import List.NonEmpty
-import Maybe.Extra
 import Set
 import State exposing (NonEmptyState)
 import String.Extra

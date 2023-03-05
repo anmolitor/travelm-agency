@@ -14,6 +14,8 @@ import Dynamic.HtmlIntlServer as HtmlIntlServer
 import Dynamic.HtmlIntlTranslations as HtmlIntlTranslations
 import Dynamic.InterpolationMatchServer as InterpolationMatchServer
 import Dynamic.InterpolationMatchTranslations as InterpolationMatchTranslations
+import Dynamic.MultiBundleLanguageServer as MultiBundleLanguageServer
+import Dynamic.MultiBundleLanguageTranslations as MultiBundleLanguageTranslations
 import Dynamic.MultiBundleServer as MultiBundleServer
 import Dynamic.MultiBundleTranslations as MultiBundleTranslations
 import Dynamic.MultiInterpolationServer as MultiInterpolationServer
@@ -633,6 +635,78 @@ fallback =
                     |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = "" }))
                     |> Result.map FallbackTranslations.text
                     |> Expect.equal (Ok "english text")
+        ]
+
+
+getCurrentLanguage : Test
+getCurrentLanguage =
+    describe "get current language"
+        [ test "is correct for initial language" <|
+            \_ ->
+                MultiLanguageTextTranslations.init { lang = MultiLanguageTextTranslations.De, path = "" }
+                    |> MultiLanguageTextTranslations.currentLanguage
+                    |> Expect.equal MultiLanguageTextTranslations.De
+        , test "is correct after switching" <|
+            \_ ->
+                MultiLanguageTextTranslations.init { lang = MultiLanguageTextTranslations.De, path = "" }
+                    |> MultiLanguageTextTranslations.switchLanguage MultiLanguageTextTranslations.En (always ())
+                    |> Tuple.first
+                    |> MultiLanguageTextTranslations.currentLanguage
+                    |> Expect.equal MultiLanguageTextTranslations.En
+        , test "works for intl case" <|
+            \_ ->
+                HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = "" }
+                    |> HtmlIntlTranslations.currentLanguage
+                    |> Expect.equal HtmlIntlTranslations.En
+        ]
+
+
+getArrivedLanguage : Test
+getArrivedLanguage =
+    describe "get arrived language"
+        [ test "is correct for initial language" <|
+            \_ ->
+                MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+                    |> MultiBundleLanguageTranslations.arrivedLanguage
+                    |> Expect.equal MultiBundleLanguageTranslations.De
+        , test "switchLanguage immediately switches arrived language since no translations have been loaded yet" <|
+            \_ ->
+                MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+                    |> MultiBundleLanguageTranslations.switchLanguage MultiBundleLanguageTranslations.En (always ())
+                    |> Tuple.first
+                    |> MultiBundleLanguageTranslations.arrivedLanguage
+                    |> Expect.equal MultiBundleLanguageTranslations.En
+        , test "switchLanguage does not switch arrived language if translations were loaded" <|
+            \_ ->
+                let
+                    init =
+                        MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+                in
+                sendRequest MultiBundleLanguageServer.server "bundle_1.de.json" (MultiBundleLanguageTranslations.decodeBundle1 MultiBundleLanguageTranslations.De)
+                    |> Result.map ((|>) init)
+                    |> Result.map (MultiBundleLanguageTranslations.switchLanguage MultiBundleLanguageTranslations.En (always ()))
+                    |> Result.map Tuple.first
+                    |> Result.map MultiBundleLanguageTranslations.arrivedLanguage
+                    |> Expect.equal (Ok MultiBundleLanguageTranslations.De)
+        , test "switchLanguage switches arrived language if translations in the new language are loaded" <|
+            \_ ->
+                let
+                    init =
+                        MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+
+                    req_1_de =
+                        sendRequest MultiBundleLanguageServer.server "bundle_1.de.json" (MultiBundleLanguageTranslations.decodeBundle1 MultiBundleLanguageTranslations.De)
+
+                    req_1_en =
+                        sendRequest MultiBundleLanguageServer.server "bundle_1.en.json" (MultiBundleLanguageTranslations.decodeBundle1 MultiBundleLanguageTranslations.En)
+                in
+                req_1_de
+                    |> Result.map ((|>) init)
+                    |> Result.map (MultiBundleLanguageTranslations.switchLanguage MultiBundleLanguageTranslations.En (always ()))
+                    |> Result.map Tuple.first
+                    |> Result.andThen (\i18n -> Result.map ((|>) i18n) req_1_en)
+                    |> Result.map MultiBundleLanguageTranslations.arrivedLanguage
+                    |> Expect.equal (Ok MultiBundleLanguageTranslations.En)
         ]
 
 

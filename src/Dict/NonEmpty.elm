@@ -4,6 +4,7 @@ module Dict.NonEmpty exposing
     , foldl1
     , fromDict
     , fromList
+    , get
     , getFirstEntry
     , insert
     , keys
@@ -13,7 +14,7 @@ module Dict.NonEmpty exposing
     , toList
     , toNonEmptyList
     , update
-    , values, get
+    , values
     )
 
 import Dict exposing (Dict)

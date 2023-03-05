@@ -1,4 +1,4 @@
-module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, isEmpty, needsIntl, singleton, union, oneIsActive)
+module Types.Features exposing (Feature(..), Features, addFeature, combine, combineMap, default, fromList, isActive, isEmpty, needsIntl, oneIsActive, singleton, union)
 
 {-| Conditionals that change the output of the code generator that are inferred by the given translation files
 

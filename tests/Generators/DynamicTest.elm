@@ -198,7 +198,6 @@ nestedInterpolation =
                     "messages.de.json"
                     (NestedInterpolationTranslations.decodeMessages NestedInterpolationTranslations.De)
                     |> Result.map ((|>) (NestedInterpolationTranslations.init { lang = NestedInterpolationTranslations.De, path = "" }))
-                    
         in
         [ test "interpolates the correct values for 'Ich'" <|
             \_ ->
@@ -226,7 +225,7 @@ numberFormatCase =
                 sendRequest NumberFormatServer.server
                     "messages.en.json"
                     (NumberFormatTranslations.decodeMessages NumberFormatTranslations.En)
-                    |> Result.map ((|>) (NumberFormatTranslations.init { intl = Util.emptyIntl, lang =  NumberFormatTranslations.En, path = ""}))
+                    |> Result.map ((|>) (NumberFormatTranslations.init { intl = Util.emptyIntl, lang = NumberFormatTranslations.En, path = "" }))
                     |> Result.map (NumberFormatTranslations.text 12.34)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
@@ -243,7 +242,7 @@ dateFormatCase =
                 sendRequest DateFormatServer.server
                     "messages.en.json"
                     (DateFormatTranslations.decodeMessages DateFormatTranslations.En)
-                    |> Result.map ((|>) (DateFormatTranslations.init { intl = Util.emptyIntl, lang =  DateFormatTranslations.En, path = "" }))
+                    |> Result.map ((|>) (DateFormatTranslations.init { intl = Util.emptyIntl, lang = DateFormatTranslations.En, path = "" }))
                     |> Result.map (DateFormatTranslations.text <| Time.millisToPosix 9000)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
@@ -271,13 +270,13 @@ hashRegressionTest =
         [ test "produces a consistent hash for english content" <|
             \_ ->
                 sendRequest HashServer.server "messages.en.2061212766.json" (HashTranslations.decodeMessages HashTranslations.En)
-                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.En, path = "" }))
                     |> Result.map HashTranslations.text
                     |> Expect.equal (Ok "english text")
         , test "produces a consistent hash for german content" <|
             \_ ->
                 sendRequest HashServer.server "messages.de.1722545000.json" (HashTranslations.decodeMessages HashTranslations.De)
-                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.De, path = ""}))
+                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.De, path = "" }))
                     |> Result.map HashTranslations.text
                     |> Expect.equal (Ok "german text")
         ]
@@ -289,7 +288,7 @@ simpleHtml =
         [ test "produces the correct html element and text content" <|
             \_ ->
                 sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
-                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (SimpleHtmlTranslations.html []
                             >> Html.div []
@@ -300,7 +299,7 @@ simpleHtml =
         , test "generates html attribute from translation file" <|
             \_ ->
                 sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
-                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (SimpleHtmlTranslations.html []
                             >> Html.div []
@@ -311,7 +310,7 @@ simpleHtml =
         , test "passes extra attributes given at runtime" <|
             \_ ->
                 sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
-                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (SimpleHtmlTranslations.html [ Html.Attributes.class "link" ]
                             >> Html.div []
@@ -328,7 +327,7 @@ nestedHtml =
         [ test "produces the correct outer html element" <|
             \_ ->
                 sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
-                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}) )
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (NestedHtmlTranslations.html { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
                             >> Html.div []
@@ -343,7 +342,7 @@ nestedHtml =
         , test "produces the correct inner span element" <|
             \_ ->
                 sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
-                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (NestedHtmlTranslations.html { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
                             >> Html.div []
@@ -360,7 +359,7 @@ nestedHtml =
         , test "produces the correct inner img element" <|
             \_ ->
                 sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
-                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = "" }))
                     |> expectOkWith
                         (NestedHtmlTranslations.html { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
                             >> Html.div []
@@ -381,7 +380,7 @@ mixedHtmlAndInterpolation =
         [ test "shows expected content for admin role" <|
             \_ ->
                 sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
-                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
                             >> Html.div []
@@ -403,7 +402,7 @@ mixedHtmlAndInterpolation =
         , test "shows expected content for normal role" <|
             \_ ->
                 sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
-                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
                             >> Html.div []
@@ -417,7 +416,7 @@ mixedHtmlAndInterpolation =
         , test "shows expected content for default role" <|
             \_ ->
                 sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
-                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
                             >> Html.div []
@@ -433,7 +432,7 @@ htmlAndIntl =
         [ test "numberFormat typechecks" <|
             \_ ->
                 sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
-                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl , lang = HtmlIntlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlIntlTranslations.formatNumber 4.2 []
                             >> Html.div []
@@ -446,7 +445,7 @@ htmlAndIntl =
         , test "dateFormat typechecks" <|
             \_ ->
                 sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
-                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang =  HtmlIntlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlIntlTranslations.formatDate (Time.millisToPosix 1000) []
                             >> Html.div []
@@ -459,7 +458,7 @@ htmlAndIntl =
         , test "pluralRules typechecks" <|
             \_ ->
                 sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
-                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlIntlTranslations.pluralRules 5 []
                             >> Html.div []
@@ -470,7 +469,7 @@ htmlAndIntl =
         , test "normal html functions still work" <|
             \_ ->
                 sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
-                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = ""}))
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = "" }))
                     |> expectOkWith
                         (HtmlIntlTranslations.normalHtml []
                             >> Html.div []
@@ -487,19 +486,19 @@ multipleBundles =
         [ test "finds the first bundles text when first bundle is loaded" <|
             \_ ->
                 sendRequest MultiBundleServer.server "bundle_1.en.json" (MultiBundleTranslations.decodeBundle1 MultiBundleTranslations.En)
-                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }))
                     |> Result.map MultiBundleTranslations.text1
                     |> Expect.equal (Ok "text from bundle 1")
         , test "finds the second bundles text when second bundle is loaded" <|
             \_ ->
                 sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
-                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }))
                     |> Result.map MultiBundleTranslations.text2
                     |> Expect.equal (Ok "text from bundle 2")
         , test "does not find the first bundles text when second bundle is loaded" <|
             \_ ->
                 sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
-                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }))
                     |> Result.map MultiBundleTranslations.text1
                     |> Expect.equal (Ok "")
         , test "finds both texts if both bundles are loaded" <|
@@ -508,7 +507,7 @@ multipleBundles =
                     |> Result.andThen
                         (\addTranslations1 ->
                             sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
-                                |> Result.map ((|>) (addTranslations1 <| MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                                |> Result.map ((|>) (addTranslations1 <| MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }))
                         )
                     |> expectOkWith
                         (Expect.all
@@ -525,13 +524,13 @@ namespacing =
         [ test "escapes elm keywords" <|
             \_ ->
                 sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
-                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = ""}))
+                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = "" }))
                     |> Result.map NamespacingTranslations.let_
                     |> Expect.equal (Ok "elm keyword")
         , test "escapes top level function names" <|
             \_ ->
                 sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
-                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = ""}))
+                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = "" }))
                     |> Result.map NamespacingTranslations.init_
                     |> Expect.equal (Ok "reserved name")
         ]
@@ -543,13 +542,13 @@ escapedCurlyBrackets =
         [ test "works without parsing problems for text" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> Result.map (EscapeTranslations.text "interp")
                     |> Expect.equal (Ok "escaped interpolation { $var }, actual interp")
         , test "works without parsing problems for html" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> expectOkWith
                         (EscapeTranslations.html "interp" []
                             >> Html.div []
@@ -571,13 +570,13 @@ escapedQuotationMarks =
         [ test "works without parsing problems for text" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> Result.map (EscapeTranslations.quotationMarkAndBackslash "abc")
                     |> Expect.equal (Ok "just a \\ and \"quotation mark\"abc")
         , test "works without parsing problems for html" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> expectOkWith
                         (EscapeTranslations.quotationMarkAndBackslashHtml "abc" []
                             >> Html.div []
@@ -598,13 +597,13 @@ escapedPipeSymbols =
         [ test "interpolation match works" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> Result.map (EscapeTranslations.pipeOperatorInterpolationCase "abc")
                     |> Expect.equal (Ok "just a | pipe")
         , test "html works" <|
             \_ ->
                 sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
-                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = "" }))
                     |> expectOkWith
                         (EscapeTranslations.pipeOperatorHtml []
                             >> Html.p []
@@ -625,13 +624,13 @@ fallback =
         [ test "falls back to the fallback language successfully" <|
             \_ ->
                 sendRequest FallbackServer.server "messages.en.json" (FallbackTranslations.decodeMessages FallbackTranslations.En)
-                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = ""}))
+                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = "" }))
                     |> Result.map FallbackTranslations.justInGerman
                     |> Expect.equal (Ok "more german text")
         , test "still uses other existing values" <|
             \_ ->
                 sendRequest FallbackServer.server "messages.en.json" (FallbackTranslations.decodeMessages FallbackTranslations.En)
-                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = ""}))
+                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = "" }))
                     |> Result.map FallbackTranslations.text
                     |> Expect.equal (Ok "english text")
         ]

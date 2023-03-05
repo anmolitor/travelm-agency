@@ -1,4 +1,4 @@
-module CodeGen.DecodeM exposing (andThen, array, decodeString, decoder, dict, fail, map, required, string, succeed, errorToString)
+module CodeGen.DecodeM exposing (andThen, array, decodeString, decoder, dict, errorToString, fail, map, required, string, succeed)
 
 import Elm.CodeGen as CG
 

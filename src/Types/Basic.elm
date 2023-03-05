@@ -1,5 +1,6 @@
 module Types.Basic exposing (..)
 
+
 type alias Identifier =
     String
 

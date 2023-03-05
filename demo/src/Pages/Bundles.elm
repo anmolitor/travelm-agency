@@ -29,7 +29,7 @@ viewExplanation : Model -> List (Html msg)
 viewExplanation { i18n } =
     [ Html.p [] <| Translations.bundlesPreamble [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.bundlesConsiderationsHeadline i18n ]
-    , Html.p [] <| Translations.bundlesConsiderationsBody [class "highlighted" ] i18n
+    , Html.p [] <| Translations.bundlesConsiderationsBody [ class "highlighted" ] i18n
     , Html.h2 [] [ Html.text <| Translations.bundlesExploreHeadline i18n ]
     , Html.p [] [ Html.text <| Translations.bundlesExploreBody i18n ]
     ]

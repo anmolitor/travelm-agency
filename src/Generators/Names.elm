@@ -2,8 +2,8 @@ module Generators.Names exposing (Names, defaultNames, withUniqueNames)
 
 import Set
 import String.Extra
-import Types.UniqueName as Unique
 import Types.Segment exposing (TKey)
+import Types.UniqueName as Unique
 
 
 type alias Names =

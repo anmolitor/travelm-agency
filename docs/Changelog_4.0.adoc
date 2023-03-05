@@ -72,3 +72,13 @@ setLanguage lang onLoad (I18n opts bundles) =
 == Get current language in dynamic mode
 
 Since we now store the language in the I18n type, we can implement the `currentLanguage` function just like in the inline case.
+The semantics are a bit tricky though - not all bundles might have loaded, so while the language is already switched,
+the translations might be in the "old" language.
+
+The idea here is to expose a seperate function `arrivedLanguage` (name is consistent to elm-animator semantics)
+which returns the old language until the new language translations have fully loaded.
+
+But how do we know that? The trick is storing a language for each bundle! The language has fully loaded if
+`currentLanguage` and all bundle languages are equal.
+
+We could also generate this function in inline mode to facilitate switching.

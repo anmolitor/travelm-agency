@@ -1,43 +1,43 @@
 module Generators.DynamicTest exposing (..)
 
-import Dynamic.DateFormatServer
-import Dynamic.DateFormatTranslations
-import Dynamic.EscapeServer
-import Dynamic.EscapeTranslations
-import Dynamic.FallbackServer
-import Dynamic.FallbackTranslations
-import Dynamic.HashServer
-import Dynamic.HashTranslations
-import Dynamic.HtmlInterpolationServer
-import Dynamic.HtmlInterpolationTranslations
-import Dynamic.HtmlIntlServer
-import Dynamic.HtmlIntlTranslations
-import Dynamic.InterpolationMatchServer
-import Dynamic.InterpolationMatchTranslations
-import Dynamic.MultiBundleServer
-import Dynamic.MultiBundleTranslations
-import Dynamic.MultiInterpolationServer
-import Dynamic.MultiInterpolationTranslations
-import Dynamic.MultiLanguageTextServer
-import Dynamic.MultiLanguageTextTranslations
-import Dynamic.NamespacingServer
-import Dynamic.NamespacingTranslations
-import Dynamic.NestedHtmlServer
-import Dynamic.NestedHtmlTranslations
-import Dynamic.NestedInterpolationServer
-import Dynamic.NestedInterpolationTranslations
-import Dynamic.NumberFormatServer
-import Dynamic.NumberFormatTranslations
-import Dynamic.PluralServer
-import Dynamic.PluralTranslations
-import Dynamic.SimpleHtmlServer
-import Dynamic.SimpleHtmlTranslations
-import Dynamic.SimpleI18nFirstServer
-import Dynamic.SimpleI18nFirstTranslations
-import Dynamic.SingleInterpolationServer
-import Dynamic.SingleInterpolationTranslations
-import Dynamic.SingleTextServer
-import Dynamic.SingleTextTranslations
+import Dynamic.DateFormatServer as DateFormatServer
+import Dynamic.DateFormatTranslations as DateFormatTranslations
+import Dynamic.EscapeServer as EscapeServer
+import Dynamic.EscapeTranslations as EscapeTranslations
+import Dynamic.FallbackServer as FallbackServer
+import Dynamic.FallbackTranslations as FallbackTranslations
+import Dynamic.HashServer as HashServer
+import Dynamic.HashTranslations as HashTranslations
+import Dynamic.HtmlInterpolationServer as HtmlInterpolationServer
+import Dynamic.HtmlInterpolationTranslations as HtmlInterpolationTranslations
+import Dynamic.HtmlIntlServer as HtmlIntlServer
+import Dynamic.HtmlIntlTranslations as HtmlIntlTranslations
+import Dynamic.InterpolationMatchServer as InterpolationMatchServer
+import Dynamic.InterpolationMatchTranslations as InterpolationMatchTranslations
+import Dynamic.MultiBundleServer as MultiBundleServer
+import Dynamic.MultiBundleTranslations as MultiBundleTranslations
+import Dynamic.MultiInterpolationServer as MultiInterpolationServer
+import Dynamic.MultiInterpolationTranslations as MultiInterpolationTranslations
+import Dynamic.MultiLanguageTextServer as MultiLanguageTextServer
+import Dynamic.MultiLanguageTextTranslations as MultiLanguageTextTranslations
+import Dynamic.NamespacingServer as NamespacingServer
+import Dynamic.NamespacingTranslations as NamespacingTranslations
+import Dynamic.NestedHtmlServer as NestedHtmlServer
+import Dynamic.NestedHtmlTranslations as NestedHtmlTranslations
+import Dynamic.NestedInterpolationServer as NestedInterpolationServer
+import Dynamic.NestedInterpolationTranslations as NestedInterpolationTranslations
+import Dynamic.NumberFormatServer as NumberFormatServer
+import Dynamic.NumberFormatTranslations as NumberFormatTranslations
+import Dynamic.PluralServer as PluralServer
+import Dynamic.PluralTranslations as PluralTranslations
+import Dynamic.SimpleHtmlServer as SimpleHtmlServer
+import Dynamic.SimpleHtmlTranslations as SimpleHtmlTranslations
+import Dynamic.SimpleI18nFirstServer as SimpleI18nFirstServer
+import Dynamic.SimpleI18nFirstTranslations as SimpleI18nFirstTranslations
+import Dynamic.SingleInterpolationServer as SingleInterpolationServer
+import Dynamic.SingleInterpolationTranslations as SingleInterpolationTranslations
+import Dynamic.SingleTextServer as SingleTextServer
+import Dynamic.SingleTextTranslations as SingleTextTranslations
 import Expect
 import Html
 import Html.Attributes
@@ -54,9 +54,11 @@ singleText =
     describe "single text"
         [ test "returns the expected translated text" <|
             \_ ->
-                sendRequest Dynamic.SingleTextServer.server "messages.en.json" Dynamic.SingleTextTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SingleTextTranslations.init)
-                    |> Result.map Dynamic.SingleTextTranslations.singleText
+                sendRequest SingleTextServer.server
+                    "messages.en.json"
+                    (SingleTextTranslations.decodeMessages SingleTextTranslations.En)
+                    |> Result.map ((|>) (SingleTextTranslations.init { lang = SingleTextTranslations.En, path = "" }))
+                    |> Result.map SingleTextTranslations.singleText
                     |> Expect.equal (Ok "the text")
         ]
 
@@ -66,15 +68,19 @@ multiLanguageText =
     describe "multi language text"
         [ test "returns the expected translated text in english" <|
             \_ ->
-                sendRequest Dynamic.MultiLanguageTextServer.server "messages.en.json" Dynamic.MultiLanguageTextTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.MultiLanguageTextTranslations.init)
-                    |> Result.map Dynamic.MultiLanguageTextTranslations.text
+                sendRequest MultiLanguageTextServer.server
+                    "messages.en.json"
+                    (MultiLanguageTextTranslations.decodeMessages MultiLanguageTextTranslations.En)
+                    |> Result.map ((|>) (MultiLanguageTextTranslations.init { lang = MultiLanguageTextTranslations.En, path = "" }))
+                    |> Result.map MultiLanguageTextTranslations.text
                     |> Expect.equal (Ok "english text")
         , test "returns the expected translated text in german" <|
             \_ ->
-                sendRequest Dynamic.MultiLanguageTextServer.server "messages.de.json" Dynamic.MultiLanguageTextTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.MultiLanguageTextTranslations.init)
-                    |> Result.map Dynamic.MultiLanguageTextTranslations.text
+                sendRequest MultiLanguageTextServer.server
+                    "messages.de.json"
+                    (MultiLanguageTextTranslations.decodeMessages MultiLanguageTextTranslations.De)
+                    |> Result.map ((|>) (MultiLanguageTextTranslations.init { lang = MultiLanguageTextTranslations.De, path = "" }))
+                    |> Result.map MultiLanguageTextTranslations.text
                     |> Expect.equal (Ok "german text")
         ]
 
@@ -84,9 +90,11 @@ singleInterpolation =
     describe "single interpolation"
         [ test "interpolates the given value at the correct position" <|
             \_ ->
-                sendRequest Dynamic.SingleInterpolationServer.server "messages.en.json" Dynamic.SingleInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SingleInterpolationTranslations.init)
-                    |> Result.map (Dynamic.SingleInterpolationTranslations.text "world")
+                sendRequest SingleInterpolationServer.server
+                    "messages.en.json"
+                    (SingleInterpolationTranslations.decodeMessages SingleInterpolationTranslations.En)
+                    |> Result.map ((|>) (SingleInterpolationTranslations.init { lang = SingleInterpolationTranslations.En, path = "" }))
+                    |> Result.map (SingleInterpolationTranslations.text "world")
                     |> Expect.equal (Ok "hello world!")
         ]
 
@@ -96,21 +104,27 @@ multiInterpolation =
     describe "multi interpolation"
         [ test "interpolates the given values at the correct positions" <|
             \_ ->
-                sendRequest Dynamic.MultiInterpolationServer.server "messages.en.json" Dynamic.MultiInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "my dear" })
+                sendRequest MultiInterpolationServer.server
+                    "messages.en.json"
+                    (MultiInterpolationTranslations.decodeMessages MultiInterpolationTranslations.En)
+                    |> Result.map ((|>) (MultiInterpolationTranslations.init { lang = MultiInterpolationTranslations.En, path = "" }))
+                    |> Result.map (MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "my dear" })
                     |> Expect.equal (Ok "Good morning, my dear")
         , test "works for languages that do not use all interpolated values" <|
             \_ ->
-                sendRequest Dynamic.MultiInterpolationServer.server "messages.de.json" Dynamic.MultiInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "Morgen", name = "Doesn't matter" })
+                sendRequest MultiInterpolationServer.server
+                    "messages.de.json"
+                    (MultiInterpolationTranslations.decodeMessages MultiInterpolationTranslations.De)
+                    |> Result.map ((|>) (MultiInterpolationTranslations.init { lang = MultiInterpolationTranslations.De, path = "" }))
+                    |> Result.map (MultiInterpolationTranslations.greeting { timeOfDay = "Morgen", name = "Doesn't matter" })
                     |> Expect.equal (Ok "Guten Morgen")
         , test "works if languages interpolate values in different orders" <|
             \_ ->
-                sendRequest Dynamic.MultiInterpolationServer.server "messages.yoda.json" Dynamic.MultiInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.MultiInterpolationTranslations.init)
-                    |> Result.map (Dynamic.MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "Luke" })
+                sendRequest MultiInterpolationServer.server
+                    "messages.yoda.json"
+                    (MultiInterpolationTranslations.decodeMessages MultiInterpolationTranslations.Yoda)
+                    |> Result.map ((|>) (MultiInterpolationTranslations.init { lang = MultiInterpolationTranslations.Yoda, path = "" }))
+                    |> Result.map (MultiInterpolationTranslations.greeting { timeOfDay = "morning", name = "Luke" })
                     |> Expect.equal (Ok "Luke, good morning")
         ]
 
@@ -120,21 +134,27 @@ i18nLastSimple =
     describe "generated code with i18nArgLast flag"
         [ test "single text" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
-                    |> Result.map Dynamic.SimpleI18nFirstTranslations.singleText
+                sendRequest SimpleI18nFirstServer.server
+                    "messages.en.json"
+                    (SimpleI18nFirstTranslations.decodeMessages SimpleI18nFirstTranslations.En)
+                    |> Result.map ((|>) (SimpleI18nFirstTranslations.init { lang = SimpleI18nFirstTranslations.En, path = "" }))
+                    |> Result.map SimpleI18nFirstTranslations.singleText
                     |> Expect.equal (Ok "the text")
         , test "single interpolation" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.SimpleI18nFirstTranslations.interpolation i18n "world")
+                sendRequest SimpleI18nFirstServer.server
+                    "messages.en.json"
+                    (SimpleI18nFirstTranslations.decodeMessages SimpleI18nFirstTranslations.En)
+                    |> Result.map ((|>) (SimpleI18nFirstTranslations.init { lang = SimpleI18nFirstTranslations.En, path = "" }))
+                    |> Result.map (\i18n -> SimpleI18nFirstTranslations.interpolation i18n "world")
                     |> Expect.equal (Ok "Hello world!")
         , test "multi interpolation" <|
             \_ ->
-                sendRequest Dynamic.SimpleI18nFirstServer.server "messages.en.json" Dynamic.SimpleI18nFirstTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleI18nFirstTranslations.init)
-                    |> Result.map (\i18n -> Dynamic.SimpleI18nFirstTranslations.greeting i18n { timeOfDay = "evening", name = "Sir" })
+                sendRequest SimpleI18nFirstServer.server
+                    "messages.en.json"
+                    (SimpleI18nFirstTranslations.decodeMessages SimpleI18nFirstTranslations.En)
+                    |> Result.map ((|>) (SimpleI18nFirstTranslations.init { lang = SimpleI18nFirstTranslations.En, path = "" }))
+                    |> Result.map (\i18n -> SimpleI18nFirstTranslations.greeting i18n { timeOfDay = "evening", name = "Sir" })
                     |> Expect.equal (Ok "Good evening, Sir")
         ]
 
@@ -144,21 +164,27 @@ interpolationMatchCase =
     describe "interpolation match case"
         [ test "interpolates the correct value for female gender" <|
             \_ ->
-                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "female")
+                sendRequest InterpolationMatchServer.server
+                    "messages.en.json"
+                    (InterpolationMatchTranslations.decodeMessages InterpolationMatchTranslations.En)
+                    |> Result.map ((|>) (InterpolationMatchTranslations.init { lang = InterpolationMatchTranslations.En, path = "" }))
+                    |> Result.map (InterpolationMatchTranslations.text "female")
                     |> Expect.equal (Ok "She bought a cat.")
         , test "interpolates the correct value for male gender" <|
             \_ ->
-                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "male")
+                sendRequest InterpolationMatchServer.server
+                    "messages.en.json"
+                    (InterpolationMatchTranslations.decodeMessages InterpolationMatchTranslations.En)
+                    |> Result.map ((|>) (InterpolationMatchTranslations.init { lang = InterpolationMatchTranslations.En, path = "" }))
+                    |> Result.map (InterpolationMatchTranslations.text "male")
                     |> Expect.equal (Ok "He bought a cat.")
         , test "interpolates the default value for other values" <|
             \_ ->
-                sendRequest Dynamic.InterpolationMatchServer.server "messages.en.json" Dynamic.InterpolationMatchTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.InterpolationMatchTranslations.init)
-                    |> Result.map (Dynamic.InterpolationMatchTranslations.text "anything else")
+                sendRequest InterpolationMatchServer.server
+                    "messages.en.json"
+                    (InterpolationMatchTranslations.decodeMessages InterpolationMatchTranslations.En)
+                    |> Result.map ((|>) (InterpolationMatchTranslations.init { lang = InterpolationMatchTranslations.En, path = "" }))
+                    |> Result.map (InterpolationMatchTranslations.text "anything else")
                     |> Expect.equal (Ok "It bought a cat.")
         ]
 
@@ -168,25 +194,26 @@ nestedInterpolation =
     describe "nested interpolation" <|
         let
             i18n =
-                sendRequest Dynamic.NestedInterpolationServer.server
+                sendRequest NestedInterpolationServer.server
                     "messages.de.json"
-                    Dynamic.NestedInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NestedInterpolationTranslations.init)
+                    (NestedInterpolationTranslations.decodeMessages NestedInterpolationTranslations.De)
+                    |> Result.map ((|>) (NestedInterpolationTranslations.init { lang = NestedInterpolationTranslations.De, path = "" }))
+                    
         in
         [ test "interpolates the correct values for 'Ich'" <|
             \_ ->
                 i18n
-                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Ich", objectsToBuy = "Gemüse" })
+                    |> Result.map (NestedInterpolationTranslations.text { pronoun = "Ich", objectsToBuy = "Gemüse" })
                     |> Expect.equal (Ok "Ich kaufe Gemüse.")
         , test "interpolates the correct values for 'Du'" <|
             \_ ->
                 i18n
-                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Du", objectsToBuy = "Obst" })
+                    |> Result.map (NestedInterpolationTranslations.text { pronoun = "Du", objectsToBuy = "Obst" })
                     |> Expect.equal (Ok "Du kaufst Obst.")
         , test "interpolates the default value for other values" <|
             \_ ->
                 i18n
-                    |> Result.map (Dynamic.NestedInterpolationTranslations.text { pronoun = "Er", objectsToBuy = "Fleisch" })
+                    |> Result.map (NestedInterpolationTranslations.text { pronoun = "Er", objectsToBuy = "Fleisch" })
                     |> Expect.equal (Ok "Er kauft Fleisch.")
         ]
 
@@ -196,11 +223,11 @@ numberFormatCase =
     describe "number format"
         [ test "type checks" <|
             \_ ->
-                sendRequest Dynamic.NumberFormatServer.server
+                sendRequest NumberFormatServer.server
                     "messages.en.json"
-                    Dynamic.NumberFormatTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.NumberFormatTranslations.init Util.emptyIntl Dynamic.NumberFormatTranslations.En))
-                    |> Result.map (Dynamic.NumberFormatTranslations.text 12.34)
+                    (NumberFormatTranslations.decodeMessages NumberFormatTranslations.En)
+                    |> Result.map ((|>) (NumberFormatTranslations.init { intl = Util.emptyIntl, lang =  NumberFormatTranslations.En, path = ""}))
+                    |> Result.map (NumberFormatTranslations.text 12.34)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
@@ -213,11 +240,11 @@ dateFormatCase =
     describe "date format"
         [ test "type checks" <|
             \_ ->
-                sendRequest Dynamic.DateFormatServer.server
+                sendRequest DateFormatServer.server
                     "messages.en.json"
-                    Dynamic.DateFormatTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.DateFormatTranslations.init Util.emptyIntl Dynamic.DateFormatTranslations.En))
-                    |> Result.map (Dynamic.DateFormatTranslations.text <| Time.millisToPosix 9000)
+                    (DateFormatTranslations.decodeMessages DateFormatTranslations.En)
+                    |> Result.map ((|>) (DateFormatTranslations.init { intl = Util.emptyIntl, lang =  DateFormatTranslations.En, path = "" }))
+                    |> Result.map (DateFormatTranslations.text <| Time.millisToPosix 9000)
                     -- This is expected since we cannot get the actual browser intl API in the test
                     -- We do not want to test the intl-proxy package here, so the fact that the generated
                     -- code typechecks is enough here.
@@ -230,9 +257,9 @@ pluralCase =
     describe "plural"
         [ test "type checks" <|
             \_ ->
-                sendRequest Dynamic.PluralServer.server "messages.en.json" Dynamic.PluralTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.PluralTranslations.init Util.emptyIntl Dynamic.PluralTranslations.En))
-                    |> Result.map (Dynamic.PluralTranslations.text 4)
+                sendRequest PluralServer.server "messages.en.json" (PluralTranslations.decodeMessages PluralTranslations.En)
+                    |> Result.map ((|>) (PluralTranslations.init { intl = Util.emptyIntl, lang = PluralTranslations.En, path = "" }))
+                    |> Result.map (PluralTranslations.text 4)
                     -- Due to the absent intl api, we can only test the default case here
                     |> Expect.equal (Ok "I met many people.")
         ]
@@ -243,15 +270,15 @@ hashRegressionTest =
     describe "content hashing of json files"
         [ test "produces a consistent hash for english content" <|
             \_ ->
-                sendRequest Dynamic.HashServer.server "messages.en.2061212766.json" Dynamic.HashTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.HashTranslations.init)
-                    |> Result.map Dynamic.HashTranslations.text
+                sendRequest HashServer.server "messages.en.2061212766.json" (HashTranslations.decodeMessages HashTranslations.En)
+                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.En, path = ""}))
+                    |> Result.map HashTranslations.text
                     |> Expect.equal (Ok "english text")
         , test "produces a consistent hash for german content" <|
             \_ ->
-                sendRequest Dynamic.HashServer.server "messages.de.1722545000.json" Dynamic.HashTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.HashTranslations.init)
-                    |> Result.map Dynamic.HashTranslations.text
+                sendRequest HashServer.server "messages.de.1722545000.json" (HashTranslations.decodeMessages HashTranslations.De)
+                    |> Result.map ((|>) (HashTranslations.init { lang = HashTranslations.De, path = ""}))
+                    |> Result.map HashTranslations.text
                     |> Expect.equal (Ok "german text")
         ]
 
@@ -261,10 +288,10 @@ simpleHtml =
     describe "simple html"
         [ test "produces the correct html element and text content" <|
             \_ ->
-                sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
+                sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.SimpleHtmlTranslations.html []
+                        (SimpleHtmlTranslations.html []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -272,10 +299,10 @@ simpleHtml =
                         )
         , test "generates html attribute from translation file" <|
             \_ ->
-                sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
+                sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.SimpleHtmlTranslations.html []
+                        (SimpleHtmlTranslations.html []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -283,10 +310,10 @@ simpleHtml =
                         )
         , test "passes extra attributes given at runtime" <|
             \_ ->
-                sendRequest Dynamic.SimpleHtmlServer.server "messages.en.json" Dynamic.SimpleHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.SimpleHtmlTranslations.init)
+                sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
+                    |> Result.map ((|>) (SimpleHtmlTranslations.init { lang = SimpleHtmlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.SimpleHtmlTranslations.html [ Html.Attributes.class "link" ]
+                        (SimpleHtmlTranslations.html [ Html.Attributes.class "link" ]
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -300,10 +327,10 @@ nestedHtml =
     describe "nested html"
         [ test "produces the correct outer html element" <|
             \_ ->
-                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}) )
                     |> expectOkWith
-                        (Dynamic.NestedHtmlTranslations.html { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
+                        (NestedHtmlTranslations.html { image = [], link = [ Html.Attributes.class "nestedLink" ], text = [] }
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -315,10 +342,10 @@ nestedHtml =
                         )
         , test "produces the correct inner span element" <|
             \_ ->
-                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.NestedHtmlTranslations.html { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
+                        (NestedHtmlTranslations.html { image = [], link = [], text = [ Html.Attributes.class "theText" ] }
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -332,10 +359,10 @@ nestedHtml =
                         )
         , test "produces the correct inner img element" <|
             \_ ->
-                sendRequest Dynamic.NestedHtmlServer.server "messages.en.json" Dynamic.NestedHtmlTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NestedHtmlTranslations.init)
+                sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
+                    |> Result.map ((|>) (NestedHtmlTranslations.init { lang = NestedHtmlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.NestedHtmlTranslations.html { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
+                        (NestedHtmlTranslations.html { image = [ Html.Attributes.class "nestedImage" ], link = [], text = [] }
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "a" ]
@@ -353,10 +380,10 @@ mixedHtmlAndInterpolation =
     describe "mixed html and interpolation"
         [ test "shows expected content for admin role" <|
             \_ ->
-                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
+                        (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "admin", username = "A. Dmin" } []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -375,10 +402,10 @@ mixedHtmlAndInterpolation =
                         )
         , test "shows expected content for normal role" <|
             \_ ->
-                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
+                        (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "normal", username = "Justin Normal" } []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -389,10 +416,10 @@ mixedHtmlAndInterpolation =
                         )
         , test "shows expected content for default role" <|
             \_ ->
-                sendRequest Dynamic.HtmlInterpolationServer.server "messages.en.json" Dynamic.HtmlInterpolationTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.HtmlInterpolationTranslations.init)
+                sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
+                    |> Result.map ((|>) (HtmlInterpolationTranslations.init { lang = HtmlInterpolationTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlInterpolationTranslations.text { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
+                        (HtmlInterpolationTranslations.text { adminLink = "/admin", role = "undefined", username = "Does not matter" } []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has [ Selector.text "You are not logged in." ]
@@ -405,10 +432,10 @@ htmlAndIntl =
     describe "html mixed with intl functions"
         [ test "numberFormat typechecks" <|
             \_ ->
-                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl , lang = HtmlIntlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlIntlTranslations.formatNumber 4.2 []
+                        (HtmlIntlTranslations.formatNumber 4.2 []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -418,10 +445,10 @@ htmlAndIntl =
                         )
         , test "dateFormat typechecks" <|
             \_ ->
-                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang =  HtmlIntlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlIntlTranslations.formatDate (Time.millisToPosix 1000) []
+                        (HtmlIntlTranslations.formatDate (Time.millisToPosix 1000) []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -431,10 +458,10 @@ htmlAndIntl =
                         )
         , test "pluralRules typechecks" <|
             \_ ->
-                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlIntlTranslations.pluralRules 5 []
+                        (HtmlIntlTranslations.pluralRules 5 []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "p" ]
@@ -442,10 +469,10 @@ htmlAndIntl =
                         )
         , test "normal html functions still work" <|
             \_ ->
-                sendRequest Dynamic.HtmlIntlServer.server "messages.en.json" Dynamic.HtmlIntlTranslations.decodeMessages
-                    |> Result.map ((|>) (Dynamic.HtmlIntlTranslations.init Util.emptyIntl Dynamic.HtmlIntlTranslations.En))
+                sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
+                    |> Result.map ((|>) (HtmlIntlTranslations.init { intl = Util.emptyIntl, lang = HtmlIntlTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.HtmlIntlTranslations.normalHtml []
+                        (HtmlIntlTranslations.normalHtml []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "p" ]
@@ -459,34 +486,34 @@ multipleBundles =
     describe "multiple bundles"
         [ test "finds the first bundles text when first bundle is loaded" <|
             \_ ->
-                sendRequest Dynamic.MultiBundleServer.server "bundle_1.en.json" Dynamic.MultiBundleTranslations.decodeBundle1
-                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
-                    |> Result.map Dynamic.MultiBundleTranslations.text1
+                sendRequest MultiBundleServer.server "bundle_1.en.json" (MultiBundleTranslations.decodeBundle1 MultiBundleTranslations.En)
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map MultiBundleTranslations.text1
                     |> Expect.equal (Ok "text from bundle 1")
         , test "finds the second bundles text when second bundle is loaded" <|
             \_ ->
-                sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
-                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
-                    |> Result.map Dynamic.MultiBundleTranslations.text2
+                sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map MultiBundleTranslations.text2
                     |> Expect.equal (Ok "text from bundle 2")
         , test "does not find the first bundles text when second bundle is loaded" <|
             \_ ->
-                sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
-                    |> Result.map ((|>) Dynamic.MultiBundleTranslations.init)
-                    |> Result.map Dynamic.MultiBundleTranslations.text1
+                sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
+                    |> Result.map ((|>) (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
+                    |> Result.map MultiBundleTranslations.text1
                     |> Expect.equal (Ok "")
         , test "finds both texts if both bundles are loaded" <|
             \_ ->
-                sendRequest Dynamic.MultiBundleServer.server "bundle_1.en.json" Dynamic.MultiBundleTranslations.decodeBundle1
+                sendRequest MultiBundleServer.server "bundle_1.en.json" (MultiBundleTranslations.decodeBundle1 MultiBundleTranslations.En)
                     |> Result.andThen
                         (\addTranslations1 ->
-                            sendRequest Dynamic.MultiBundleServer.server "bundle_2.en.json" Dynamic.MultiBundleTranslations.decodeBundle2
-                                |> Result.map ((|>) (addTranslations1 Dynamic.MultiBundleTranslations.init))
+                            sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2 MultiBundleTranslations.En)
+                                |> Result.map ((|>) (addTranslations1 <| MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = ""}))
                         )
                     |> expectOkWith
                         (Expect.all
-                            [ Dynamic.MultiBundleTranslations.text1 >> Expect.equal "text from bundle 1"
-                            , Dynamic.MultiBundleTranslations.text2 >> Expect.equal "text from bundle 2"
+                            [ MultiBundleTranslations.text1 >> Expect.equal "text from bundle 1"
+                            , MultiBundleTranslations.text2 >> Expect.equal "text from bundle 2"
                             ]
                         )
         ]
@@ -497,15 +524,15 @@ namespacing =
     describe "namespacing"
         [ test "escapes elm keywords" <|
             \_ ->
-                sendRequest Dynamic.NamespacingServer.server "messages.en.json" Dynamic.NamespacingTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NamespacingTranslations.init)
-                    |> Result.map Dynamic.NamespacingTranslations.let_
+                sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
+                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = ""}))
+                    |> Result.map NamespacingTranslations.let_
                     |> Expect.equal (Ok "elm keyword")
         , test "escapes top level function names" <|
             \_ ->
-                sendRequest Dynamic.NamespacingServer.server "messages.en.json" Dynamic.NamespacingTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.NamespacingTranslations.init)
-                    |> Result.map Dynamic.NamespacingTranslations.init_
+                sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
+                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = ""}))
+                    |> Result.map NamespacingTranslations.init_
                     |> Expect.equal (Ok "reserved name")
         ]
 
@@ -515,16 +542,16 @@ escapedCurlyBrackets =
     describe "escaped curly brackets"
         [ test "works without parsing problems for text" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (Dynamic.EscapeTranslations.text "interp")
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map (EscapeTranslations.text "interp")
                     |> Expect.equal (Ok "escaped interpolation { $var }, actual interp")
         , test "works without parsing problems for html" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.EscapeTranslations.html "interp" []
+                        (EscapeTranslations.html "interp" []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -543,16 +570,16 @@ escapedQuotationMarks =
     describe "escaped quotation marks"
         [ test "works without parsing problems for text" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (Dynamic.EscapeTranslations.quotationMarkAndBackslash "abc")
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map (EscapeTranslations.quotationMarkAndBackslash "abc")
                     |> Expect.equal (Ok "just a \\ and \"quotation mark\"abc")
         , test "works without parsing problems for html" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.EscapeTranslations.quotationMarkAndBackslashHtml "abc" []
+                        (EscapeTranslations.quotationMarkAndBackslashHtml "abc" []
                             >> Html.div []
                             >> Query.fromHtml
                             >> Query.has
@@ -570,16 +597,16 @@ escapedPipeSymbols =
     describe "escaped pipe symbol"
         [ test "interpolation match works" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
-                    |> Result.map (Dynamic.EscapeTranslations.pipeOperatorInterpolationCase "abc")
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
+                    |> Result.map (EscapeTranslations.pipeOperatorInterpolationCase "abc")
                     |> Expect.equal (Ok "just a | pipe")
         , test "html works" <|
             \_ ->
-                sendRequest Dynamic.EscapeServer.server "messages.en.json" Dynamic.EscapeTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.EscapeTranslations.init)
+                sendRequest EscapeServer.server "messages.en.json" (EscapeTranslations.decodeMessages EscapeTranslations.En)
+                    |> Result.map ((|>) (EscapeTranslations.init { lang = EscapeTranslations.En, path = ""}))
                     |> expectOkWith
-                        (Dynamic.EscapeTranslations.pipeOperatorHtml []
+                        (EscapeTranslations.pipeOperatorHtml []
                             >> Html.p []
                             >> Query.fromHtml
                             >> Query.find [ Selector.tag "div" ]
@@ -597,15 +624,15 @@ fallback =
     describe "fallback to another language"
         [ test "falls back to the fallback language successfully" <|
             \_ ->
-                sendRequest Dynamic.FallbackServer.server "messages.en.json" Dynamic.FallbackTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.FallbackTranslations.init)
-                    |> Result.map Dynamic.FallbackTranslations.justInGerman
+                sendRequest FallbackServer.server "messages.en.json" (FallbackTranslations.decodeMessages FallbackTranslations.En)
+                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = ""}))
+                    |> Result.map FallbackTranslations.justInGerman
                     |> Expect.equal (Ok "more german text")
         , test "still uses other existing values" <|
             \_ ->
-                sendRequest Dynamic.FallbackServer.server "messages.en.json" Dynamic.FallbackTranslations.decodeMessages
-                    |> Result.map ((|>) Dynamic.FallbackTranslations.init)
-                    |> Result.map Dynamic.FallbackTranslations.text
+                sendRequest FallbackServer.server "messages.en.json" (FallbackTranslations.decodeMessages FallbackTranslations.En)
+                    |> Result.map ((|>) (FallbackTranslations.init { lang = FallbackTranslations.De, path = ""}))
+                    |> Result.map FallbackTranslations.text
                     |> Expect.equal (Ok "english text")
         ]
 

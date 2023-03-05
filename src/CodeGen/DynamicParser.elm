@@ -97,7 +97,7 @@ addReplacePlaceholderDeclaration =
 
                     cfgParserArgs =
                         List.filterMap identity
-                            [ CG.namedPattern ctx.names.i18nTypeName [ CG.allPattern, CG.varPattern <| lookup "intl", CG.varPattern <| lookup "lang" ]
+                            [ CG.namedPattern ctx.names.i18nTypeName [ CG.varPattern <| lookup "opts", CG.allPattern ]
                                 |> (\pat -> CG.asPattern pat (lookup "i18n"))
                                 |> filterIntl
                             , Just <| CG.varPattern <| lookup "endSymbols"
@@ -106,7 +106,7 @@ addReplacePlaceholderDeclaration =
 
                     cfgHtmlParserArgs =
                         List.filterMap identity
-                            [ CG.namedPattern ctx.names.i18nTypeName [ CG.allPattern, CG.varPattern <| lookup "intl", CG.varPattern <| lookup "lang" ]
+                            [ CG.namedPattern ctx.names.i18nTypeName [ CG.varPattern <| lookup "opts", CG.allPattern ]
                                 |> (\pat -> CG.asPattern pat (lookup "i18n"))
                                 |> filterIntl
                             , Just <| CG.varPattern <| lookup "endSymbols"
@@ -156,7 +156,7 @@ addReplacePlaceholderDeclaration =
                                         CG.letVal (lookup "wrappedLang")
                                             (CG.binOpChain (CG.string "\"")
                                                 CG.append
-                                                [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ]
+                                                [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.access (CG.val <| lookup "opts") "lang" ]
                                                 , CG.string "\""
                                                 ]
                                             )
@@ -246,7 +246,7 @@ addReplacePlaceholderDeclaration =
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
                                             (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
                                                 CG.applyBinOp
-                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.access (CG.val <| lookup "opts") "intl" ])
                                                     CG.pipel
                                                 <|
                                                     appendAll (CG.string "[\"NumberFormat\",[")
@@ -261,7 +261,7 @@ addReplacePlaceholderDeclaration =
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
                                             (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
                                                 CG.applyBinOp
-                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.access (CG.val <| lookup "opts") "intl" ])
                                                     CG.pipel
                                                 <|
                                                     CG.binOpChain
@@ -294,9 +294,9 @@ addReplacePlaceholderDeclaration =
                                                             CG.pipe
                                                                 (CG.apply
                                                                     [ CG.fqFun [ "Intl" ] "determinePluralRuleFloat"
-                                                                    , CG.val <| lookup "intl"
+                                                                    , CG.access (CG.val <| lookup "opts") "intl"
                                                                     , CG.record
-                                                                        [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ] )
+                                                                        [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.access (CG.val <| lookup "opts") "lang" ] )
                                                                         , ( "number", CG.val <| lookup "i" )
                                                                         , ( "type_", CG.fqVal [ "Intl" ] "Cardinal" )
                                                                         ]
@@ -436,7 +436,7 @@ addReplacePlaceholderDeclaration =
                                         CG.letVal (lookup "wrappedLang")
                                             (CG.binOpChain (CG.string "\"")
                                                 CG.append
-                                                [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ]
+                                                [ CG.apply [ CG.val ctx.names.languageToStringFunName, CG.access (CG.val <| lookup "opts") "lang" ]
                                                 , CG.string "\""
                                                 ]
                                             )
@@ -527,7 +527,7 @@ addReplacePlaceholderDeclaration =
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
                                             (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
                                                 CG.applyBinOp
-                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.access (CG.val <| lookup "opts") "intl" ])
                                                     CG.pipel
                                                 <|
                                                     appendAll (CG.string "[\"NumberFormat\",[")
@@ -542,7 +542,7 @@ addReplacePlaceholderDeclaration =
                                             [ CG.varPattern <| lookup "n", CG.varPattern <| lookup "parsedArgString" ]
                                             (CG.applyBinOp defaultMaybeToEmptyString CG.pipel <|
                                                 CG.applyBinOp
-                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.val <| lookup "intl" ])
+                                                    (CG.apply [ CG.fqFun [ "Intl" ] "unsafeAccess", CG.access (CG.val <| lookup "opts") "intl" ])
                                                     CG.pipel
                                                 <|
                                                     CG.binOpChain
@@ -575,9 +575,9 @@ addReplacePlaceholderDeclaration =
                                                             CG.pipe
                                                                 (CG.apply
                                                                     [ CG.fqFun [ "Intl" ] "determinePluralRuleFloat"
-                                                                    , CG.val <| lookup "intl"
+                                                                    , CG.access (CG.val <| lookup "opts") "intl"
                                                                     , CG.record
-                                                                        [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.val <| lookup "lang" ] )
+                                                                        [ ( "language", CG.apply [ CG.val ctx.names.languageToStringFunName, CG.access (CG.val <| lookup "opts") "lang" ] )
                                                                         , ( "number", CG.val <| lookup "i" )
                                                                         , ( "type_", CG.fqVal [ "Intl" ] "Cardinal" )
                                                                         ]

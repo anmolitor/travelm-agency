@@ -135,19 +135,31 @@ addI18nTypeDeclaration =
     Unique.map <|
         \ctx ->
             let
+                bundleType =
+                    CG.tupleAnn [ CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ], CG.typed ctx.names.languageTypeName [] ]
+
                 simpleI18nType =
-                    CG.recordAnn <| List.map (\id -> ( id, CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] )) (Dict.NonEmpty.keys ctx.state)
+                    CG.recordAnn <| List.map (\id -> ( id, bundleType )) (Dict.NonEmpty.keys ctx.state)
+
+                i18nOptsType =
+                    CG.recordAnn <|
+                        if State.inferFeatures ctx.state |> Features.needsIntl then
+                            [ ( "lang", CG.typed ctx.names.languageTypeName [] )
+                            , ( "path", CG.stringAnn )
+                            , ( "intl", intlAnn )
+                            ]
+
+                        else
+                            [ ( "lang", CG.typed ctx.names.languageTypeName [] )
+                            , ( "path", CG.stringAnn )
+                            ]
 
                 i18nTypeDecl =
                     CG.customTypeDecl Nothing
                         ctx.names.i18nTypeName
                         []
                         [ ( ctx.names.i18nTypeName
-                          , if State.inferFeatures ctx.state |> Features.needsIntl then
-                                [ simpleI18nType, intlAnn, CG.typed ctx.names.languageTypeName [] ]
-
-                            else
-                                [ simpleI18nType ]
+                          , [ i18nOptsType, simpleI18nType ]
                           )
                         ]
             in
@@ -157,11 +169,14 @@ addI18nTypeDeclaration =
 addInitDeclaration : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
 addInitDeclaration =
     Unique.scoped <|
-        Unique.andThen2 "intl" "lang" <|
-            \_ ctx intlName langName ->
+        Unique.andThen "opts" <|
+            \_ ctx optsName ->
                 let
+                    emptyBundle =
+                        CG.tuple [ CG.fqFun [ "Array" ] "empty", CG.access (CG.val "opts") "lang" ]
+
                     emptyI18nRecord =
-                        CG.record (List.map (\id -> ( id, CG.fqFun [ "Array" ] "empty" )) (Dict.NonEmpty.keys ctx.state))
+                        CG.record (List.map (\id -> ( id, emptyBundle )) (Dict.NonEmpty.keys ctx.state))
 
                     needsIntl =
                         State.inferFeatures ctx.state |> Features.needsIntl
@@ -169,28 +184,39 @@ addInitDeclaration =
                     initDecl =
                         CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Initialize an (empty) `I18n` instance. This is useful on startup when no JSON was `load`ed yet."))
                             (Just <|
-                                if needsIntl then
-                                    CG.funAnn intlAnn (CG.funAnn (CG.typed ctx.names.languageTypeName []) (CG.typed ctx.names.i18nTypeName []))
+                                CG.funAnn
+                                    (CG.recordAnn <|
+                                        if needsIntl then
+                                            [ ( "lang", CG.typed ctx.names.languageTypeName [] )
+                                            , ( "path", CG.stringAnn )
+                                            , ( "intl", intlAnn )
+                                            ]
 
-                                else
+                                        else
+                                            [ ( "lang", CG.typed ctx.names.languageTypeName [] )
+                                            , ( "path", CG.stringAnn )
+                                            ]
+                                    )
+                                <|
                                     CG.typed ctx.names.i18nTypeName []
                             )
                             ctx.names.initFunName
-                            (if needsIntl then
-                                [ CG.varPattern intlName, CG.varPattern langName ]
-
-                             else
-                                []
-                            )
+                            [ CG.varPattern optsName ]
                             (CG.apply
-                                (CG.fun ctx.names.i18nTypeName
-                                    :: (if needsIntl then
-                                            [ emptyI18nRecord, CG.val intlName, CG.val langName ]
+                                [ CG.fun ctx.names.i18nTypeName
+                                , CG.record <|
+                                    if needsIntl then
+                                        [ ( "lang", CG.access (CG.val optsName) "lang" )
+                                        , ( "path", CG.access (CG.val optsName) "path" )
+                                        , ( "intl", CG.access (CG.val optsName) "intl" )
+                                        ]
 
-                                        else
-                                            [ emptyI18nRecord ]
-                                       )
-                                )
+                                    else
+                                        [ ( "lang", CG.access (CG.val optsName) "lang" )
+                                        , ( "path", CG.access (CG.val optsName) "path" )
+                                        ]
+                                , emptyI18nRecord
+                                ]
                             )
                 in
                 { ctx | file = ctx.file |> Shared.addDeclaration initDecl |> Shared.addExposing (CG.closedTypeExpose ctx.names.initFunName) }
@@ -312,11 +338,11 @@ addAccessorDeclarations =
                                             List.NonEmpty.toList nonEmptyIds
 
                             i18nPattern =
-                                if needsIntl then
-                                    aliasPatternIfNotEmptyPlaceholders (CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ], CG.allPattern, CG.allPattern ])
-
-                                else
-                                    CG.namedPattern ctx.names.i18nTypeName [ CG.recordPattern [ identifier ] ]
+                                aliasPatternIfNotEmptyPlaceholders <|
+                                    CG.namedPattern ctx.names.i18nTypeName
+                                        [ CG.allPattern
+                                        , CG.recordPattern [ identifier ]
+                                        ]
 
                             patterns =
                                 if ctx.i18nArgLast then
@@ -360,7 +386,13 @@ addAccessorDeclarations =
                             (Just typeAnn)
                             (ctx.lookupAccessor key)
                             patterns
-                            (CG.caseExpr (CG.apply [ CG.fqFun [ "Array" ] "get", CG.int index, CG.val identifier ])
+                            (CG.caseExpr
+                                (CG.apply
+                                    [ CG.fqFun [ "Array" ] "get"
+                                    , CG.int index
+                                    , CG.parens <| CG.apply [ CG.fqFun [ "Tuple" ] "first", CG.val identifier ]
+                                    ]
+                                )
                                 [ ( CG.namedPattern "Just" [ CG.varPattern translationName ]
                                   , body
                                   )
@@ -396,18 +428,19 @@ addAccessorDeclarations =
 addDecodeDeclarations : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
 addDecodeDeclarations =
     Unique.scoped <|
-        Unique.andThen4 "arr" "i18n" "intl" "lang" <|
-            \_ ctx arrName i18nName intlName langName ->
+        Unique.andThen4 "arr" "bundles" "opts" "lang" <|
+            \_ ctx arrName bundlesName optsName langName ->
                 let
                     needsIntl =
                         State.inferFeatures ctx.state |> Features.needsIntl
 
                     decoderDecl : Identifier -> CG.Declaration
                     decoderDecl identifier =
-                        CG.funDecl (Just (CG.emptyDocComment |> CG.markdown "Decode an `I18n` from Json. Make sure this is *only* used on the files generated by this package."))
-                            (Just <| DecodeM.decoder <| Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
+                        CG.funDecl (Just (CG.emptyDocComment |> CG.markdown """Decode an `I18n` from Json. Make sure this is *only* used on the files generated by this package.
+You need to pass the language of the loaded translations (for bookkeeping)."""))
+                            (Just <| CG.funAnn (CG.typed ctx.names.languageTypeName []) <| DecodeM.decoder <| Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
                             (ctx.names.decoderName identifier)
-                            []
+                            [ CG.varPattern langName ]
                             (CG.applyBinOp
                                 (CG.apply [ DecodeM.array, DecodeM.string ])
                                 CG.piper
@@ -416,21 +449,14 @@ addDecodeDeclarations =
                                     , CG.lambda
                                         [ CG.varPattern arrName
                                         , CG.namedPattern ctx.names.i18nTypeName
-                                            (if needsIntl then
-                                                [ CG.varPattern i18nName, CG.varPattern intlName, CG.varPattern langName ]
-
-                                             else
-                                                [ CG.varPattern i18nName ]
-                                            )
+                                            [ CG.varPattern optsName, CG.varPattern bundlesName ]
                                         ]
                                         (CG.apply <|
-                                            [ CG.fun ctx.names.i18nTypeName, CG.update i18nName [ ( identifier, CG.val arrName ) ] ]
-                                                ++ (if needsIntl then
-                                                        [ CG.val intlName, CG.val langName ]
-
-                                                    else
-                                                        []
-                                                   )
+                                            [ CG.fun ctx.names.i18nTypeName
+                                            , CG.val optsName
+                                            , CG.update bundlesName
+                                                [ ( identifier, CG.tuple [ CG.val arrName, CG.val langName ] ) ]
+                                            ]
                                         )
                                     ]
                                 )
@@ -450,8 +476,8 @@ addDecodeDeclarations =
 addLoadDeclarations : Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx)) -> Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
 addLoadDeclarations =
     Unique.scoped <|
-        Unique.andThen "opts" <|
-            \_ ctx optsName ->
+        Unique.andThen2 "onLoad" "opts" <|
+            \_ ctx onLoadName optsName ->
                 let
                     loadDecl : Identifier -> TranslationSet OptimizedJson -> CG.Declaration
                     loadDecl identifier translations =
@@ -468,34 +494,35 @@ you can use the `decoder` instead. Pass the path and a callback to your `update`
 will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ """ and will call GotTranslations with the decoded response.""")))
                             (Just <|
                                 CG.funAnn
-                                    (CG.recordAnn
-                                        [ ( "language", CG.typed ctx.names.languageTypeName [] )
-                                        , ( "path", CG.stringAnn )
-                                        , ( "onLoad"
-                                          , CG.funAnn
-                                                (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
-                                                    (Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
-                                                )
-                                                (CG.typeVar "msg")
-                                          )
-                                        ]
+                                    (CG.funAnn
+                                        (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
+                                            (Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
+                                        )
+                                        (CG.typeVar "msg")
                                     )
-                                    (CG.typed "Cmd" [ CG.typeVar "msg" ])
+                                    (CG.funAnn (CG.typed ctx.names.i18nTypeName []) (CG.typed "Cmd" [ CG.typeVar "msg" ]))
                             )
                             (ctx.names.loadName identifier)
-                            [ CG.varPattern optsName ]
-                            (let
-                                opts =
-                                    CG.val optsName
-                             in
-                             CG.apply
+                            [ CG.varPattern onLoadName
+                            , CG.namedPattern ctx.names.i18nTypeName
+                                [ CG.varPattern optsName
+                                , CG.allPattern
+                                ]
+                            ]
+                            (CG.apply
                                 [ CG.fqFun [ "Http" ] "get"
                                 , CG.record
-                                    [ ( "expect", CG.apply [ CG.fqFun [ "Http" ] "expectJson", CG.access opts "onLoad", CG.fun (ctx.names.decoderName identifier) ] )
+                                    [ ( "expect"
+                                      , CG.apply
+                                            [ CG.fqFun [ "Http" ] "expectJson"
+                                            , CG.val onLoadName
+                                            , CG.parens <| CG.apply [ CG.fun (ctx.names.decoderName identifier), CG.access (CG.val optsName) "lang" ]
+                                            ]
+                                      )
                                     , ( "url"
-                                      , appendAll (CG.access opts "path")
+                                      , appendAll (CG.access (CG.val optsName) "path")
                                             [ CG.string "/"
-                                            , CG.apply [ CG.fun <| ctx.lookupLanguageToFileName identifier, CG.access opts "language" ]
+                                            , CG.apply [ CG.fun <| ctx.lookupLanguageToFileName identifier, CG.access (CG.val optsName) "lang" ]
                                             ]
                                       )
                                     ]

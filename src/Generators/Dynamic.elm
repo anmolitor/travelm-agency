@@ -123,6 +123,7 @@ toFileUnique =
         >> addArrivedLanguageDeclaration
         >> Shared.addLanguageRelatedDeclsUnique
         >> addLoadDeclarations
+        >> addSwitchLanguageDeclaration
         >> addAccessorDeclarations
         >> addDecodeDeclarations
         >> addReplacePlaceholderDeclaration
@@ -489,6 +490,40 @@ This function will equal `currentLanguage` if all pending translations have sett
             in
             { ctx | file = ctx.file |> Shared.addDeclaration arrivedLanguageDecl |> Shared.addExposing (CG.funExpose arrivedLanguageName) }
 
+addSwitchLanguageDeclaration : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
+addSwitchLanguageDeclaration = 
+    Unique.andThen "switchLanguage" <|
+        \lookup ctx switchLanguageName ->
+            let
+                identifiers =
+                    Dict.NonEmpty.keys ctx.state
+                switchLanguageDeclComment = CG.emptyDocComment
+                    |> CG.markdown "Switch the current language and reload all previously loaded translation bundles in the new language."
+                
+                switchLanguageAnn = CG.funAnn (CG.typed ctx.names.languageTypeName [])
+                    <| CG.funAnn (CG.funAnn
+                                        (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
+                                            (Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
+                                        )
+                                        (CG.typeVar "msg")
+                                    ) <| CG.funAnn (CG.typed ctx.names.i18nTypeName [])
+                                    <| CG.tupleAnn [CG.typed ctx.names.i18nTypeName [], CG.typed "Cmd" [CG.typeVar "msg"]]
+                switchLanguageDecl = CG.funDecl (Just switchLanguageDeclComment)
+                    (Just switchLanguageAnn)
+                    switchLanguageName
+                    [CG.varPattern <| lookup "lang", CG.varPattern <| lookup "onLoad", CG.namedPattern ctx.names.i18nTypeName [CG.varPattern <| lookup "opts", CG.varPattern <| lookup "bundles"]]
+                    (CG.letExpr [
+                        CG.letVal (lookup "i18nNewLang") <| CG.apply [CG.val ctx.names.i18nTypeName, 
+                            CG.update (lookup "opts") [("lang", CG.val <| lookup "lang")], CG.val <| lookup "bundles"]
+                    ] <| CG.pipe (CG.list <| List.map (\identifier -> CG.tuple [CG.access (CG.val <| lookup "bundles") identifier, CG.val <| ctx.names.loadName identifier]) identifiers) [
+                        CG.apply [ CG.fqFun [ "List" ] "filter", CG.parens <| CG.binOpChain (CG.fun "not") CG.composel [ CG.fqFun [ "Array" ] "isEmpty", CG.fqFun [ "Tuple" ] "first", CG.fqFun [ "Tuple" ] "first" ] ]
+                        , CG.apply [ CG.fqFun [ "List" ] "map", CG.fqFun [ "Tuple" ] "second" ]
+                        , CG.apply [ CG.fqFun [ "List" ] "map", CG.parens <| CG.lambda [ CG.varPattern <| lookup "load" ] <| CG.apply [CG.val <| lookup "load", CG.val <| lookup "onLoad", CG.val <| lookup "i18nNewLang"] ]
+                        , CG.fun "Cmd.batch"
+                        , CG.apply [CG.fqFun ["Tuple"] "pair", CG.val <| lookup "i18nNewLang"]
+                    ])
+            in
+            { ctx | file = ctx.file |> Shared.addDeclaration switchLanguageDecl |> Shared.addExposing (CG.funExpose switchLanguageName) }
 
 addDecodeDeclarations : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
 addDecodeDeclarations =

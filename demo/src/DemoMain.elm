@@ -50,7 +50,7 @@ init flags url key =
             , version = flags.version
 
             -- internationalzation
-            , i18n = Translations.init
+            , i18n = Translations.init { lang = language, path = flags.basePath ++ "/i18n" }
             , intl = flags.intl
             , language = language
 
@@ -79,11 +79,7 @@ init flags url key =
         |> Tuple.mapSecond
             (\cmds ->
                 Cmd.batch
-                    [ Translations.loadShared
-                        { language = model.language
-                        , path = model.basePath ++ "/i18n"
-                        , onLoad = LoadedTranslations
-                        }
+                    [ Translations.loadShared LoadedTranslations model.i18n
                     , cmds
                     ]
             )

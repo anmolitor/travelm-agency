@@ -40,8 +40,8 @@ loadInputFiles { files, directory } model =
 
 
 withTranslations :
-    ({ language : Language, path : String, onLoad : Result Http.Error (I18n -> I18n) -> Msg } -> Cmd Msg)
+    ((Result Http.Error (I18n -> I18n) -> Msg) -> I18n -> Cmd Msg)
     -> ( Model, Cmd Msg )
     -> ( Model, Cmd Msg )
 withTranslations load ( model, otherCmds ) =
-    ( model, Cmd.batch [ load { language = model.language, path = model.basePath ++ "/i18n", onLoad = LoadedTranslations }, otherCmds ] )
+    ( model, Cmd.batch [ load LoadedTranslations model.i18n, otherCmds ] )

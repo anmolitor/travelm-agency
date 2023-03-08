@@ -3,7 +3,7 @@ preamble = Previously, the return type for all the generated translation key fun
   But sometimes there are formatting and highlighting requirements for your texts that are frustrating to
   solve with just Strings. Coloring or emphasizing part of a sentence come to mind. Links inside of a sentence.
   While you may split up pre and post html string parts, you will run into ordering issues for some languages.
-  That's why Travelm-Agency understands HTML and generates a function returning <code>List (Html Never)</code> instead, if it
+  That's why Travelm-Agency understands HTML and generates a function returning <code>List (Html msg)</code> instead, if it
   encounters any HTML tags.
 
 basicsHeadline = Basics

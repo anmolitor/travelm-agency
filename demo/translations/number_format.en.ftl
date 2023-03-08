@@ -9,7 +9,7 @@ preamble = Did you know that different languages format numbers in different way
 
 intlHeadline = Elm and the Intl APIs
 intlBody = Formatting numbers in a variety of different ways is a lot of work.
-  Thankfully, the Intl API <a href="{-intl-link}">Intl API</a> has this covered. Unfortunately, Elm does not provide
+  Thankfully, the <a href="{-intl-link}">Intl API</a> has this covered. Unfortunately, Elm does not provide
   first class access to this API. The tradional interop ways like Flags, Ports and Web components do not work well for
   this usecase either. Instead, we use the interaction between JSON decoders and ES6 proxies to provide synchronous access.
   For this to work, you need to npm install <a href="{-proxy-link}">intl-proxy</a> and pass it into your Elm application

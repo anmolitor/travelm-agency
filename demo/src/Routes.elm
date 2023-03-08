@@ -12,6 +12,7 @@ type Route
     = Intro (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
+    | Language (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Html (Maybe Ports.GeneratorMode) (Maybe InputType)
     | Terms (Maybe Ports.GeneratorMode)
@@ -32,6 +33,7 @@ order =
     [ Intro
     , Interpolation
     , Consistency
+    , Language
     , Bundles
     , Html
     , fixedInputType Terms
@@ -56,6 +58,7 @@ next route =
         |> List.filter (\( curr, _ ) -> curr == route)
         |> List.map Tuple.second
         |> List.head
+        |> Debug.log "next"
 
 
 previous : Route -> Maybe Route
@@ -91,6 +94,7 @@ parser =
         [ map Intro (s "intro" <?> modeParser <?> inputParser)
         , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
         , map Consistency (s "consistency" <?> modeParser <?> inputParser)
+        , map Language (s "language" <?> modeParser <?> inputParser)
         , map Bundles (s "bundles" <?> modeParser <?> inputParser)
         , map Html (s "html" <?> modeParser <?> inputParser)
         , map Terms (s "terms" <?> modeParser)
@@ -129,6 +133,9 @@ toUrl basePath route =
         Consistency mode inputType ->
             default "consistency" mode inputType
 
+        Language mode inputType ->
+            default "language" mode inputType
+
         Bundles mode inputType ->
             default "bundles" mode inputType
 
@@ -164,6 +171,9 @@ getParams route =
             ( inputType, mode )
 
         Consistency mode inputType ->
+            ( inputType, mode )
+
+        Language mode inputType ->
             ( inputType, mode )
 
         Bundles mode inputType ->
@@ -203,6 +213,9 @@ setInputType inputType route =
         Consistency mode _ ->
             Consistency mode (Just inputType)
 
+        Language mode _ ->
+            Language mode (Just inputType)
+
         Bundles mode _ ->
             Bundles mode (Just inputType)
 
@@ -239,6 +252,9 @@ setGeneratorMode mode route =
 
         Consistency _ inputType ->
             Consistency (Just mode) inputType
+
+        Language _ inputType ->
+            Language (Just mode) inputType
 
         Bundles _ inputType ->
             Bundles (Just mode) inputType

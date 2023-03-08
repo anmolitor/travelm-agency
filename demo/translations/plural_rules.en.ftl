@@ -8,7 +8,7 @@ preamble = Some languages differ in their grammatic or wording based on
 
 syntaxHeadline = Syntax
 syntaxBody = Well it turns out you can! Simply wrap a <code>NUMBER</code>
-  function call around you variable in a case interpolation. Now you won't be matching on specific
+  function call around your variable in a case interpolation. Now you won't be matching on specific
   numbers but on <a href="{-categories-link}">categories</a>. The valid categories are 
   'zero', 'one', 'two', 'few', 'many' and 'other'.  
 

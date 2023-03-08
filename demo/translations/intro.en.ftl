@@ -46,4 +46,4 @@ tutorialMobileAdditional = You seem to be on a mobile device. While you cannot v
 
 textsFeatureHeadline = Simple texts
 textsFeatureBody = It may be weird to call this a feature, but this is the most common translation type that you will need.
-  Observe how texts get copied into language records for inline mode and into a JSON array for dynamic mode.
+  Observe how texts get copied into pattern matching functions for inline mode and into a JSON array for dynamic mode.

@@ -18,6 +18,7 @@ import Pages.DateFormat
 import Pages.Html
 import Pages.Interpolation
 import Pages.Intro
+import Pages.Language
 import Pages.NumberFormat
 import Pages.PluralRules
 import Pages.Terms
@@ -96,6 +97,9 @@ initPage model =
 
         Routes.Consistency _ _ ->
             Pages.Consistency.init model
+
+        Routes.Language _ _ ->
+            Pages.Language.init model
 
         Routes.Bundles _ _ ->
             Pages.Bundles.init model
@@ -360,6 +364,9 @@ viewHeadline model =
         Routes.Consistency _ _ ->
             Translations.consistencyHeadline model.i18n
 
+        Routes.Language _ _ ->
+            Translations.languageHeadline model.i18n
+
         Routes.Bundles _ _ ->
             Translations.bundlesHeadline model.i18n
 
@@ -396,6 +403,9 @@ viewExplanation model =
 
         Routes.Consistency _ _ ->
             Pages.Consistency.viewExplanation model
+
+        Routes.Language _ _ ->
+            Pages.Language.viewExplanation model
 
         Routes.Bundles _ _ ->
             Pages.Bundles.viewExplanation model

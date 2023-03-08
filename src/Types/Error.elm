@@ -285,9 +285,9 @@ formatError error =
             ( "Found inconsistent keys in translation files."
             , [ "Language '"
                     ++ inconsistency.hasKeys
-                    ++ "' includes the keys ["
+                    ++ "' includes the keys [ "
                     ++ String.join ", " inconsistency.keys
-                    ++ " but language '"
+                    ++ " ] but language '"
                     ++ inconsistency.missesKeys
                     ++ "' does not."
               , "Either delete the keys in '"
@@ -304,8 +304,9 @@ formatError error =
 
         InconsistentLanguages inconsistency ->
             ( "Found bundles with inconsistent languages."
-            , [ "Bundle does not exist in the following languages ["
+            , [ "Bundle does not exist in the following languages [ "
                     ++ String.join ", " inconsistency.missingLanguages
+                    ++ " ]."
               , "You can solve this by creating translation files for the missing languages and adding the required translations."
               ]
             )

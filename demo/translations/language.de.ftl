@@ -15,5 +15,6 @@ activeLanguageBody = Ist das nicht eine triviale Frage? Die Sprache die der User
   Normalerweise gibt es zwei interessante Sprachen zu einem beliebigen Zeitpunkt.
   Die Sprache in die unsere Anwendung sein sollte, und die Sprache in der unsere Anwendung gerade ist.
   Daher werden für diese beiden Sprachen Funktionen generiert: <code>currentLanguage</code> and <code>arrivedLanguage</code>.
+  Du kannst den Unterschied live beobachten wenn du in den DevTools die Netzwerkgeschwindigkeit drosselst und die Sprache oben mit einer der Flaggen in der Mitte änderst.
   Wenn mehr Logik als das notwendig ist, solltest du vermutlich die Sprache zusätzlich in deinem eigenen Model speichern
   (oder ein Issue aufmachen, vielleicht haben andere Nutzer das gleiche Problem).

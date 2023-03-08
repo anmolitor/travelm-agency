@@ -80,6 +80,22 @@ select {
   width: 67%;
 }
 
+.language-select {
+  display: flex;
+}
+
+.language-flag {
+  padding: 10px;
+}
+
+.language-flag.arrived {
+  box-shadow: inset 0px 0px 0px 2px rgb(25, 244, 80);
+}
+
+.language-flag.current {
+  box-shadow: inset 0px 0px 0px 2px rgb(217, 233, 48);
+}
+
 .file-header-container {
   align-items: flex-end;
   display: flex;

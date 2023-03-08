@@ -5,7 +5,7 @@ import File exposing (InputFile)
 import Http
 import InputType exposing (InputType)
 import Ports
-import Translations exposing (I18n)
+import Translations exposing (I18n, Language)
 import Url
 
 
@@ -22,6 +22,7 @@ type Msg
     | EditedInput { filePath : String, newContent : String, caretPosition : Int }
     | ChangeInputType InputType
     | ChangeGeneratorMode Ports.GeneratorMode
+    | ChangeLanguage Language
     | ChangeActiveInputFile String
     | ChangeActiveOutputFile String
     | AddFile InputFile

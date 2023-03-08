@@ -14,6 +14,7 @@ import Maybe.Extra
 import Msg exposing (Msg(..))
 import Ports exposing (GeneratorMode)
 import Routes
+import Translations exposing (Language)
 
 
 type alias TutorialModel =
@@ -22,6 +23,8 @@ type alias TutorialModel =
     , inputTypes : List InputType
     , activeInputType : InputType
     , generatorMode : GeneratorMode
+    , currentLanguage : Language
+    , arrivedLanguage : Language
     , inputFiles : Dict String InputFile
     , activeInputFilePath : String
     , caretPosition : Int
@@ -78,6 +81,30 @@ view model explanationText =
                     Nothing ->
                         Material.Icons.arrow_forward 50 (Color <| Color.rgba 0.5 0.5 0.5 0.5)
                 ]
+
+        renderLanguage lang =
+            Html.img
+                [ Html.Events.onClick <| ChangeLanguage lang
+                , Html.Attributes.src <| "/flag_" ++ Translations.languageToString lang ++ ".svg"
+                , Html.Attributes.height 20
+                , class "language-flag"
+                , class <|
+                    if lang == model.arrivedLanguage then
+                        "arrived"
+
+                    else if lang == model.currentLanguage then
+                        "current"
+
+                    else
+                        ""
+                ]
+                []
+
+        languageSelect =
+            Html.div [ class "language-select" ] <|
+                List.map
+                    renderLanguage
+                    Translations.languages
 
         inputTypeSelect =
             if List.length model.inputTypes > 1 then
@@ -198,7 +225,8 @@ view model explanationText =
         [ Html.div [ class "left-sidebar" ]
             [ navigation, Html.div [ class "explanation" ] explanationText ]
         , Html.div [ class "playground" ]
-            [ inputHeader
+            [ languageSelect
+            , inputHeader
             , inputCode
             , outputHeader
             , outputCode

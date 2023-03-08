@@ -194,6 +194,13 @@ update msg model =
                 |> Browser.Navigation.pushUrl model.key
             )
 
+        ChangeLanguage language ->
+            let
+                ( newI18n, cmds ) =
+                    Translations.switchLanguage language LoadedTranslations model.i18n
+            in
+            ( { model | i18n = newI18n }, cmds )
+
         Resize width height ->
             ( { model | width = width, height = height }, Cmd.none )
 
@@ -316,6 +323,8 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
             , activeInputType = inputType
             , generatorMode = model.generatorMode
             , inputTypes = inputTypesForRoute route
+            , currentLanguage = Translations.currentLanguage model.i18n
+            , arrivedLanguage = Translations.arrivedLanguage model.i18n
             , route = route
             , inputFiles = inputFiles
             , activeInputFilePath = activeInputFilePath

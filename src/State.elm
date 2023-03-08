@@ -194,6 +194,10 @@ validateState devMode =
     Dict.NonEmpty.fromDict
         >> Maybe.map
             (\nonEmptyState ->
+                let
+                    allLanguages =
+                        getAllLanguages nonEmptyState
+                in
                 if devMode then
                     nonEmptyState
                         |> Dict.NonEmpty.map
@@ -209,7 +213,7 @@ validateState devMode =
 
                 else
                     Dict.NonEmpty.toList nonEmptyState
-                        |> List.map (\( key, value ) -> ( key, validateTranslationSet value |> Error.addTranslationFileNameCtx key ))
+                        |> List.map (\( key, value ) -> ( key, validateTranslationSet allLanguages value |> Error.addTranslationFileNameCtx key ))
                         |> List.map Result.Extra.combineSecond
                         |> Error.combineList
                         |> Result.andThen
@@ -237,20 +241,35 @@ completeFallbacks translationSet =
         |> Error.combineList
 
 
-validateTranslationSet : TranslationSet any -> Failable (TranslationSet any)
-validateTranslationSet =
-    completeFallbacks
-        >> Result.andThen
-            (\translations ->
-                List.map2 Translation.checkTranslationsForConsistency translations (List.drop 1 translations)
-                    |> Error.combineList
-                    |> Result.andThen
-                        (always <|
-                            case translations of
-                                first :: rest ->
-                                    Ok <| Dict.NonEmpty.fromList ( first, rest )
+validateTranslationSet : Set Language -> TranslationSet any -> Failable (TranslationSet any)
+validateTranslationSet allLanguages translationSet =
+    let
+        languageDiff =
+            Set.diff allLanguages (Set.fromList <| Dict.NonEmpty.keys translationSet)
+    in
+    if not <| Set.isEmpty languageDiff then
+        Error.inconsistentLanguages { missingLanguages = Set.toList languageDiff }
 
-                                [] ->
-                                    Error.noTranslationFiles
-                        )
-            )
+    else
+        completeFallbacks translationSet
+            |> Result.andThen
+                (\translations ->
+                    List.map2 Translation.checkTranslationsForConsistency translations (List.drop 1 translations)
+                        |> Error.combineList
+                        |> Result.andThen
+                            (always <|
+                                case translations of
+                                    first :: rest ->
+                                        Ok <| Dict.NonEmpty.fromList ( first, rest )
+
+                                    [] ->
+                                        Error.noTranslationFiles
+                            )
+                )
+
+
+getAllLanguages : NonEmptyState any -> Set Language
+getAllLanguages =
+    Dict.NonEmpty.values
+        >> List.map (Dict.NonEmpty.keys >> Set.fromList)
+        >> List.foldl Set.union Set.empty

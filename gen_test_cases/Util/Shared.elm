@@ -25,17 +25,18 @@ type alias GenOptions =
     { mode : GeneratorMode
     , i18nArgFirst : Bool
     , addContentHash : Bool
+    , expectError : Bool
     }
 
 
 inlineOpts : GenOptions
 inlineOpts =
-    { mode = Inline, i18nArgFirst = False, addContentHash = False }
+    { mode = Inline, i18nArgFirst = False, addContentHash = False, expectError = False }
 
 
 dynamicOpts : GenOptions
 dynamicOpts =
-    { mode = Dynamic, i18nArgFirst = False, addContentHash = False }
+    { mode = Dynamic, i18nArgFirst = False, addContentHash = False, expectError = False }
 
 
 buildMain : List GenOptions -> State () -> Generator
@@ -57,39 +58,52 @@ generate name state opts =
     let
         moduleName =
             name ++ "Translations"
-    in
-    case opts.mode of
-        Dynamic ->
-            let
-                stateWithResources =
-                    State.validateState False state
-                        |> Result.mapError (\err -> Debug.todo <| "State validation failed!" ++ Debug.toString err)
-                        |> Result.Extra.merge
-                        |> Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages opts.addContentHash)
-            in
-            Cmd.batch
-                [ Generators.Dynamic.toFile
-                    { defaultContext
-                        | moduleName = [ "Dynamic", moduleName ]
-                        , i18nArgLast = not opts.i18nArgFirst
-                    }
-                    stateWithResources
-                    |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")
-                , Dict.NonEmpty.toDict stateWithResources
-                    |> State.getAllResources
-                    |> writeServerProxy (name ++ "Server")
-                ]
 
-        Inline ->
+        validatedState =
             State.validateState False state
-                |> Result.mapError (\err -> Debug.todo <| "State validation failed!" ++ Debug.toString err)
-                |> Result.Extra.merge
-                |> Generators.Inline.toFile
-                    { defaultContext
-                        | moduleName = [ "Inline", moduleName ]
-                        , i18nArgLast = not opts.i18nArgFirst
-                    }
-                |> writeFile ("gen_test_cases/Inline/" ++ moduleName ++ ".elm")
+    in
+    if opts.expectError then
+        case validatedState of
+            Ok st ->
+                Debug.todo <| "State validation succeeded but should have failed: " ++ Debug.toString st
+
+            Err err ->
+                Cmd.none
+
+    else
+        let
+            st =
+                validatedState
+                    |> Result.mapError (\err -> Debug.todo <| "State validation failed!" ++ Debug.toString err)
+                    |> Result.Extra.merge
+        in
+        case opts.mode of
+            Dynamic ->
+                let
+                    stateWithResources =
+                        st |> Dict.NonEmpty.map (Generators.Dynamic.optimizeJsonAllLanguages opts.addContentHash)
+                in
+                Cmd.batch
+                    [ Generators.Dynamic.toFile
+                        { defaultContext
+                            | moduleName = [ "Dynamic", moduleName ]
+                            , i18nArgLast = not opts.i18nArgFirst
+                        }
+                        stateWithResources
+                        |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")
+                    , Dict.NonEmpty.toDict stateWithResources
+                        |> State.getAllResources
+                        |> writeServerProxy (name ++ "Server")
+                    ]
+
+            Inline ->
+                st
+                    |> Generators.Inline.toFile
+                        { defaultContext
+                            | moduleName = [ "Inline", moduleName ]
+                            , i18nArgLast = not opts.i18nArgFirst
+                        }
+                    |> writeFile ("gen_test_cases/Inline/" ++ moduleName ++ ".elm")
 
 
 defaultContext : Context

@@ -1,4 +1,4 @@
-module Types.Error exposing (Failable, addAdditionalCtx, addContentTypeCtx, addLanguageCtx, addTranslationFileNameCtx, combineList, combineNonEmpty, cyclicFallback, cyclicTermReference, failedToFormatStringAsNumber, failedToParseStringAsDate, failedToParseStringAsNumber, formatFail, inconsistentKeys, joinErr, noTranslationFiles, requestDecodeError, runParser, translationFileParsingError, unresolvableTermReference, unsupportedContentType)
+module Types.Error exposing (Failable, addAdditionalCtx, addContentTypeCtx, addLanguageCtx, addTranslationFileNameCtx, combineList, combineNonEmpty, cyclicFallback, cyclicTermReference, failedToFormatStringAsNumber, failedToParseStringAsDate, failedToParseStringAsNumber, formatFail, inconsistentKeys, inconsistentLanguages, joinErr, noTranslationFiles, requestDecodeError, runParser, translationFileParsingError, unresolvableTermReference, unsupportedContentType)
 
 import Dict exposing (Dict)
 import Json.Decode
@@ -17,10 +17,15 @@ type alias InconsistentKeysInfo =
     { keys : List String, hasKeys : Language, missesKeys : Language }
 
 
+type alias InconsistentLanguageInfo =
+    { missingLanguages : List String }
+
+
 type Error
     = NoTranslationFiles
     | CyclicFallback (List String)
     | InconsistentKeys InconsistentKeysInfo
+    | InconsistentLanguages InconsistentLanguageInfo
     | CannotFormatStringAsNumber String
     | CannotParseStringAsNumber String
     | CannotParseStringAsDate String
@@ -58,6 +63,13 @@ cyclicFallback =
 inconsistentKeys : InconsistentKeysInfo -> Failable a
 inconsistentKeys =
     errorToFailable << InconsistentKeys
+
+
+{-| Fail because of inconsistent keys across translation files, i.e. one file contains keys that another does not.
+-}
+inconsistentLanguages : InconsistentLanguageInfo -> Failable a
+inconsistentLanguages =
+    errorToFailable << InconsistentLanguages
 
 
 {-| Fail when formatting a non-number string as a number.
@@ -287,6 +299,14 @@ formatError error =
                     ++ "' into the '"
                     ++ inconsistency.missesKeys
                     ++ "' translation file."
+              ]
+            )
+
+        InconsistentLanguages inconsistency ->
+            ( "Found bundles with inconsistent languages."
+            , [ "Bundle does not exist in the following languages ["
+                    ++ String.join ", " inconsistency.missingLanguages
+              , "You can solve this by creating translation files for the missing languages and adding the required translations."
               ]
             )
 

@@ -58,7 +58,6 @@ next route =
         |> List.filter (\( curr, _ ) -> curr == route)
         |> List.map Tuple.second
         |> List.head
-        |> Debug.log "next"
 
 
 previous : Route -> Maybe Route

@@ -20,7 +20,7 @@ suite =
                 Types.Error.inconsistentKeys { hasKeys = "en", missesKeys = "de", keys = [ "someKey", "anotherKey" ] }
                     |> Types.Error.formatFail
                     |> Expect.equal (Err """Found inconsistent keys in translation files.
-\tLanguage 'en' includes the keys [someKey, anotherKey but language 'de' does not.
+\tLanguage 'en' includes the keys [ someKey, anotherKey ] but language 'de' does not.
 \tEither delete the keys in 'en', add the keys in 'de', or opt into a fallback behaviour by adding '# fallback-language: en' into the 'de' translation file.""")
         , test "format recursive term reference" <|
             \_ ->

@@ -48,7 +48,7 @@ jobs:
           echo $GITHUB_ACTOR
           git init
           git config --global user.name $GITHUB_ACTOR
-          git config --global user.name $GITHUB_ACTOR@users.noreply.github.com
+          git config --global user.email $GITHUB_ACTOR@users.noreply.github.com
           git checkout -b gh-pages
           git add -A
           git commit -m "Deploy"

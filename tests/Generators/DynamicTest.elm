@@ -53,7 +53,7 @@ import Util.Shared exposing (sendRequest)
 
 singleText : Test
 singleText =
-    describe "single text"
+    describe "single text | dynamic"
         [ test "returns the expected translated text" <|
             \_ ->
                 sendRequest SingleTextServer.server
@@ -67,7 +67,7 @@ singleText =
 
 multiLanguageText : Test
 multiLanguageText =
-    describe "multi language text"
+    describe "multi language text | dynamic"
         [ test "returns the expected translated text in english" <|
             \_ ->
                 sendRequest MultiLanguageTextServer.server
@@ -89,7 +89,7 @@ multiLanguageText =
 
 singleInterpolation : Test
 singleInterpolation =
-    describe "single interpolation"
+    describe "single interpolation | dynamic"
         [ test "interpolates the given value at the correct position" <|
             \_ ->
                 sendRequest SingleInterpolationServer.server
@@ -103,7 +103,7 @@ singleInterpolation =
 
 multiInterpolation : Test
 multiInterpolation =
-    describe "multi interpolation"
+    describe "multi interpolation | dynamic"
         [ test "interpolates the given values at the correct positions" <|
             \_ ->
                 sendRequest MultiInterpolationServer.server
@@ -163,7 +163,7 @@ i18nLastSimple =
 
 interpolationMatchCase : Test
 interpolationMatchCase =
-    describe "interpolation match case"
+    describe "interpolation match case | dynamic"
         [ test "interpolates the correct value for female gender" <|
             \_ ->
                 sendRequest InterpolationMatchServer.server
@@ -193,7 +193,7 @@ interpolationMatchCase =
 
 nestedInterpolation : Test
 nestedInterpolation =
-    describe "nested interpolation" <|
+    describe "nested interpolation | dynamic" <|
         let
             i18n =
                 sendRequest NestedInterpolationServer.server
@@ -221,7 +221,7 @@ nestedInterpolation =
 
 numberFormatCase : Test
 numberFormatCase =
-    describe "number format"
+    describe "number format | dynamic"
         [ test "type checks" <|
             \_ ->
                 sendRequest NumberFormatServer.server
@@ -238,7 +238,7 @@ numberFormatCase =
 
 dateFormatCase : Test
 dateFormatCase =
-    describe "date format"
+    describe "date format | dynamic"
         [ test "type checks" <|
             \_ ->
                 sendRequest DateFormatServer.server
@@ -255,7 +255,7 @@ dateFormatCase =
 
 pluralCase : Test
 pluralCase =
-    describe "plural"
+    describe "plural | dynamic"
         [ test "type checks" <|
             \_ ->
                 sendRequest PluralServer.server "messages.en.json" (PluralTranslations.decodeMessages PluralTranslations.En)
@@ -286,7 +286,7 @@ hashRegressionTest =
 
 simpleHtml : Test
 simpleHtml =
-    describe "simple html"
+    describe "simple html | dynamic"
         [ test "produces the correct html element and text content" <|
             \_ ->
                 sendRequest SimpleHtmlServer.server "messages.en.json" (SimpleHtmlTranslations.decodeMessages SimpleHtmlTranslations.En)
@@ -325,7 +325,7 @@ simpleHtml =
 
 nestedHtml : Test
 nestedHtml =
-    describe "nested html"
+    describe "nested html | dynamic"
         [ test "produces the correct outer html element" <|
             \_ ->
                 sendRequest NestedHtmlServer.server "messages.en.json" (NestedHtmlTranslations.decodeMessages NestedHtmlTranslations.En)
@@ -378,7 +378,7 @@ nestedHtml =
 
 mixedHtmlAndInterpolation : Test
 mixedHtmlAndInterpolation =
-    describe "mixed html and interpolation"
+    describe "mixed html and interpolation | dynamic"
         [ test "shows expected content for admin role" <|
             \_ ->
                 sendRequest HtmlInterpolationServer.server "messages.en.json" (HtmlInterpolationTranslations.decodeMessages HtmlInterpolationTranslations.En)
@@ -430,7 +430,7 @@ mixedHtmlAndInterpolation =
 
 htmlAndIntl : Test
 htmlAndIntl =
-    describe "html mixed with intl functions"
+    describe "html mixed with intl functions | dynamic"
         [ test "numberFormat typechecks" <|
             \_ ->
                 sendRequest HtmlIntlServer.server "messages.en.json" (HtmlIntlTranslations.decodeMessages HtmlIntlTranslations.En)
@@ -484,7 +484,7 @@ htmlAndIntl =
 
 multipleBundles : Test
 multipleBundles =
-    describe "multiple bundles"
+    describe "multiple bundles | dynamic"
         [ test "finds the first bundles text when first bundle is loaded" <|
             \_ ->
                 sendRequest MultiBundleServer.server "bundle_1.en.json" (MultiBundleTranslations.decodeBundle1 MultiBundleTranslations.En)
@@ -522,7 +522,7 @@ multipleBundles =
 
 namespacing : Test
 namespacing =
-    describe "namespacing"
+    describe "namespacing | dynamic"
         [ test "escapes elm keywords" <|
             \_ ->
                 sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
@@ -622,7 +622,7 @@ escapedPipeSymbols =
 
 fallback : Test
 fallback =
-    describe "fallback to another language"
+    describe "fallback to another language | dynamic"
         [ test "falls back to the fallback language successfully" <|
             \_ ->
                 sendRequest FallbackServer.server "messages.en.json" (FallbackTranslations.decodeMessages FallbackTranslations.En)
@@ -640,7 +640,7 @@ fallback =
 
 getCurrentLanguage : Test
 getCurrentLanguage =
-    describe "get current language"
+    describe "get current language | dynamic"
         [ test "is correct for initial language" <|
             \_ ->
                 MultiLanguageTextTranslations.init { lang = MultiLanguageTextTranslations.De, path = "" }

@@ -168,7 +168,7 @@ numberFormatCase =
 
 dateFormatCase : Test
 dateFormatCase =
-    describe "date format"
+    describe "date format | inline"
         [ test "type checks" <|
             \_ ->
                 Inline.DateFormatTranslations.init Util.emptyIntl Inline.DateFormatTranslations.En
@@ -401,7 +401,7 @@ complexI18nFirst =
 
 fallback : Test
 fallback =
-    describe "fallback to another language"
+    describe "fallback to another language | inline"
         [ test "falls back to the fallback language successfully" <|
             \_ ->
                 Inline.FallbackTranslations.init Inline.FallbackTranslations.En
@@ -417,7 +417,7 @@ fallback =
 
 getCurrentLanguage : Test
 getCurrentLanguage =
-    describe "get current language"
+    describe "get current language | inline"
         [ test "is correct for initial language" <|
             \_ ->
                 Inline.MultiLanguageTextTranslations.init Inline.MultiLanguageTextTranslations.En

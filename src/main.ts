@@ -27,34 +27,117 @@ const getPluginVersion = (): string => {
   return nodeJson.version;
 };
 
-let ports: Ports | undefined;
+export interface TravelmAgencyInstance {
+  withElmApp: <T>(
+    consumer: (ports: Ports) => Promise<T>,
+    devMode?: boolean
+  ) => Promise<T>;
+  sendTranslations: (filePaths: string[], devMode?: boolean) => Promise<void>;
+  finishModule: (opts: FinishModuleOptions) => Promise<ResponseContent>;
+}
 
-export const withElmApp = async <T>(
-  consumer: (ports: Ports) => Promise<T>,
-  devMode = false
-): Promise<T> => {
-  let error: string | undefined;
-  if (!ports) {
-    const version = getPluginVersion();
-    ({ ports } = Elm.Main.init({
-      flags: { version, intl: intl_proxy, devMode },
-    }));
-    const throwOnError: ResponseHandler = (response) => {
-      if (response.error) {
-        error = response.error;
-      }
-    };
-    ports.sendResponse.subscribe(throwOnError);
-  }
-  return consumer(ports).then((res) => {
-    const previousError = error;
-    if (previousError) {
-      error = undefined;
-      throw new Error(previousError);
+export interface FinishModuleOptions {
+  elmPath: string;
+  generatorMode?: GeneratorMode | null;
+  addContentHash: boolean;
+  devMode?: boolean;
+  i18nArgFirst?: boolean;
+  prefixFileIdentifier?: boolean;
+}
+
+export function createInstance(): TravelmAgencyInstance {
+  let ports: Ports | undefined;
+
+  const withElmApp = async <T>(
+    consumer: (ports: Ports) => Promise<T>,
+    devMode = false
+  ): Promise<T> => {
+    let error: string | undefined;
+    if (!ports) {
+      const version = getPluginVersion();
+      ({ ports } = Elm.Main.init({
+        flags: { version, intl: intl_proxy, devMode },
+      }));
+      const throwOnError: ResponseHandler = (response) => {
+        if (response.error) {
+          error = response.error;
+        }
+      };
+      ports.sendResponse.subscribe(throwOnError);
     }
-    return res;
-  });
-};
+    return consumer(ports).then((res) => {
+      const previousError = error;
+      if (previousError) {
+        error = undefined;
+        throw new Error(previousError);
+      }
+      return res;
+    });
+  };
+
+  const sendTranslations = (
+    filePaths: string[],
+    devMode = false
+  ): Promise<void> =>
+    withElmApp(async (ports) => {
+      await Promise.all(
+        filePaths.map(async (filePath) => {
+          const fileName = path.parse(filePath).base;
+          const fileContent = await readFile(filePath);
+          ports.receiveRequest.send({
+            type: "translation",
+            fileName,
+            fileContent,
+          });
+        })
+      );
+    }, devMode);
+
+  const finishModule = ({
+    elmPath,
+    generatorMode = null,
+    addContentHash,
+    devMode = false,
+    i18nArgFirst = false,
+    prefixFileIdentifier = false,
+  }: FinishModuleOptions): Promise<ResponseContent> =>
+    withElmApp(
+      async (ports) =>
+        new Promise<ResponseContent>((resolve, reject) => {
+          const elmModuleName = elmPathToModuleName(elmPath);
+          const responseHandler: ResponseHandler = async (res) => {
+            ports.sendResponse.unsubscribe(responseHandler);
+            if (res.error) {
+              reject(res.error);
+            }
+            if (!res.content) {
+              reject(new Error("Received neither error nor content from Elm."));
+            } else {
+              resolve(res.content);
+            }
+          };
+          ports.sendResponse.subscribe(responseHandler);
+          ports.receiveRequest.send({
+            type: "finish",
+            elmModuleName,
+            generatorMode,
+            addContentHash,
+            i18nArgFirst,
+            prefixFileIdentifier,
+          });
+        }),
+      devMode
+    ).then(async ({ elmFile, optimizedJson }) => ({
+      elmFile: await runElmFormat(elmFile),
+      optimizedJson,
+    }));
+
+  return {
+    withElmApp,
+    sendTranslations,
+    finishModule,
+  };
+}
 
 export type Options =
   | ({ generatorMode: "inline" } & InlineOptions)
@@ -72,70 +155,6 @@ interface InlineOptions {
 interface DynamicOptions extends InlineOptions {
   jsonPath: string;
 }
-
-export const sendTranslations = (
-  filePaths: string[],
-  devMode = false
-): Promise<void> =>
-  withElmApp(async (ports) => {
-    await Promise.all(
-      filePaths.map(async (filePath) => {
-        const fileName = path.parse(filePath).base;
-        const fileContent = await readFile(filePath);
-        ports.receiveRequest.send({
-          type: "translation",
-          fileName,
-          fileContent,
-        });
-      })
-    );
-  }, devMode);
-
-export const finishModule = ({
-  elmPath,
-  generatorMode = null,
-  addContentHash,
-  devMode = false,
-  i18nArgFirst = false,
-  prefixFileIdentifier = false,
-}: {
-  elmPath: string;
-  generatorMode?: GeneratorMode | null;
-  addContentHash: boolean;
-  devMode?: boolean;
-  i18nArgFirst?: boolean;
-  prefixFileIdentifier?: boolean;
-}): Promise<ResponseContent> =>
-  withElmApp(
-    async (ports) =>
-      new Promise<ResponseContent>((resolve, reject) => {
-        const elmModuleName = elmPathToModuleName(elmPath);
-        const responseHandler: ResponseHandler = async (res) => {
-          ports.sendResponse.unsubscribe(responseHandler);
-          if (res.error) {
-            reject(res.error);
-          }
-          if (!res.content) {
-            reject(new Error("Received neither error nor content from Elm."));
-          } else {
-            resolve(res.content);
-          }
-        };
-        ports.sendResponse.subscribe(responseHandler);
-        ports.receiveRequest.send({
-          type: "finish",
-          elmModuleName,
-          generatorMode,
-          addContentHash,
-          i18nArgFirst,
-          prefixFileIdentifier,
-        });
-      }),
-    devMode
-  ).then(async ({ elmFile, optimizedJson }) => ({
-    elmFile: await runElmFormat(elmFile),
-    optimizedJson,
-  }));
 
 // This function should not be necessary once https://github.com/the-sett/elm-syntax-dsl/issues/42 is fixed.
 const runElmFormat = async (code: string): Promise<string> =>
@@ -171,8 +190,9 @@ export const run = async (options: Options) => {
     addContentHash,
     devMode,
     i18nArgFirst,
-    prefixFileIdentifier
+    prefixFileIdentifier,
   } = options;
+
   const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
     path.resolve(translationDir, fileName)
   );
@@ -181,8 +201,10 @@ export const run = async (options: Options) => {
       `Given translation directory ${translationDir} does not contain any files`
     );
   }
-  await sendTranslations(translationFilePaths, devMode);
-  const { elmFile, optimizedJson } = await finishModule({
+  const instance = createInstance();
+
+  await instance.sendTranslations(translationFilePaths, devMode);
+  const { elmFile, optimizedJson } = await instance.finishModule({
     elmPath,
     generatorMode,
     addContentHash,

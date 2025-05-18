@@ -564,7 +564,7 @@ content ctx =
                             htmlContent tag
                                 |> Parser.map
                                     (\innerCnt ->
-                                        HtmlContent { tag = tag, id = tag, attrs = otherAttrs, content = innerCnt }
+                                        HtmlContent { tag = tag, id = String.Extra.camelize tag, attrs = otherAttrs, content = innerCnt }
                                     )
 
                         _ ->

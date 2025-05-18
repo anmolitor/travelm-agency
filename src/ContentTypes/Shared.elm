@@ -3,6 +3,7 @@ module ContentTypes.Shared exposing (..)
 import List.Extra
 import List.NonEmpty
 import Parser as P exposing ((|.), (|=))
+import String.Extra
 import Types.Segment as Segment
 
 
@@ -83,7 +84,7 @@ applyStepInnermost step state =
                                                 , revSegments =
                                                     Segment.Html
                                                         { tag = tag
-                                                        , id = tag
+                                                        , id = String.Extra.camelize tag
                                                         , attrs = List.filter (not << isSpecialAttribute << Tuple.first) finalizedAttrs
                                                         , content = content
                                                         }

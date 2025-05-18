@@ -188,6 +188,24 @@ blank lines"""
                                 )
                             }
                         )
+        , test "html with custom element" <|
+            \_ ->
+                Parser.run F.message """msg = <my-tag>Test</my-tag>"""
+                    |> Expect.equal
+                        (Ok
+                            { identifier = F.MessageIdentifier "msg"
+                            , attrs = []
+                            , content =
+                                ( F.HtmlContent
+                                    { tag = "my-tag"
+                                    , id = "myTag"
+                                    , attrs = []
+                                    , content = ( F.TextContent "Test", [] )
+                                    }
+                                , []
+                                )
+                            }
+                        )
         , test "nested html message" <|
             \_ ->
                 Parser.run F.message """msg = some <b _id="bold">important</b> paragraph: <p><img _id="image" src="{ $imgSrc }"></img></p>"""

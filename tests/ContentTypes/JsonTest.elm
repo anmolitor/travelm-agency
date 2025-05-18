@@ -80,6 +80,10 @@ parserTests =
                             )
                           )
                         ]
+        , test "html with custom element" <|
+            \_ ->
+                """{ "a": "<my-tag>Test</my-tag>" }"""
+                    |> expectParseTo [ ( "a", ( Html { tag = "my-tag", id = "myTag", attrs = [], content = ( Text "Test", [] ) }, [] ) ) ]
         , test "multiple html attributes" <|
             \_ ->
                 """{ "a": "<span id=\\"an id\\" _id=\\"realId\\" data-testid=\\"test\\">Test</span>" }"""

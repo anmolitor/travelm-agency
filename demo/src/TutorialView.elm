@@ -85,7 +85,7 @@ view model explanationText =
         renderLanguage lang =
             Html.img
                 [ Html.Events.onClick <| ChangeLanguage lang
-                , Html.Attributes.src <| "/flag_" ++ Translations.languageToString lang ++ ".svg"
+                , Html.Attributes.src <| "/travelm-agency/flag_" ++ Translations.languageToString lang ++ ".svg"
                 , Html.Attributes.height 20
                 , class "language-flag"
                 , class <|

@@ -24,12 +24,12 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@types/node": "^18.8.5",
+    "@types/node": "^22.15.21",
     "cross-env": "^7.0.3",
     "elm": "^0.19.1-5",
     "elm-test-rs": "^3.0.0-5",
     "node-elm-compiler": "^5.0.6",
-    "typescript": "^5.5.4",
-    "uglify-js": "^3.15.3"
+    "typescript": "^5.8.3",
+    "uglify-js": "^3.19.3"
   }
 }

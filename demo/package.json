@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "demo application for travelm-agency",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "vite",
     "prebuild": "node ../index.js translations --json_path=public/i18n --prefix_file_identifier --hash",
@@ -14,10 +15,10 @@
   "devDependencies": {
     "cross-env": "^7.0.3",
     "intl-proxy": "^1.0.1",
-    "vite": "^2.9.14",
-    "vite-plugin-elm": "^2.6.1"
+    "vite": "^6.3.5",
+    "vite-plugin-elm": "^3.0.1"
   },
   "dependencies": {
-    "prismjs": "^1.28.0"
+    "prismjs": "1.30"
   }
 }

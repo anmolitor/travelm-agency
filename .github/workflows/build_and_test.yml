@@ -59,7 +59,7 @@ jobs:
           git checkout -b gh-pages
           git add -A
           git commit -m "Deploy"
-          git remote add origin https://andreasewering:$GITHUB_TOKEN@github.com/andreasewering/travelm-agency.git
+          git remote add origin https://anmolitor:$GITHUB_TOKEN@github.com/anmolitor/travelm-agency.git
           git push -f --set-upstream origin gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

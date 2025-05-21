@@ -57,6 +57,7 @@ jobs:
           git config --global user.name $GITHUB_ACTOR
           git config --global user.email $GITHUB_ACTOR@users.noreply.github.com
           git checkout -b gh-pages
+          touch .nojekyll
           git add -A
           git commit -m "Deploy"
           git remote add origin https://anmolitor:$GITHUB_TOKEN@github.com/anmolitor/travelm-agency.git

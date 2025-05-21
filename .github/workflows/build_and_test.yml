@@ -32,10 +32,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-elm
       - uses: justgook/setup-elm@1.2.0
-        with:
-          cache: false
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       - name: install
         run: npm ci && (cd demo && npm ci)
       - name: build

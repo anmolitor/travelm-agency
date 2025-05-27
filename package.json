@@ -21,7 +21,7 @@
   "dependencies": {
     "elm-format": "0.8.7",
     "intl-proxy": "^1.0.1",
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",

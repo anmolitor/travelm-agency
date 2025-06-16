@@ -80,8 +80,17 @@ select {
   width: 67%;
 }
 
+.language-and-framework-wrapper {
+  display: flex;
+  justify-content: space-between;
+}
+
 .language-select {
   display: flex;
+}
+
+.framework-select {
+  border-bottom-left-radius: 0.5rem;
 }
 
 .language-flag {

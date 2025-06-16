@@ -1,17 +1,14 @@
 module Pages.Intro exposing (init, viewExplanation)
 
 import Accordion
-import Dict exposing (Dict)
-import File exposing (InputFile)
 import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Http
-import InputType exposing (InputType)
+import InputType
 import Model exposing (Model)
 import Msg exposing (Msg(..))
 import Page
-import Ports exposing (GeneratorMode)
-import Translations exposing (I18n, Language)
+import Ports
+import Translations
 
 
 init : Model -> ( Model, Cmd Msg )

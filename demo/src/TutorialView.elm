@@ -106,6 +106,13 @@ view model explanationText =
                     renderLanguage
                     Translations.languages
 
+        frameworkSelect =
+            Html.select [ class "framework-select", Html.Events.onInput ChangeHtmlModule ]
+                [ Html.option [ Html.Attributes.value "Html", Html.Attributes.default True ] [ Html.text "elm/html" ]
+                , Html.option [ Html.Attributes.value "Html.Styled" ] [ Html.text "rtfeldman/elm-css" ]
+                , Html.option [ Html.Attributes.value "Html.WithContext" ] [ Html.text "miniBill/elm-html-with-context" ]
+                ]
+
         inputTypeSelect =
             if List.length model.inputTypes > 1 then
                 Just <|
@@ -225,7 +232,7 @@ view model explanationText =
         [ Html.div [ class "left-sidebar" ]
             [ navigation, Html.div [ class "explanation" ] explanationText ]
         , Html.div [ class "playground" ]
-            [ languageSelect
+            [ Html.div [ class "language-and-framework-wrapper" ] [ languageSelect, frameworkSelect ]
             , inputHeader
             , inputCode
             , outputHeader

@@ -25,6 +25,7 @@ type alias Model =
     , route : Route
     , generatorMode : Ports.GeneratorMode
     , inputType : InputType
+    , customHtmlModule : String
 
     -- viewport
     , height : Int
@@ -46,10 +47,11 @@ type alias Model =
 setInputTypeAndModeDefaults : ( InputType, Ports.GeneratorMode ) -> Model -> Model
 setInputTypeAndModeDefaults ( defaultInputType, defaultMode ) model =
     let
-        ( inputType, mode ) =
+        { inputType, generatorMode, customHtmlModule } =
             Routes.getParams model.route
     in
     { model
         | inputType = inputType |> Maybe.withDefault defaultInputType
-        , generatorMode = mode |> Maybe.withDefault defaultMode
+        , generatorMode = generatorMode |> Maybe.withDefault defaultMode
+        , customHtmlModule = customHtmlModule |> Maybe.withDefault "Html"
     }

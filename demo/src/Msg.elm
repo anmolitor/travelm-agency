@@ -22,6 +22,7 @@ type Msg
     | EditedInput { filePath : String, newContent : String, caretPosition : Int }
     | ChangeInputType InputType
     | ChangeGeneratorMode Ports.GeneratorMode
+    | ChangeHtmlModule String
     | ChangeLanguage Language
     | ChangeActiveInputFile String
     | ChangeActiveOutputFile String

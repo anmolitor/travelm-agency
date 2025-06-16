@@ -5,7 +5,7 @@ import InputType
 import List.NonEmpty exposing (NonEmpty)
 import Model exposing (Model)
 import Msg exposing (Msg(..))
-import Translations exposing (I18n, Language)
+import Translations exposing (I18n)
 
 
 loadInputFiles : { files : NonEmpty { name : String, language : String }, directory : String } -> Model -> ( Model, Cmd Msg )

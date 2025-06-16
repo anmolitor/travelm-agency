@@ -29,4 +29,6 @@ viewExplanation { i18n } =
     , Html.p [] <| Translations.htmlSecurityBody [] i18n
     , Html.h2 [] [ Html.text <| Translations.htmlEscapingHeadline i18n ]
     , Html.p [] <| Translations.htmlEscapingBody [ class "highlighted" ] i18n
+    , Html.h2 [] [ Html.text <| Translations.htmlCustomizingHeadline i18n ]
+    , Html.p [] <| Translations.htmlCustomizingBody { a = [], code = [ class "highlighted" ] } i18n
     ]

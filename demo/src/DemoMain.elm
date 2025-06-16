@@ -59,6 +59,7 @@ init flags url key =
             , route = route
             , generatorMode = Ports.Inline
             , inputType = InputType.Json
+            , customHtmlModule = "Html"
 
             -- viewport
             , height = flags.height
@@ -89,41 +90,41 @@ init flags url key =
 initPage : Model -> ( Model, Cmd Msg )
 initPage model =
     case model.route of
-        Routes.Intro _ _ ->
+        Routes.Intro _ _ _ ->
             Pages.Intro.init model
 
-        Routes.Interpolation _ _ ->
+        Routes.Interpolation _ _ _ ->
             Pages.Interpolation.init model
 
-        Routes.Consistency _ _ ->
+        Routes.Consistency _ _ _ ->
             Pages.Consistency.init model
 
-        Routes.Language _ _ ->
+        Routes.Language _ _ _ ->
             Pages.Language.init model
 
-        Routes.Bundles _ _ ->
+        Routes.Bundles _ _ _ ->
             Pages.Bundles.init model
 
-        Routes.Html _ _ ->
+        Routes.Html _ _ _ ->
             Pages.Html.init model
 
-        Routes.Terms _ ->
+        Routes.Terms _ _ ->
             Pages.Terms.init model
 
-        Routes.CaseInterpolation _ ->
+        Routes.CaseInterpolation _ _ ->
             Pages.CaseInterpolation.init model
 
-        Routes.NumberFormat _ ->
+        Routes.NumberFormat _ _ ->
             Pages.NumberFormat.init model
 
-        Routes.DateFormat _ ->
+        Routes.DateFormat _ _ ->
             Pages.DateFormat.init model
 
-        Routes.PluralRules _ ->
+        Routes.PluralRules _ _ ->
             Pages.PluralRules.init model
 
         Routes.NotFound _ ->
-            ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing )
+            ( model, Browser.Navigation.replaceUrl model.key <| Routes.toUrl model.basePath <| Routes.Intro Nothing Nothing Nothing )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -190,6 +191,14 @@ update msg model =
             ( model
             , model.route
                 |> Routes.setGeneratorMode mode
+                |> Routes.toUrl model.basePath
+                |> Browser.Navigation.pushUrl model.key
+            )
+
+        ChangeHtmlModule htmlModule ->
+            ( model
+            , model.route
+                |> Routes.setHtmlModule htmlModule
                 |> Routes.toUrl model.basePath
                 |> Browser.Navigation.pushUrl model.key
             )
@@ -295,6 +304,8 @@ runTravelmAgency model =
             , generatorMode = model.generatorMode
             , addContentHash = False
             , prefixFileIdentifier = False
+            , customHtmlModule = model.customHtmlModule
+            , customHtmlAttributesModule = model.customHtmlModule ++ ".Attributes"
             , elmModuleName = "Translations"
             }
 
@@ -342,19 +353,19 @@ view ({ inputFiles, activeInputFilePath, outputFiles, activeOutputFilePath, care
 inputTypesForRoute : Route -> List InputType
 inputTypesForRoute route =
     case route of
-        Routes.Terms _ ->
+        Routes.Terms _ _ ->
             [ InputType.Fluent ]
 
-        Routes.CaseInterpolation _ ->
+        Routes.CaseInterpolation _ _ ->
             [ InputType.Fluent ]
 
-        Routes.NumberFormat _ ->
+        Routes.NumberFormat _ _ ->
             [ InputType.Fluent ]
 
-        Routes.DateFormat _ ->
+        Routes.DateFormat _ _ ->
             [ InputType.Fluent ]
 
-        Routes.PluralRules _ ->
+        Routes.PluralRules _ _ ->
             [ InputType.Fluent ]
 
         _ ->
@@ -364,37 +375,37 @@ inputTypesForRoute route =
 viewHeadline : Model -> String
 viewHeadline model =
     case model.route of
-        Routes.Intro _ _ ->
+        Routes.Intro _ _ _ ->
             Translations.introHeadline model.i18n
 
-        Routes.Interpolation _ _ ->
+        Routes.Interpolation _ _ _ ->
             Translations.interpolationHeadline model.i18n
 
-        Routes.Consistency _ _ ->
+        Routes.Consistency _ _ _ ->
             Translations.consistencyHeadline model.i18n
 
-        Routes.Language _ _ ->
+        Routes.Language _ _ _ ->
             Translations.languageHeadline model.i18n
 
-        Routes.Bundles _ _ ->
+        Routes.Bundles _ _ _ ->
             Translations.bundlesHeadline model.i18n
 
-        Routes.Html _ _ ->
+        Routes.Html _ _ _ ->
             Translations.htmlHeadline model.i18n
 
-        Routes.Terms _ ->
+        Routes.Terms _ _ ->
             Translations.termsHeadline model.i18n
 
-        Routes.CaseInterpolation _ ->
+        Routes.CaseInterpolation _ _ ->
             Translations.caseInterpolationHeadline model.i18n
 
-        Routes.NumberFormat _ ->
+        Routes.NumberFormat _ _ ->
             Translations.numberFormatHeadline model.i18n
 
-        Routes.DateFormat _ ->
+        Routes.DateFormat _ _ ->
             Translations.dateFormatHeadline model.i18n
 
-        Routes.PluralRules _ ->
+        Routes.PluralRules _ _ ->
             Translations.pluralRulesHeadline model.i18n
 
         Routes.NotFound _ ->
@@ -404,37 +415,37 @@ viewHeadline model =
 viewExplanation : Model -> List (Html Msg)
 viewExplanation model =
     case model.route of
-        Routes.Intro _ _ ->
+        Routes.Intro _ _ _ ->
             Pages.Intro.viewExplanation model
 
-        Routes.Interpolation _ _ ->
+        Routes.Interpolation _ _ _ ->
             Pages.Interpolation.viewExplanation model
 
-        Routes.Consistency _ _ ->
+        Routes.Consistency _ _ _ ->
             Pages.Consistency.viewExplanation model
 
-        Routes.Language _ _ ->
+        Routes.Language _ _ _ ->
             Pages.Language.viewExplanation model
 
-        Routes.Bundles _ _ ->
+        Routes.Bundles _ _ _ ->
             Pages.Bundles.viewExplanation model
 
-        Routes.Html _ _ ->
+        Routes.Html _ _ _ ->
             Pages.Html.viewExplanation model
 
-        Routes.Terms _ ->
+        Routes.Terms _ _ ->
             Pages.Terms.viewExplanation model
 
-        Routes.CaseInterpolation _ ->
+        Routes.CaseInterpolation _ _ ->
             Pages.CaseInterpolation.viewExplanation model
 
-        Routes.NumberFormat _ ->
+        Routes.NumberFormat _ _ ->
             Pages.NumberFormat.viewExplanation model
 
-        Routes.DateFormat _ ->
+        Routes.DateFormat _ _ ->
             Pages.DateFormat.viewExplanation model
 
-        Routes.PluralRules _ ->
+        Routes.PluralRules _ _ ->
             Pages.PluralRules.viewExplanation model
 
         Routes.NotFound _ ->

@@ -1,6 +1,5 @@
 module Pages.Language exposing (init, viewExplanation)
 
-import Accordion
 import Html exposing (Html)
 import Html.Attributes exposing (class)
 import InputType

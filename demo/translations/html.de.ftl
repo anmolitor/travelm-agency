@@ -30,3 +30,16 @@ escapingHeadline = Escaping
 escapingBody = Da Travelm-Agency HTML versteht, ist der Parser verwirrt wenn er ein { "<" } symbol findet was nicht für HTML gedacht war.
   Daher muss dieser Char mit den üblichen Techniken escaped werden: Backslash <code>{ "\\<" }</code> für JSON, Quotes <code>{ "'<'" }</code> für Properties
   und String Literale <code>{ "{ \"<\" }" }</code> für Fluent.
+
+customizingHeadline = Anpassungen
+customizingBody = Travelm-Agency ermöglicht es, einige seiner Ausgaben anzupassen. Insbesondere durch das Setzen von <code>--custom_html_module</code>
+  kann das importierte Html-Modul geändert werden, das der generierte Code deklariert. Dies setzt automatisch auch
+  <code>--custom_html_attributes_module</code> auf das Html-Modul + .Attributes, da dies der De-facto-Standard ist:
+  <a href="https://package.elm-lang.org/packages/miniBill/elm-html-with-context/latest/">elm-html-with-context</a>,
+  <a href="https://package.elm-lang.org/packages/rtfeldman/elm-css/latest/">elm-css</a> und natürlich das Standard
+  <a href="https://package.elm-lang.org/packages/elm/html/latest/">elm/html</a> verwenden diese Struktur.
+  Du kannst <code>--custom_html_attributes_module</code> aber auch explizit angeben, falls andere Bibliotheken oder dein eigener
+  elm/html-Wrapper sich in dieser Hinsicht unterscheiden.
+  Die Schnittstelle, die von einer benutzerdefinierten Html-Implementierung benötigt wird, ist in diesen Test-Dateien spezifiziert:
+  <a href="https://github.com/anmolitor/travelm-agency/tree/main/gen_test_cases/Util/CustomHtml.elm">CustomHtml</a>
+  <a href="https://github.com/anmolitor/travelm-agency/tree/main/gen_test_cases/Util/CustomHtmlAttributes.elm">CustomHtmlAttributes</a>

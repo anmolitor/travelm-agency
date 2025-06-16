@@ -12,6 +12,7 @@ You can see what the package does and how to use it in the https://anmolitor.git
 * 🚀 Key length and placeholder length do not impact resource size 
 * ✨ Generates correctly typed Elm functions for values with placeholders
 * ✍ Generates HTML if your translations contain HTML tags
+* 🤝 Allows customizing used Html imports to support elm-css, elm-html-with-context and your own custom html library
 * 🔑 Generated Elm module exposes all your translation keys as functions
 * 🎌 Simple runtime switching of languages
 * 🎚️ Choose between inline code generation and dynamic loading based code generation

@@ -9,26 +9,26 @@ import Url.Parser.Query as Query
 
 
 type Route
-    = Intro (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Language (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Html (Maybe Ports.GeneratorMode) (Maybe InputType)
-    | Terms (Maybe Ports.GeneratorMode)
-    | CaseInterpolation (Maybe Ports.GeneratorMode)
-    | NumberFormat (Maybe Ports.GeneratorMode)
-    | DateFormat (Maybe Ports.GeneratorMode)
-    | PluralRules (Maybe Ports.GeneratorMode)
+    = Intro (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Interpolation (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Consistency (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Language (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Bundles (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Html (Maybe Ports.GeneratorMode) (Maybe InputType) (Maybe String)
+    | Terms (Maybe Ports.GeneratorMode) (Maybe String)
+    | CaseInterpolation (Maybe Ports.GeneratorMode) (Maybe String)
+    | NumberFormat (Maybe Ports.GeneratorMode) (Maybe String)
+    | DateFormat (Maybe Ports.GeneratorMode) (Maybe String)
+    | PluralRules (Maybe Ports.GeneratorMode) (Maybe String)
     | NotFound Url.Url
 
 
-fixedInputType : (Maybe Ports.GeneratorMode -> Route) -> Maybe Ports.GeneratorMode -> Maybe InputType -> Route
-fixedInputType route mode _ =
-    route mode
+fixedInputType : (Maybe Ports.GeneratorMode -> Maybe String -> Route) -> Maybe Ports.GeneratorMode -> Maybe InputType -> Maybe String -> Route
+fixedInputType route mode _ customHtmlModule =
+    route mode customHtmlModule
 
 
-order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Route)
+order : List (Maybe Ports.GeneratorMode -> Maybe InputType -> Maybe String -> Route)
 order =
     [ Intro
     , Interpolation
@@ -47,11 +47,11 @@ order =
 next : Route -> Maybe Route
 next route =
     let
-        ( inputType, generatorMode ) =
+        { inputType, generatorMode, customHtmlModule } =
             getParams route
 
         appliedOrder =
-            List.map (\r -> r generatorMode inputType) order
+            List.map (\r -> r generatorMode inputType customHtmlModule) order
     in
     List.drop 1 appliedOrder
         |> List.map2 Tuple.pair appliedOrder
@@ -63,11 +63,11 @@ next route =
 previous : Route -> Maybe Route
 previous route =
     let
-        ( inputType, generatorMode ) =
+        { inputType, generatorMode, customHtmlModule } =
             getParams route
 
         appliedOrder =
-            List.map (\r -> r generatorMode inputType) order
+            List.map (\r -> r generatorMode inputType customHtmlModule) order
     in
     List.drop 1 appliedOrder
         |> List.map2 Tuple.pair appliedOrder
@@ -88,19 +88,23 @@ parser =
         inputParser =
             Query.string "input"
                 |> Query.map (Maybe.andThen InputType.fromString)
+
+        customHtmlParser : Query.Parser (Maybe String)
+        customHtmlParser =
+            Query.string "customHtmlModule"
     in
     oneOf
-        [ map Intro (s "intro" <?> modeParser <?> inputParser)
-        , map Interpolation (s "interpolation" <?> modeParser <?> inputParser)
-        , map Consistency (s "consistency" <?> modeParser <?> inputParser)
-        , map Language (s "language" <?> modeParser <?> inputParser)
-        , map Bundles (s "bundles" <?> modeParser <?> inputParser)
-        , map Html (s "html" <?> modeParser <?> inputParser)
-        , map Terms (s "terms" <?> modeParser)
-        , map CaseInterpolation (s "case-interpolation" <?> modeParser)
-        , map NumberFormat (s "number-format" <?> modeParser)
-        , map DateFormat (s "date-format" <?> modeParser)
-        , map PluralRules (s "plural-rules" <?> modeParser)
+        [ map Intro (s "intro" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Interpolation (s "interpolation" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Consistency (s "consistency" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Language (s "language" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Bundles (s "bundles" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Html (s "html" <?> modeParser <?> inputParser <?> customHtmlParser)
+        , map Terms (s "terms" <?> modeParser <?> customHtmlParser)
+        , map CaseInterpolation (s "case-interpolation" <?> modeParser <?> customHtmlParser)
+        , map NumberFormat (s "number-format" <?> modeParser <?> customHtmlParser)
+        , map DateFormat (s "date-format" <?> modeParser <?> customHtmlParser)
+        , map PluralRules (s "plural-rules" <?> modeParser <?> customHtmlParser)
         ]
 
 
@@ -112,128 +116,133 @@ fromUrl basePath url =
 toUrl : String -> Route -> String
 toUrl basePath route =
     let
-        default path mode inputType =
+        default path mode inputType customHtmlModule =
             absolute [ basePath, path ] <|
                 List.filterMap identity
                     [ Maybe.map (string "mode" << Ports.generatorModeToString) mode
                     , Maybe.map (string "input" << InputType.toString) inputType
+                    , Maybe.map (string "customHtmlModule") customHtmlModule
                     ]
 
         fluentOnly path mode =
             default path mode Nothing
     in
     case route of
-        Intro mode inputType ->
-            default "intro" mode inputType
+        Intro mode inputType customHtmlModule ->
+            default "intro" mode inputType customHtmlModule
 
-        Interpolation mode inputType ->
-            default "interpolation" mode inputType
+        Interpolation mode inputType customHtmlModule ->
+            default "interpolation" mode inputType customHtmlModule
 
-        Consistency mode inputType ->
-            default "consistency" mode inputType
+        Consistency mode inputType customHtmlModule ->
+            default "consistency" mode inputType customHtmlModule
 
-        Language mode inputType ->
-            default "language" mode inputType
+        Language mode inputType customHtmlModule ->
+            default "language" mode inputType customHtmlModule
 
-        Bundles mode inputType ->
-            default "bundles" mode inputType
+        Bundles mode inputType customHtmlModule ->
+            default "bundles" mode inputType customHtmlModule
 
-        Html mode inputType ->
-            default "html" mode inputType
+        Html mode inputType customHtmlModule ->
+            default "html" mode inputType customHtmlModule
 
-        Terms mode ->
-            fluentOnly "terms" mode
+        Terms mode customHtmlModule ->
+            fluentOnly "terms" mode customHtmlModule
 
-        CaseInterpolation mode ->
-            fluentOnly "case-interpolation" mode
+        CaseInterpolation mode customHtmlModule ->
+            fluentOnly "case-interpolation" mode customHtmlModule
 
-        NumberFormat mode ->
-            fluentOnly "number-format" mode
+        NumberFormat mode customHtmlModule ->
+            fluentOnly "number-format" mode customHtmlModule
 
-        DateFormat mode ->
-            fluentOnly "date-format" mode
+        DateFormat mode customHtmlModule ->
+            fluentOnly "date-format" mode customHtmlModule
 
-        PluralRules mode ->
-            fluentOnly "plural-rules" mode
+        PluralRules mode customHtmlModule ->
+            fluentOnly "plural-rules" mode customHtmlModule
 
         NotFound url ->
             Url.toString url
 
 
-getParams : Route -> ( Maybe InputType, Maybe Ports.GeneratorMode )
+getParams : Route -> { inputType : Maybe InputType, generatorMode : Maybe Ports.GeneratorMode, customHtmlModule : Maybe String }
 getParams route =
+    let
+        default =
+            { inputType = Nothing, generatorMode = Nothing, customHtmlModule = Nothing }
+    in
     case route of
-        Intro mode inputType ->
-            ( inputType, mode )
+        Intro mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Interpolation mode inputType ->
-            ( inputType, mode )
+        Interpolation mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Consistency mode inputType ->
-            ( inputType, mode )
+        Consistency mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Language mode inputType ->
-            ( inputType, mode )
+        Language mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Bundles mode inputType ->
-            ( inputType, mode )
+        Bundles mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Html mode inputType ->
-            ( inputType, mode )
+        Html mode inputType customHtmlModule ->
+            { default | inputType = inputType, generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        Terms mode ->
-            ( Nothing, mode )
+        Terms mode customHtmlModule ->
+            { default | generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        CaseInterpolation mode ->
-            ( Nothing, mode )
+        CaseInterpolation mode customHtmlModule ->
+            { default | generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        NumberFormat mode ->
-            ( Nothing, mode )
+        NumberFormat mode customHtmlModule ->
+            { default | generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        DateFormat mode ->
-            ( Nothing, mode )
+        DateFormat mode customHtmlModule ->
+            { default | generatorMode = mode, customHtmlModule = customHtmlModule }
 
-        PluralRules mode ->
-            ( Nothing, mode )
+        PluralRules mode customHtmlModule ->
+            { default | generatorMode = mode, customHtmlModule = customHtmlModule }
 
         NotFound _ ->
-            ( Nothing, Nothing )
+            default
 
 
 setInputType : InputType -> Route -> Route
 setInputType inputType route =
     case route of
-        Intro mode _ ->
-            Intro mode (Just inputType)
+        Intro mode _ customHtmlModule ->
+            Intro mode (Just inputType) customHtmlModule
 
-        Interpolation mode _ ->
-            Interpolation mode (Just inputType)
+        Interpolation mode _ customHtmlModule ->
+            Interpolation mode (Just inputType) customHtmlModule
 
-        Consistency mode _ ->
-            Consistency mode (Just inputType)
+        Consistency mode _ customHtmlModule ->
+            Consistency mode (Just inputType) customHtmlModule
 
-        Language mode _ ->
-            Language mode (Just inputType)
+        Language mode _ customHtmlModule ->
+            Language mode (Just inputType) customHtmlModule
 
-        Bundles mode _ ->
-            Bundles mode (Just inputType)
+        Bundles mode _ customHtmlModule ->
+            Bundles mode (Just inputType) customHtmlModule
 
-        Html mode _ ->
-            Html mode (Just inputType)
+        Html mode _ customHtmlModule ->
+            Html mode (Just inputType) customHtmlModule
 
-        Terms _ ->
+        Terms _ _ ->
             route
 
-        CaseInterpolation _ ->
+        CaseInterpolation _ _ ->
             route
 
-        NumberFormat _ ->
+        NumberFormat _ _ ->
             route
 
-        DateFormat _ ->
+        DateFormat _ _ ->
             route
 
-        PluralRules _ ->
+        PluralRules _ _ ->
             route
 
         NotFound _ ->
@@ -243,38 +252,78 @@ setInputType inputType route =
 setGeneratorMode : Ports.GeneratorMode -> Route -> Route
 setGeneratorMode mode route =
     case route of
-        Intro _ inputType ->
-            Intro (Just mode) inputType
+        Intro _ inputType customHtmlModule ->
+            Intro (Just mode) inputType customHtmlModule
 
-        Interpolation _ inputType ->
-            Interpolation (Just mode) inputType
+        Interpolation _ inputType customHtmlModule ->
+            Interpolation (Just mode) inputType customHtmlModule
 
-        Consistency _ inputType ->
-            Consistency (Just mode) inputType
+        Consistency _ inputType customHtmlModule ->
+            Consistency (Just mode) inputType customHtmlModule
 
-        Language _ inputType ->
-            Language (Just mode) inputType
+        Language _ inputType customHtmlModule ->
+            Language (Just mode) inputType customHtmlModule
 
-        Bundles _ inputType ->
-            Bundles (Just mode) inputType
+        Bundles _ inputType customHtmlModule ->
+            Bundles (Just mode) inputType customHtmlModule
 
-        Html _ inputType ->
-            Html (Just mode) inputType
+        Html _ inputType customHtmlModule ->
+            Html (Just mode) inputType customHtmlModule
 
-        Terms _ ->
-            Terms (Just mode)
+        Terms _ customHtmlModule ->
+            Terms (Just mode) customHtmlModule
 
-        CaseInterpolation _ ->
-            CaseInterpolation (Just mode)
+        CaseInterpolation _ customHtmlModule ->
+            CaseInterpolation (Just mode) customHtmlModule
 
-        NumberFormat _ ->
-            NumberFormat (Just mode)
+        NumberFormat _ customHtmlModule ->
+            NumberFormat (Just mode) customHtmlModule
 
-        DateFormat _ ->
-            DateFormat (Just mode)
+        DateFormat _ customHtmlModule ->
+            DateFormat (Just mode) customHtmlModule
 
-        PluralRules _ ->
-            PluralRules (Just mode)
+        PluralRules _ customHtmlModule ->
+            PluralRules (Just mode) customHtmlModule
+
+        NotFound _ ->
+            route
+
+
+setHtmlModule : String -> Route -> Route
+setHtmlModule customHtmlModule route =
+    case route of
+        Intro mode inputType _ ->
+            Intro mode inputType (Just customHtmlModule)
+
+        Interpolation mode inputType _ ->
+            Interpolation mode inputType (Just customHtmlModule)
+
+        Consistency mode inputType _ ->
+            Consistency mode inputType (Just customHtmlModule)
+
+        Language mode inputType _ ->
+            Language mode inputType (Just customHtmlModule)
+
+        Bundles mode inputType _ ->
+            Bundles mode inputType (Just customHtmlModule)
+
+        Html mode inputType _ ->
+            Html mode inputType (Just customHtmlModule)
+
+        Terms mode _ ->
+            Terms mode (Just customHtmlModule)
+
+        CaseInterpolation mode _ ->
+            CaseInterpolation mode (Just customHtmlModule)
+
+        NumberFormat mode _ ->
+            NumberFormat mode (Just customHtmlModule)
+
+        DateFormat mode _ ->
+            DateFormat mode (Just customHtmlModule)
+
+        PluralRules mode _ ->
+            PluralRules mode (Just customHtmlModule)
 
         NotFound _ ->
             route

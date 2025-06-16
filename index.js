@@ -71,7 +71,6 @@ import { hideBin } from "yargs/helpers";
           })
     )
     .parse();
-  console.log(args);
   run({
     translationDir: args.translation_directory,
     elmPath: args.elm_path,

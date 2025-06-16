@@ -1,6 +1,10 @@
-const { writeFile, mkdir, readdir } = require("fs/promises");
-const elmCompiler = require("node-elm-compiler");
-const { resolve, dirname, parse } = require("path");
+import { writeFile, mkdir, readdir } from "fs/promises";
+import elmCompiler from "node-elm-compiler";
+import { resolve, dirname, parse } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const testCaseDir = resolve(__dirname, "gen_test_cases");
 

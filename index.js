@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const { run } = require("./lib/main.js");
-const yargs = require("yargs");
-const { hideBin } = require("yargs/helpers");
+import { run } from "./lib/main.js";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 
 (async () => {
   const args = await yargs(hideBin(process.argv))
@@ -71,7 +71,7 @@ const { hideBin } = require("yargs/helpers");
           })
     )
     .parse();
-
+  console.log(args);
   run({
     translationDir: args.translation_directory,
     elmPath: args.elm_path,

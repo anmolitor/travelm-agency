@@ -1,6 +1,6 @@
-const fs = require("fs");
-const { minify } = require("uglify-js");
-const ElmCompiler = require("node-elm-compiler");
+import fs from "fs";
+import { minify } from "uglify-js";
+import ElmCompiler from "node-elm-compiler";
 
 fs.mkdirSync("lib", { recursive: true });
 
@@ -19,6 +19,7 @@ const isRelease = process.env.NODE_ENV === "production";
 let elmCode = ElmCompiler.compileToStringSync("src/Main.elm", {
   optimize: isRelease,
 });
+elmCode = toESModule(elmCode);
 
 if (isRelease) {
   const minifiedResult = minify(elmCode, {
@@ -38,3 +39,18 @@ if (isRelease) {
 }
 
 fs.writeFileSync("lib/elm.min.js", elmCode);
+
+function toESModule(js) {
+  const elmExports = js.match(
+    /^\s*_Platform_export\(([^]*)\);\n?}\(this\)\);/m
+  )[1];
+  return js
+    .replace(/\(function\s*\(scope\)\s*\{$/m, "// -- $&")
+    .replace(/['"]use strict['"];$/m, "// -- $&")
+    .replace(/function _Platform_export([^]*?)\}\n/g, "/*\n$&\n*/")
+    .replace(/function _Platform_mergeExports([^]*?)\}\n\s*}/g, "/*\n$&\n*/")
+    .replace(/^\s*_Platform_export\(([^]*)\);\n?}\(this\)\);/m, "/*\n$&\n*/")
+    .concat(`
+export const Elm = ${elmExports};
+  `);
+}

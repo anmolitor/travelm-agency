@@ -1,7 +1,7 @@
 import cp from "child_process";
 import fs from "fs";
 import intl_proxy from "intl-proxy";
-import path from "path";
+import path, { dirname } from "path";
 import { promisify } from "util";
 import {
   Elm,
@@ -10,6 +10,10 @@ import {
   ResponseContent,
   ResponseHandler,
 } from "./elm.min.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const readFile = (filePath: string) =>
   promisify(fs.readFile)(filePath, { encoding: "utf-8" });
@@ -105,36 +109,34 @@ export function createInstance(): TravelmAgencyInstance {
     customHtmlModule = "Html",
     customHtmlAttributesModule,
   }: FinishModuleOptions): Promise<ResponseContent> =>
-    withElmApp(
-      async (ports) =>
-        new Promise<ResponseContent>((resolve, reject) => {
-          const elmModuleName = elmPathToModuleName(elmPath);
-          const responseHandler: ResponseHandler = async (res) => {
-            ports.sendResponse.unsubscribe(responseHandler);
-            if (res.error) {
-              reject(res.error);
-            }
-            if (!res.content) {
-              reject(new Error("Received neither error nor content from Elm."));
-            } else {
-              resolve(res.content);
-            }
-          };
-          ports.sendResponse.subscribe(responseHandler);
-          ports.receiveRequest.send({
-            type: "finish",
-            elmModuleName,
-            generatorMode,
-            addContentHash,
-            i18nArgFirst,
-            prefixFileIdentifier,
-            customHtmlAttributesModule:
-              customHtmlAttributesModule ?? `${customHtmlModule}.Attributes`,
-            customHtmlModule: customHtmlModule,
-          });
-        }),
-      devMode
-    ).then(async ({ elmFile, optimizedJson }) => ({
+    withElmApp(async (ports) => {
+      const elmModuleName = await elmPathToModuleName(elmPath);
+      return new Promise<ResponseContent>((resolve, reject) => {
+        const responseHandler: ResponseHandler = async (res) => {
+          ports.sendResponse.unsubscribe(responseHandler);
+          if (res.error) {
+            reject(res.error);
+          }
+          if (!res.content) {
+            reject(new Error("Received neither error nor content from Elm."));
+          } else {
+            resolve(res.content);
+          }
+        };
+        ports.sendResponse.subscribe(responseHandler);
+        ports.receiveRequest.send({
+          type: "finish",
+          elmModuleName,
+          generatorMode,
+          addContentHash,
+          i18nArgFirst,
+          prefixFileIdentifier,
+          customHtmlAttributesModule:
+            customHtmlAttributesModule ?? `${customHtmlModule}.Attributes`,
+          customHtmlModule: customHtmlModule,
+        });
+      });
+    }, devMode).then(async ({ elmFile, optimizedJson }) => ({
       elmFile: await runElmFormat(elmFile),
       optimizedJson,
     }));
@@ -157,6 +159,8 @@ interface InlineOptions {
   devMode: boolean;
   i18nArgFirst: boolean;
   prefixFileIdentifier: boolean;
+  customHtmlModule?: string;
+  customHtmlAttributesModule?: string;
 }
 
 interface DynamicOptions extends InlineOptions {
@@ -198,6 +202,8 @@ export const run = async (options: Options) => {
     devMode,
     i18nArgFirst,
     prefixFileIdentifier,
+    customHtmlModule,
+    customHtmlAttributesModule,
   } = options;
 
   const translationFilePaths = (await readDir(translationDir)).map((fileName) =>
@@ -218,6 +224,8 @@ export const run = async (options: Options) => {
     devMode,
     i18nArgFirst,
     prefixFileIdentifier,
+    customHtmlModule,
+    customHtmlAttributesModule,
   });
 
   const elmPromise = writeFile(elmPath, elmFile);
@@ -232,12 +240,12 @@ export const run = async (options: Options) => {
 
 let elmConfig: { "source-directories": string[] } | undefined;
 
-const elmPathToModuleName = (elmPath: string): string => {
+const elmPathToModuleName = async (elmPath: string): Promise<string> => {
   const absoluteElmPath = path.resolve(elmPath);
   const elmJsonPath = lookForElmJsonRecursively(path.dirname(absoluteElmPath));
   const elmJsonDir = path.dirname(elmJsonPath);
   if (!elmConfig) {
-    elmConfig = require(elmJsonPath);
+    elmConfig = await JSON.parse(await readFile(elmJsonPath));
   }
   const elmPathRelativeToElmJson = path.relative(elmJsonDir, absoluteElmPath);
   const possibleSourceDirs = elmConfig!["source-directories"]

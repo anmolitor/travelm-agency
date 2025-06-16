@@ -1,9 +1,10 @@
 {
   "name": "travelm-agency",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "Generate type-safe accessors and decoders for your i18n files",
   "main": "./lib/main.js",
   "bin": "index.js",
+  "type": "module",
   "scripts": {
     "build": "tsc && cross-env NODE_ENV=production node build.js",
     "build:dev": "node build.js",
@@ -21,10 +22,10 @@
   "dependencies": {
     "elm-format": "0.8.7",
     "intl-proxy": "^1.0.1",
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.21",
+    "@types/node": "24.0.3",
     "cross-env": "^7.0.3",
     "elm": "^0.19.1-5",
     "elm-test-rs": "^3.0.0-5",

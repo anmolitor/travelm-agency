@@ -16,6 +16,8 @@ declare module "*elm.min.js" {
     addContentHash: boolean | null;
     i18nArgFirst: boolean | null;
     prefixFileIdentifier: boolean | null;
+    customHtmlModule: string;
+    customHtmlAttributesModule: string;
   }
 
   export interface Response {

@@ -1,5 +1,6 @@
 module Generators.Names exposing (Names, defaultNames, withUniqueNames)
 
+import Elm.CodeGen exposing (ModuleName)
 import Set
 import String.Extra
 import Types.Segment exposing (TKey)
@@ -15,6 +16,8 @@ type alias Names =
     , languageFromStringFunName : String
     , languageToStringFunName : String
     , decoderName : String -> String
+    , htmlModuleName : ModuleName
+    , htmlAttributesModuleName : ModuleName
     }
 
 
@@ -28,6 +31,8 @@ defaultNames =
     , languageFromStringFunName = "languageFromString"
     , languageToStringFunName = "languageToString"
     , decoderName = \identifier -> "decode" ++ String.Extra.classify identifier
+    , htmlModuleName = [ "Html" ]
+    , htmlAttributesModuleName = [ "Html", "Attributes" ]
     }
 
 
@@ -56,5 +61,7 @@ withUniqueNames identifiers names doWithNames =
                 , languageToStringFunName = lookup names.languageToStringFunName
                 , loadName = names.loadName >> lookup
                 , decoderName = names.decoderName >> lookup
+                , htmlModuleName = names.htmlModuleName
+                , htmlAttributesModuleName = names.htmlAttributesModuleName
                 }
                 a

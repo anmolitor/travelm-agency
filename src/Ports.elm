@@ -92,6 +92,8 @@ type alias FinishRequest =
     , addContentHash : Bool
     , i18nArgFirst : Bool
     , prefixFileIdentifier : Bool
+    , customHtmlModule : String
+    , customHtmlAttributesModule : String
     }
 
 
@@ -147,6 +149,8 @@ finishRequestDecoder =
         |> D.optional "addContentHash" D.bool False
         |> D.optional "i18nArgFirst" D.bool False
         |> D.optional "prefixFileIdentifier" D.bool False
+        |> D.required "customHtmlModule" D.string
+        |> D.required "customHtmlAttributesModule" D.string
 
 
 type alias InternalRequest =

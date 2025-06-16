@@ -4,6 +4,7 @@ import Expect
 import Html
 import Html.Attributes
 import Inline.ComplexI18nFirstTranslations
+import Inline.CustomHtmlModuleTranslations
 import Inline.DateFormatTranslations
 import Inline.FallbackTranslations
 import Inline.HtmlInterpolationTranslations
@@ -26,6 +27,7 @@ import Test.Html.Query as Query
 import Test.Html.Selector as Selector
 import Time
 import Util
+import Util.CustomHtml
 
 
 singleText : Test
@@ -434,4 +436,18 @@ getCurrentLanguage =
                 Inline.HtmlIntlTranslations.init Util.emptyIntl Inline.HtmlIntlTranslations.En
                     |> Inline.HtmlIntlTranslations.currentLanguage
                     |> Expect.equal Inline.HtmlIntlTranslations.En
+        ]
+
+
+customHtmlModule : Test
+customHtmlModule =
+    describe "CustomHtmlModule | inline"
+        [ test "works correctly" <|
+            \_ ->
+                Inline.CustomHtmlModuleTranslations.html [] (Inline.CustomHtmlModuleTranslations.init Inline.CustomHtmlModuleTranslations.En)
+                    |> List.map Util.CustomHtml.unpackHtml
+                    |> Html.div []
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "a" ]
+                    |> Query.has [ Selector.text "Click me" ]
         ]

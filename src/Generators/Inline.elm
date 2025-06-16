@@ -270,7 +270,7 @@ addAccessorDeclarations =
                                     CG.funAnn
                                 )
                                     (CG.typed ctx.names.i18nTypeName [])
-                                    (translationToRecordTypeAnn ctx.state key)
+                                    (translationToRecordTypeAnn ctx ctx.state key)
                             )
                             (ctx.lookupAccessor key)
                             patterns
@@ -293,7 +293,7 @@ addAccessorDeclarations =
                                 Dict.get key htmlMap |> Maybe.withDefault Set.empty
 
                             toHtml =
-                                Shared.applyWithParensIfNecessary (CG.fqFun [ "Html" ] "text")
+                                Shared.applyWithParensIfNecessary (CG.fqFun ctx.names.htmlModuleName "text")
 
                             needsHtmlConversion seg =
                                 Set.isEmpty (Segment.htmlIdsForSegment seg) && not (Set.isEmpty htmlIds)
@@ -432,7 +432,7 @@ addAccessorDeclarations =
 
                                     Segment.Html html ->
                                         CG.apply
-                                            [ CG.fqFun [ "Html" ] "node"
+                                            [ CG.fqFun ctx.names.htmlModuleName "node"
                                             , CG.string html.tag
                                             , CG.parens <|
                                                 Shared.concatenateLists (refHtmlAttr html.id) (generateHtmlAttrs html.attrs)
@@ -443,7 +443,7 @@ addAccessorDeclarations =
                                 List.map
                                     (\( attrKey, attrVal ) ->
                                         CG.apply
-                                            [ CG.fqFun [ "Html", "Attributes" ] "attribute"
+                                            [ CG.fqFun ctx.names.htmlAttributesModuleName "attribute"
                                             , CG.string attrKey
                                             , List.NonEmpty.map segmentToExpression attrVal
                                                 |> List.NonEmpty.foldl1 Shared.concatenateLists
@@ -554,8 +554,8 @@ toFile context state =
         |> toFileUnique
 
 
-translationToRecordTypeAnn : NonEmptyState () -> TKey -> CG.TypeAnnotation
-translationToRecordTypeAnn state key =
+translationToRecordTypeAnn : { ctx | names : Names } -> NonEmptyState () -> TKey -> CG.TypeAnnotation
+translationToRecordTypeAnn ctx state key =
     let
         placeholders =
             State.collectiveTranslationSet state
@@ -571,8 +571,8 @@ translationToRecordTypeAnn state key =
                 |> Maybe.withDefault Set.empty
 
         htmlReturnType nonEmptyIds =
-            CG.funAnn (Shared.htmlRecordTypeAnn nonEmptyIds)
-                (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ])
+            CG.funAnn (Shared.htmlRecordTypeAnn ctx nonEmptyIds)
+                (CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Html" [ CG.typeVar "msg" ])
     in
     case ( placeholders, List.NonEmpty.fromList <| Set.toList htmlIds ) of
         ( [], Nothing ) ->

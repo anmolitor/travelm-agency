@@ -1,5 +1,7 @@
 module Generators.DynamicTest exposing (..)
 
+import Dynamic.CustomHtmlModuleServer as CustomHtmlModuleServer
+import Dynamic.CustomHtmlModuleTranslations as CustomHtmlModuleTranslations
 import Dynamic.DateFormatServer as DateFormatServer
 import Dynamic.DateFormatTranslations as DateFormatTranslations
 import Dynamic.EscapeServer as EscapeServer
@@ -48,6 +50,7 @@ import Test.Html.Query as Query
 import Test.Html.Selector as Selector
 import Time
 import Util
+import Util.CustomHtml
 import Util.Shared exposing (sendRequest)
 
 
@@ -707,6 +710,26 @@ getArrivedLanguage =
                     |> Result.andThen (\i18n -> Result.map ((|>) i18n) req_1_en)
                     |> Result.map MultiBundleLanguageTranslations.arrivedLanguage
                     |> Expect.equal (Ok MultiBundleLanguageTranslations.En)
+        ]
+
+
+customHtmlModule : Test
+customHtmlModule =
+    describe "CustomHtmlModule | dynamic"
+        [ test "works correctly" <|
+            \_ ->
+                sendRequest CustomHtmlModuleServer.server
+                    "messages.en.json"
+                    (CustomHtmlModuleTranslations.decodeMessages CustomHtmlModuleTranslations.En)
+                    |> Result.map ((|>) (CustomHtmlModuleTranslations.init { lang = CustomHtmlModuleTranslations.En, path = "" }))
+                    |> expectOkWith
+                        (CustomHtmlModuleTranslations.html []
+                            >> List.map Util.CustomHtml.unpackHtml
+                            >> Html.div []
+                            >> Query.fromHtml
+                            >> Query.find [ Selector.tag "a" ]
+                            >> Query.has [ Selector.text "Click me" ]
+                        )
         ]
 
 

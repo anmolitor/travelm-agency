@@ -53,6 +53,16 @@ const { hideBin } = require("yargs/helpers");
             type: "boolean",
             default: false,
           })
+          .option("custom_html_module", {
+            description:
+              "Which module the generated code should use instead of elm/html",
+            type: "string",
+          })
+          .option("custom_html_attributes_module", {
+            description:
+              "Which module the generated code should use instead of elm/html Html.Attributes. Defaults to the value of custom_html_module + '.Attributes'",
+            type: "string",
+          })
           .positional("translation_directory", {
             description:
               "The directory containing translation files (.json/.properties).",
@@ -72,6 +82,8 @@ const { hideBin } = require("yargs/helpers");
     devMode: args.devMode,
     i18nArgFirst: args.i18n_arg_first,
     prefixFileIdentifier: args.prefix_file_identifier,
+    customHtmlModule: args.custom_html_module,
+    customHtmlAttributesModule: args.custom_html_attributes_module,
   });
 })();
 

@@ -43,6 +43,8 @@ export interface FinishModuleOptions {
   devMode?: boolean;
   i18nArgFirst?: boolean;
   prefixFileIdentifier?: boolean;
+  customHtmlModule?: string;
+  customHtmlAttributesModule?: string;
 }
 
 export function createInstance(): TravelmAgencyInstance {
@@ -100,6 +102,8 @@ export function createInstance(): TravelmAgencyInstance {
     devMode = false,
     i18nArgFirst = false,
     prefixFileIdentifier = false,
+    customHtmlModule = "Html",
+    customHtmlAttributesModule,
   }: FinishModuleOptions): Promise<ResponseContent> =>
     withElmApp(
       async (ports) =>
@@ -124,6 +128,9 @@ export function createInstance(): TravelmAgencyInstance {
             addContentHash,
             i18nArgFirst,
             prefixFileIdentifier,
+            customHtmlAttributesModule:
+              customHtmlAttributesModule ?? `${customHtmlModule}.Attributes`,
+            customHtmlModule: customHtmlModule,
           });
         }),
       devMode

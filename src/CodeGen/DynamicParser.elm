@@ -86,11 +86,11 @@ addReplacePlaceholderDeclaration =
                         <|
                             CG.funAnn (CG.listAnn CG.charAnn) <|
                                 CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ]) <|
-                                    CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ] ]) <|
+                                    CG.funAnn (CG.fqTyped [ "Array" ] "Array" [ CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Attribute" [ CG.typeVar "msg" ] ]) <|
                                         CG.fqTyped [ "Parser" ]
                                             "Parser"
                                             [ CG.tupleAnn
-                                                [ CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ]
+                                                [ CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Html" [ CG.typeVar "msg" ]
                                                 , CG.maybeAnn CG.charAnn
                                                 ]
                                             ]
@@ -417,7 +417,7 @@ addReplacePlaceholderDeclaration =
                                         CG.letFunction (lookup "stringToHtml")
                                             []
                                         <|
-                                            CG.chain (CG.fqFun [ "Html" ] "text") [ CG.fqFun [ "List" ] "singleton" ]
+                                            CG.chain (CG.fqFun ctx.names.htmlModuleName "text") [ CG.fqFun [ "List" ] "singleton" ]
                                     , Just <|
                                         CG.letFunction (lookup "getArg")
                                             [ CG.varPattern <| lookup "n" ]
@@ -624,7 +624,7 @@ addReplacePlaceholderDeclaration =
                                                                                                 ]
                                                                                                 (CG.list
                                                                                                     [ CG.apply
-                                                                                                        [ CG.fqFun [ "Html" ] "node"
+                                                                                                        [ CG.fqFun ctx.names.htmlModuleName "node"
                                                                                                         , CG.val <| lookup "tag"
                                                                                                         , CG.parens <|
                                                                                                             CG.applyBinOp
@@ -632,7 +632,7 @@ addReplacePlaceholderDeclaration =
                                                                                                                     CG.pipe
                                                                                                                         (CG.apply
                                                                                                                             [ CG.fqFun [ "Dict" ] "map"
-                                                                                                                            , CG.fqFun [ "Html", "Attributes" ] "attribute"
+                                                                                                                            , CG.fqFun ctx.names.htmlAttributesModuleName "attribute"
                                                                                                                             , CG.val <| lookup "attrs"
                                                                                                                             ]
                                                                                                                         )
@@ -772,8 +772,8 @@ addReplacePlaceholderDeclaration =
                         )
                         <|
                             CG.funAnn (CG.listAnn CG.stringAnn) <|
-                                CG.funAnn (CG.listAnn <| CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ]) <|
-                                    CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped [ "Html" ] "Html" [ CG.typeVar "msg" ])
+                                CG.funAnn (CG.listAnn <| CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Attribute" [ CG.typeVar "msg" ]) <|
+                                    CG.funAnn CG.stringAnn (CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Html" [ CG.typeVar "msg" ])
 
                     replaceHtmlPlaceholdersArgs =
                         List.filterMap identity

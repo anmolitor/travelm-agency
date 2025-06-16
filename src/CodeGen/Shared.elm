@@ -208,17 +208,17 @@ This will map languages based on the prefix i.e. 'en-US' and 'en' will both map 
             CG.apply [ CG.val <| lookup "helper", CG.parens <| CG.apply [ CG.fqFun [ "List" ] "reverse", CG.val names.languagesName ] ]
 
 
-htmlRecordTypeAnn : NonEmpty String -> CG.TypeAnnotation
-htmlRecordTypeAnn nonEmptyIds =
+htmlRecordTypeAnn : { ctx | names : Names } -> NonEmpty String -> CG.TypeAnnotation
+htmlRecordTypeAnn ctx nonEmptyIds =
     if List.NonEmpty.isSingleton nonEmptyIds then
-        htmlAttrsTypeAnn
+        htmlAttrsTypeAnn ctx
 
     else
         CG.recordAnn <|
             List.map
                 (\id ->
                     ( id
-                    , htmlAttrsTypeAnn
+                    , htmlAttrsTypeAnn ctx
                     )
                 )
                 (List.NonEmpty.toList nonEmptyIds)
@@ -234,9 +234,9 @@ concatenateLists e1 e2 =
             CG.applyBinOp e2 CG.append e1
 
 
-htmlAttrsTypeAnn : CG.TypeAnnotation
-htmlAttrsTypeAnn =
-    CG.listAnn <| CG.fqTyped [ "Html" ] "Attribute" [ CG.typeVar "msg" ]
+htmlAttrsTypeAnn : { ctx | names : Names } -> CG.TypeAnnotation
+htmlAttrsTypeAnn ctx =
+    CG.listAnn <| CG.fqTyped ctx.names.htmlModuleName "Attribute" [ CG.typeVar "msg" ]
 
 
 applyWithParensIfNecessary : CG.Expression -> CG.Expression -> CG.Expression

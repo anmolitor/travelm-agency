@@ -89,12 +89,16 @@ defaultFileWidth =
 
 
 tryFinishModule : Int -> Ports.FinishRequest -> Model -> Failable Ports.ResponseContent
-tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nArgFirst, prefixFileIdentifier } model =
+tryFinishModule fileWidth { generatorMode, elmModuleName, addContentHash, i18nArgFirst, prefixFileIdentifier, customHtmlModule, customHtmlAttributesModule } model =
     let
         context =
             { moduleName = Util.moduleName elmModuleName
             , version = model.version
-            , names = defaultNames
+            , names =
+                { defaultNames
+                    | htmlModuleName = String.split "." customHtmlModule
+                    , htmlAttributesModuleName = String.split "." customHtmlAttributesModule
+                }
             , intl = model.intl
             , i18nArgLast = not i18nArgFirst
             }

@@ -26,17 +26,31 @@ type alias GenOptions =
     , i18nArgFirst : Bool
     , addContentHash : Bool
     , expectError : Bool
+    , customHtmlModule : String
+    , customHtmlAttributesModule : String
     }
 
 
 inlineOpts : GenOptions
 inlineOpts =
-    { mode = Inline, i18nArgFirst = False, addContentHash = False, expectError = False }
+    { mode = Inline
+    , i18nArgFirst = False
+    , addContentHash = False
+    , expectError = False
+    , customHtmlModule = "Html"
+    , customHtmlAttributesModule = "Html.Attributes"
+    }
 
 
 dynamicOpts : GenOptions
 dynamicOpts =
-    { mode = Dynamic, i18nArgFirst = False, addContentHash = False, expectError = False }
+    { mode = Dynamic
+    , i18nArgFirst = False
+    , addContentHash = False
+    , expectError = False
+    , customHtmlModule = "Html"
+    , customHtmlAttributesModule = "Html.Attributes"
+    }
 
 
 buildMain : List GenOptions -> State () -> Generator
@@ -67,7 +81,7 @@ generate name state opts =
             Ok st ->
                 Debug.todo <| "State validation succeeded but should have failed: " ++ Debug.toString st
 
-            Err err ->
+            Err _ ->
                 Cmd.none
 
     else
@@ -88,6 +102,11 @@ generate name state opts =
                         { defaultContext
                             | moduleName = [ "Dynamic", moduleName ]
                             , i18nArgLast = not opts.i18nArgFirst
+                            , names =
+                                { defaultNames
+                                    | htmlModuleName = String.split "." opts.customHtmlModule
+                                    , htmlAttributesModuleName = String.split "." opts.customHtmlAttributesModule
+                                }
                         }
                         stateWithResources
                         |> writeFile ("gen_test_cases/Dynamic/" ++ moduleName ++ ".elm")
@@ -102,6 +121,11 @@ generate name state opts =
                         { defaultContext
                             | moduleName = [ "Inline", moduleName ]
                             , i18nArgLast = not opts.i18nArgFirst
+                            , names =
+                                { defaultNames
+                                    | htmlModuleName = String.split "." opts.customHtmlModule
+                                    , htmlAttributesModuleName = String.split "." opts.customHtmlAttributesModule
+                                }
                         }
                     |> writeFile ("gen_test_cases/Inline/" ++ moduleName ++ ".elm")
 

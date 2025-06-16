@@ -33,7 +33,9 @@ suite =
   "generatorMode": "inline",
   "addContentHash": true,
   "i18nArgFirst": true,
-  "prefixFileIdentifier": true
+  "prefixFileIdentifier": true,
+  "customHtmlModule": "Html.Styled",
+  "customHtmlAttributesModule": "Html.Styled.Attributes"
 }"""
                     |> Expect.equal
                         (Ok <|
@@ -43,6 +45,8 @@ suite =
                                 , addContentHash = True
                                 , i18nArgFirst = True
                                 , prefixFileIdentifier = True
+                                , customHtmlModule = "Html.Styled"
+                                , customHtmlAttributesModule = "Html.Styled.Attributes"
                                 }
                         )
         ]

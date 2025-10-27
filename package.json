@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "24.0.3",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "elm": "^0.19.1-5",
     "elm-test-rs": "^3.0.0-5",
     "node-elm-compiler": "^5.0.6",

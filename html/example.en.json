@@ -1,0 +1,8 @@
+{
+  "partlyBoldText": "Needs some <b>highlighting</b>",
+  "listWithDifferentStyles": "<ul class=\"list\"><li _id=\"red\">Red</li><li _id=\"blue\">Blue</li><li _id=\"yellow\">Yellow</li></ul>",
+  "fakeHtml": "\\<span>inside of span\\</span>",
+  "customElementExample": "<my-custom-element>This content is inside a custom element</my-custom-element>",
+  "customElementWithAttrs": "<my-custom-element data-value=\"123\" class=\"special\">Custom element with attributes</my-custom-element>",
+  "customElementNested": "<my-custom-element><span>Nested content with {variable}</span></my-custom-element>"
+}

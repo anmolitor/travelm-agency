@@ -46,7 +46,16 @@ type alias WithHelperFunctions ctx =
         , replaceHtmlPlaceholdersName : String
         , lookupLanguageToFileName : String -> String
         , lookupAccessor : String -> String
+        , loadedTranslationsTypeName : String
+        , applyTranslationsName : String
+        , switchLanguageDataName : String
+        , lookupLoadedConstructor : Identifier -> String
     }
+
+
+loadedConstructorSuggestion : Identifier -> String
+loadedConstructorSuggestion identifier =
+    "Loaded" ++ String.Extra.classify identifier
 
 
 toFileUnique : Unique.UniqueNameContext (WithCtx ctx) -> CG.File
@@ -117,12 +126,56 @@ toFileUnique =
                 , intParserName = intParserName
                 }
             )
+        >> Unique.andThen3 "LoadedTranslations"
+            "applyTranslations"
+            "switchLanguageData"
+            (\_ ctx loadedTranslationsTypeName applyTranslationsName switchLanguageDataName ->
+                { names = ctx.names
+                , intl = ctx.intl
+                , state = ctx.state
+                , file = ctx.file
+                , i18nArgLast = ctx.i18nArgLast
+                , lookupAccessor = ctx.lookupAccessor
+                , lookupLanguageToFileName = ctx.lookupLanguageToFileName
+                , replacePlaceholdersName = ctx.replacePlaceholdersName
+                , replaceHtmlPlaceholdersName = ctx.replaceHtmlPlaceholdersName
+                , parserName = ctx.parserName
+                , htmlParserName = ctx.htmlParserName
+                , dictParserName = ctx.dictParserName
+                , intParserName = ctx.intParserName
+                , loadedTranslationsTypeName = loadedTranslationsTypeName
+                , applyTranslationsName = applyTranslationsName
+                , switchLanguageDataName = switchLanguageDataName
+                }
+            )
+        >> Unique.combineAndThen (getIdentifierSet >> Set.map loadedConstructorSuggestion)
+            (\_ ctx lookup ->
+                { names = ctx.names
+                , intl = ctx.intl
+                , state = ctx.state
+                , file = ctx.file
+                , i18nArgLast = ctx.i18nArgLast
+                , lookupAccessor = ctx.lookupAccessor
+                , lookupLanguageToFileName = ctx.lookupLanguageToFileName
+                , replacePlaceholdersName = ctx.replacePlaceholdersName
+                , replaceHtmlPlaceholdersName = ctx.replaceHtmlPlaceholdersName
+                , parserName = ctx.parserName
+                , htmlParserName = ctx.htmlParserName
+                , dictParserName = ctx.dictParserName
+                , intParserName = ctx.intParserName
+                , loadedTranslationsTypeName = ctx.loadedTranslationsTypeName
+                , applyTranslationsName = ctx.applyTranslationsName
+                , switchLanguageDataName = ctx.switchLanguageDataName
+                , lookupLoadedConstructor = loadedConstructorSuggestion >> lookup
+                }
+            )
         >> addI18nTypeDeclaration
         >> addInitDeclaration
         >> addCurrentLanguageDeclaration
         >> addArrivedLanguageDeclaration
         >> Shared.addLanguageRelatedDeclsUnique
         >> addLoadDeclarations
+        >> addLoadedTranslationsDeclarations
         >> addSwitchLanguageDeclaration
         >> addAccessorDeclarations
         >> addDecodeDeclarations
@@ -491,7 +544,9 @@ This function will equal `currentLanguage` if all pending translations have sett
             { ctx | file = ctx.file |> Shared.addDeclaration arrivedLanguageDecl |> Shared.addExposing (CG.funExpose arrivedLanguageName) }
 
 
-addSwitchLanguageDeclaration : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
+addSwitchLanguageDeclaration :
+    Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
+    -> Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
 addSwitchLanguageDeclaration =
     Unique.andThen "switchLanguage" <|
         \lookup ctx switchLanguageName ->
@@ -503,23 +558,25 @@ addSwitchLanguageDeclaration =
                     CG.emptyDocComment
                         |> CG.markdown "Switch the current language and reload all previously loaded translation bundles in the new language."
 
-                switchLanguageAnn =
+                switchLanguageDataDeclComment =
+                    CG.emptyDocComment
+                        |> CG.markdown (dataVariantDocs ctx switchLanguageName)
+
+                switchLanguageAnnWith resultType =
                     CG.funAnn (CG.typed ctx.names.languageTypeName []) <|
                         CG.funAnn
                             (CG.funAnn
-                                (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
-                                    (Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
-                                )
+                                (BasicM.result (CG.fqTyped [ "Http" ] "Error" []) resultType)
                                 (CG.typeVar "msg")
                             )
                         <|
                             CG.funAnn (CG.typed ctx.names.i18nTypeName []) <|
                                 CG.tupleAnn [ CG.typed ctx.names.i18nTypeName [], CG.typed "Cmd" [ CG.typeVar "msg" ] ]
 
-                switchLanguageDecl =
-                    CG.funDecl (Just switchLanguageDeclComment)
-                        (Just switchLanguageAnn)
-                        switchLanguageName
+                switchLanguageDataDecl =
+                    CG.funDecl (Just switchLanguageDataDeclComment)
+                        (Just <| switchLanguageAnnWith <| CG.typed ctx.loadedTranslationsTypeName [])
+                        ctx.switchLanguageDataName
                         [ CG.varPattern <| lookup "lang", CG.varPattern <| lookup "onLoad", CG.namedPattern ctx.names.i18nTypeName [ CG.varPattern <| lookup "opts", CG.varPattern <| lookup "bundles" ] ]
                         (CG.letExpr
                             [ CG.letVal (lookup "i18nNewLang") <|
@@ -530,7 +587,7 @@ addSwitchLanguageDeclaration =
                                     ]
                             ]
                          <|
-                            CG.pipe (CG.list <| List.map (\identifier -> CG.tuple [ CG.access (CG.val <| lookup "bundles") identifier, CG.val <| ctx.names.loadName identifier ]) identifiers)
+                            CG.pipe (CG.list <| List.map (\identifier -> CG.tuple [ CG.access (CG.val <| lookup "bundles") identifier, CG.val <| ctx.names.loadDataName identifier ]) identifiers)
                                 [ CG.apply [ CG.fqFun [ "List" ] "filter", CG.parens <| CG.binOpChain (CG.fun "not") CG.composel [ CG.fqFun [ "Array" ] "isEmpty", CG.fqFun [ "Tuple" ] "first", CG.fqFun [ "Tuple" ] "first" ] ]
                                 , CG.apply [ CG.fqFun [ "List" ] "map", CG.fqFun [ "Tuple" ] "second" ]
                                 , CG.apply [ CG.fqFun [ "List" ] "map", CG.parens <| CG.lambda [ CG.varPattern <| lookup "load" ] <| CG.apply [ CG.val <| lookup "load", CG.val <| lookup "onLoad", CG.val <| lookup "i18nNewLang" ] ]
@@ -538,15 +595,128 @@ addSwitchLanguageDeclaration =
                                 , CG.apply [ CG.fqFun [ "Tuple" ] "pair", CG.val <| lookup "i18nNewLang" ]
                                 ]
                         )
+
+                switchLanguageDecl =
+                    CG.funDecl (Just switchLanguageDeclComment)
+                        (Just <| switchLanguageAnnWith <| Shared.endoAnn <| CG.typed ctx.names.i18nTypeName [])
+                        switchLanguageName
+                        [ CG.varPattern <| lookup "lang", CG.varPattern <| lookup "onLoad" ]
+                        (CG.apply
+                            [ CG.fun ctx.switchLanguageDataName
+                            , CG.val <| lookup "lang"
+                            , applyTranslationsToResult ctx (lookup "onLoad")
+                            ]
+                        )
             in
-            { ctx | file = ctx.file |> Shared.addDeclaration switchLanguageDecl |> Shared.addExposing (CG.funExpose switchLanguageName) }
+            { ctx
+                | file =
+                    ctx.file
+                        |> Shared.addDeclarations [ switchLanguageDecl, switchLanguageDataDecl ]
+                        |> Shared.addExposings [ CG.funExpose switchLanguageName, CG.funExpose ctx.switchLanguageDataName ]
+            }
 
 
-addDecodeDeclarations : Unique.UniqueNameContext (WithCtx ctx) -> Unique.UniqueNameContext (WithCtx ctx)
+dataVariantDocs : WithHelperFunctions (WithCtx ctx) -> String -> String
+dataVariantDocs ctx functionBasedName =
+    String.join "\n"
+        [ "Like `" ++ functionBasedName ++ "`, but the callback receives the loaded translations as data instead of a function."
+        , "Apply them to your `" ++ ctx.names.i18nTypeName ++ "` in your `update` function using `" ++ ctx.applyTranslationsName ++ "`."
+        , "Since your `msg` does not contain functions this way, it can be exported and imported by the Elm debugger."
+        ]
+
+
+{-| Turns a callback expecting `Result Http.Error (I18n -> I18n)` into one expecting `Result Http.Error LoadedTranslations`
+
+    onLoad << Result.map applyTranslations
+
+-}
+applyTranslationsToResult : WithHelperFunctions ctx -> String -> CG.Expression
+applyTranslationsToResult ctx onLoadName =
+    CG.parens <|
+        CG.applyBinOp (CG.val onLoadName)
+            CG.composel
+            (CG.apply [ CG.fqFun [ "Result" ] "map", CG.val ctx.applyTranslationsName ])
+
+
+addLoadedTranslationsDeclarations :
+    Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
+    -> Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
+addLoadedTranslationsDeclarations =
+    Unique.scoped <|
+        Unique.andThen5 "loaded" "opts" "bundles" "lang" "arr" <|
+            \_ ctx loadedName optsName bundlesName langName arrName ->
+                let
+                    identifiers =
+                        Dict.NonEmpty.keys ctx.state
+
+                    loadedTranslationsTypeDecl =
+                        CG.customTypeDecl
+                            (Just
+                                (CG.emptyDocComment
+                                    |> CG.markdown
+                                        (String.join "\n"
+                                            [ "Translations for a single bundle in a single language, as loaded from the server."
+                                            , "Only contains data (no functions), so it is safe to put into your `msg` when you want to export and import"
+                                            , "your application history using the Elm debugger. Use `" ++ ctx.applyTranslationsName ++ "` to add them to your `" ++ ctx.names.i18nTypeName ++ "`."
+                                            ]
+                                        )
+                                )
+                            )
+                            ctx.loadedTranslationsTypeName
+                            []
+                            (List.map
+                                (\identifier ->
+                                    ( ctx.lookupLoadedConstructor identifier
+                                    , [ CG.typed ctx.names.languageTypeName [], CG.fqTyped [ "Array" ] "Array" [ CG.stringAnn ] ]
+                                    )
+                                )
+                                identifiers
+                            )
+
+                    applyTranslationsDecl =
+                        CG.funDecl
+                            (Just
+                                (CG.emptyDocComment
+                                    |> CG.markdown ("Add `" ++ ctx.loadedTranslationsTypeName ++ "` to an `" ++ ctx.names.i18nTypeName ++ "` instance. Call this in your `update` function.")
+                                )
+                            )
+                            (Just <|
+                                CG.funAnn (CG.typed ctx.loadedTranslationsTypeName []) <|
+                                    Shared.endoAnn (CG.typed ctx.names.i18nTypeName [])
+                            )
+                            ctx.applyTranslationsName
+                            [ CG.varPattern loadedName
+                            , CG.namedPattern ctx.names.i18nTypeName [ CG.varPattern optsName, CG.varPattern bundlesName ]
+                            ]
+                            (CG.caseExpr (CG.val loadedName) <|
+                                List.map
+                                    (\identifier ->
+                                        ( CG.namedPattern (ctx.lookupLoadedConstructor identifier) [ CG.varPattern langName, CG.varPattern arrName ]
+                                        , CG.apply
+                                            [ CG.fun ctx.names.i18nTypeName
+                                            , CG.val optsName
+                                            , CG.update bundlesName [ ( identifier, CG.tuple [ CG.val arrName, CG.val langName ] ) ]
+                                            ]
+                                        )
+                                    )
+                                    identifiers
+                            )
+                in
+                { ctx
+                    | file =
+                        ctx.file
+                            |> Shared.addDeclarations [ loadedTranslationsTypeDecl, applyTranslationsDecl ]
+                            |> Shared.addExposings [ CG.closedTypeExpose ctx.loadedTranslationsTypeName, CG.funExpose ctx.applyTranslationsName ]
+                }
+
+
+addDecodeDeclarations :
+    Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
+    -> Unique.UniqueNameContext (WithHelperFunctions (WithCtx ctx))
 addDecodeDeclarations =
     Unique.scoped <|
-        Unique.andThen4 "arr" "bundles" "opts" "lang" <|
-            \_ ctx arrName bundlesName optsName langName ->
+        Unique.andThen "lang" <|
+            \_ ctx langName ->
                 let
                     decoderDecl : Identifier -> CG.Declaration
                     decoderDecl identifier =
@@ -556,28 +726,40 @@ You need to pass the language of the loaded translations (for bookkeeping)."""))
                             (ctx.names.decoderName identifier)
                             [ CG.varPattern langName ]
                             (CG.applyBinOp
+                                (CG.apply [ CG.fun (ctx.names.decoderDataName identifier), CG.val langName ])
+                                CG.piper
+                                (CG.apply [ DecodeM.map, CG.val ctx.applyTranslationsName ])
+                            )
+
+                    decoderDataDecl : Identifier -> CG.Declaration
+                    decoderDataDecl identifier =
+                        CG.funDecl
+                            (Just
+                                (CG.emptyDocComment
+                                    |> CG.markdown
+                                        (String.join "\n"
+                                            [ "Decode `" ++ ctx.loadedTranslationsTypeName ++ "` from Json. Make sure this is *only* used on the files generated by this package."
+                                            , "You need to pass the language of the loaded translations (for bookkeeping)."
+                                            , "Use `" ++ ctx.applyTranslationsName ++ "` to add the result to your `" ++ ctx.names.i18nTypeName ++ "`."
+                                            ]
+                                        )
+                                )
+                            )
+                            (Just <| CG.funAnn (CG.typed ctx.names.languageTypeName []) <| DecodeM.decoder <| CG.typed ctx.loadedTranslationsTypeName [])
+                            (ctx.names.decoderDataName identifier)
+                            [ CG.varPattern langName ]
+                            (CG.applyBinOp
                                 (CG.apply [ DecodeM.array, DecodeM.string ])
                                 CG.piper
                                 (CG.apply
                                     [ DecodeM.map
-                                    , CG.lambda
-                                        [ CG.varPattern arrName
-                                        , CG.namedPattern ctx.names.i18nTypeName
-                                            [ CG.varPattern optsName, CG.varPattern bundlesName ]
-                                        ]
-                                        (CG.apply <|
-                                            [ CG.fun ctx.names.i18nTypeName
-                                            , CG.val optsName
-                                            , CG.update bundlesName
-                                                [ ( identifier, CG.tuple [ CG.val arrName, CG.val langName ] ) ]
-                                            ]
-                                        )
+                                    , CG.parens <| CG.apply [ CG.fun (ctx.lookupLoadedConstructor identifier), CG.val langName ]
                                     ]
                                 )
                             )
 
                     decoderDecls =
-                        ctx.state |> Dict.NonEmpty.keys |> List.map decoderDecl
+                        ctx.state |> Dict.NonEmpty.keys |> List.concatMap (\identifier -> [ decoderDecl identifier, decoderDataDecl identifier ])
                 in
                 { ctx
                     | file =
@@ -617,6 +799,32 @@ will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ 
                                     (CG.funAnn (CG.typed ctx.names.i18nTypeName []) (CG.typed "Cmd" [ CG.typeVar "msg" ]))
                             )
                             (ctx.names.loadName identifier)
+                            [ CG.varPattern onLoadName ]
+                            (CG.apply
+                                [ CG.fun (ctx.names.loadDataName identifier)
+                                , applyTranslationsToResult ctx onLoadName
+                                ]
+                            )
+
+                    loadDataDecl : Identifier -> CG.Declaration
+                    loadDataDecl identifier =
+                        CG.funDecl
+                            (Just
+                                (CG.emptyDocComment
+                                    |> CG.markdown (dataVariantDocs ctx <| ctx.names.loadName identifier)
+                                )
+                            )
+                            (Just <|
+                                CG.funAnn
+                                    (CG.funAnn
+                                        (BasicM.result (CG.fqTyped [ "Http" ] "Error" [])
+                                            (CG.typed ctx.loadedTranslationsTypeName [])
+                                        )
+                                        (CG.typeVar "msg")
+                                    )
+                                    (CG.funAnn (CG.typed ctx.names.i18nTypeName []) (CG.typed "Cmd" [ CG.typeVar "msg" ]))
+                            )
+                            (ctx.names.loadDataName identifier)
                             [ CG.varPattern onLoadName
                             , CG.namedPattern ctx.names.i18nTypeName
                                 [ CG.varPattern optsName
@@ -630,7 +838,7 @@ will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ 
                                       , CG.apply
                                             [ CG.fqFun [ "Http" ] "expectJson"
                                             , CG.val onLoadName
-                                            , CG.parens <| CG.apply [ CG.fun (ctx.names.decoderName identifier), CG.access (CG.val optsName) "lang" ]
+                                            , CG.parens <| CG.apply [ CG.fun (ctx.names.decoderDataName identifier), CG.access (CG.val optsName) "lang" ]
                                             ]
                                       )
                                     , ( "url"
@@ -644,7 +852,10 @@ will make a `GET` request to /i18n/""" ++ someTranslation.resources.filename ++ 
                             )
 
                     loadDecls =
-                        ctx.state |> Dict.NonEmpty.map loadDecl |> Dict.NonEmpty.values
+                        ctx.state
+                            |> Dict.NonEmpty.map (\identifier translations -> [ loadDecl identifier translations, loadDataDecl identifier ])
+                            |> Dict.NonEmpty.values
+                            |> List.concat
                 in
                 { ctx
                     | file =

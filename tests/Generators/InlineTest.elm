@@ -365,6 +365,11 @@ namespacing =
                 Inline.NamespacingTranslations.init Inline.NamespacingTranslations.En
                     |> Inline.NamespacingTranslations.init_
                     |> Expect.equal "reserved name"
+        , test "escapes reserved loader names" <|
+            \_ ->
+                Inline.NamespacingTranslations.init Inline.NamespacingTranslations.En
+                    |> Inline.NamespacingTranslations.loadMessagesData_
+                    |> Expect.equal "reserved data loader name"
         ]
 
 

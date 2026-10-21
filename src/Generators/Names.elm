@@ -13,9 +13,11 @@ type alias Names =
     , i18nTypeName : String
     , initFunName : String
     , loadName : String -> String
+    , loadDataName : String -> String
     , languageFromStringFunName : String
     , languageToStringFunName : String
     , decoderName : String -> String
+    , decoderDataName : String -> String
     , htmlModuleName : ModuleName
     , htmlAttributesModuleName : ModuleName
     }
@@ -28,9 +30,11 @@ defaultNames =
     , i18nTypeName = "I18n"
     , initFunName = "init"
     , loadName = \identifier -> "load" ++ String.Extra.classify identifier
+    , loadDataName = \identifier -> "load" ++ String.Extra.classify identifier ++ "Data"
     , languageFromStringFunName = "languageFromString"
     , languageToStringFunName = "languageToString"
     , decoderName = \identifier -> "decode" ++ String.Extra.classify identifier
+    , decoderDataName = \identifier -> "decode" ++ String.Extra.classify identifier ++ "Data"
     , htmlModuleName = [ "Html" ]
     , htmlAttributesModuleName = [ "Html", "Attributes" ]
     }
@@ -41,7 +45,9 @@ withUniqueNames identifiers names doWithNames =
     let
         newNameList =
             List.map ((<|) names.loadName) identifiers
+                ++ List.map ((<|) names.loadDataName) identifiers
                 ++ List.map ((<|) names.decoderName) identifiers
+                ++ List.map ((<|) names.decoderDataName) identifiers
                 ++ [ names.languageTypeName
                    , names.languagesName
                    , names.i18nTypeName
@@ -60,7 +66,9 @@ withUniqueNames identifiers names doWithNames =
                 , languageFromStringFunName = lookup names.languageFromStringFunName
                 , languageToStringFunName = lookup names.languageToStringFunName
                 , loadName = names.loadName >> lookup
+                , loadDataName = names.loadDataName >> lookup
                 , decoderName = names.decoderName >> lookup
+                , decoderDataName = names.decoderDataName >> lookup
                 , htmlModuleName = names.htmlModuleName
                 , htmlAttributesModuleName = names.htmlAttributesModuleName
                 }

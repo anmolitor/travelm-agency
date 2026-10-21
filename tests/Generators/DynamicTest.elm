@@ -538,6 +538,18 @@ namespacing =
                     |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = "" }))
                     |> Result.map NamespacingTranslations.init_
                     |> Expect.equal (Ok "reserved name")
+        , test "escapes data loader names" <|
+            \_ ->
+                sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessages NamespacingTranslations.En)
+                    |> Result.map ((|>) (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = "" }))
+                    |> Result.map NamespacingTranslations.loadMessagesData_
+                    |> Expect.equal (Ok "reserved data loader name")
+        , test "escapes generated helpers if a translation key uses their name" <|
+            \_ ->
+                sendRequest NamespacingServer.server "messages.en.json" (NamespacingTranslations.decodeMessagesData NamespacingTranslations.En)
+                    |> Result.map (\loaded -> NamespacingTranslations.applyTranslations_ loaded (NamespacingTranslations.init { lang = NamespacingTranslations.En, path = "" }))
+                    |> Result.map NamespacingTranslations.applyTranslations
+                    |> Expect.equal (Ok "generated helper name")
         ]
 
 
@@ -710,6 +722,109 @@ getArrivedLanguage =
                     |> Result.andThen (\i18n -> Result.map ((|>) i18n) req_1_en)
                     |> Result.map MultiBundleLanguageTranslations.arrivedLanguage
                     |> Expect.equal (Ok MultiBundleLanguageTranslations.En)
+        ]
+
+
+dataOnlyLoading : Test
+dataOnlyLoading =
+    describe "data-only loading | dynamic"
+        [ test "applying decoded data gives access to the translations" <|
+            \_ ->
+                sendRequest SingleTextServer.server
+                    "messages.en.json"
+                    (SingleTextTranslations.decodeMessagesData SingleTextTranslations.En)
+                    |> Result.map (\loaded -> SingleTextTranslations.applyTranslations loaded (SingleTextTranslations.init { lang = SingleTextTranslations.En, path = "" }))
+                    |> Result.map SingleTextTranslations.singleText
+                    |> Expect.equal (Ok "the text")
+        , test "loaded translations contain no functions and can be compared for equality" <|
+            \_ ->
+                let
+                    load () =
+                        sendRequest MultiLanguageTextServer.server
+                            "messages.de.json"
+                            (MultiLanguageTextTranslations.decodeMessagesData MultiLanguageTextTranslations.De)
+                in
+                -- Comparing values that contain functions crashes at runtime
+                load ()
+                    |> Expect.equal (load ())
+        , test "loaded translations remember their language" <|
+            \_ ->
+                Result.map2 (/=)
+                    (sendRequest MultiLanguageTextServer.server
+                        "messages.de.json"
+                        (MultiLanguageTextTranslations.decodeMessagesData MultiLanguageTextTranslations.De)
+                    )
+                    (sendRequest MultiLanguageTextServer.server
+                        "messages.de.json"
+                        (MultiLanguageTextTranslations.decodeMessagesData MultiLanguageTextTranslations.En)
+                    )
+                    |> Expect.equal (Ok True)
+        , test "translations of multiple bundles can be applied in any order" <|
+            \_ ->
+                let
+                    init =
+                        MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }
+
+                    loaded1 =
+                        sendRequest MultiBundleServer.server "bundle_1.en.json" (MultiBundleTranslations.decodeBundle1Data MultiBundleTranslations.En)
+
+                    loaded2 =
+                        sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2Data MultiBundleTranslations.En)
+
+                    expectBothTexts =
+                        expectOkWith
+                            (Expect.all
+                                [ MultiBundleTranslations.text1 >> Expect.equal "text from bundle 1"
+                                , MultiBundleTranslations.text2 >> Expect.equal "text from bundle 2"
+                                ]
+                            )
+                in
+                Expect.all
+                    [ \_ ->
+                        Result.map2 (\l1 l2 -> init |> MultiBundleTranslations.applyTranslations l1 |> MultiBundleTranslations.applyTranslations l2) loaded1 loaded2
+                            |> expectBothTexts
+                    , \_ ->
+                        Result.map2 (\l1 l2 -> init |> MultiBundleTranslations.applyTranslations l2 |> MultiBundleTranslations.applyTranslations l1) loaded1 loaded2
+                            |> expectBothTexts
+                    ]
+                    ()
+        , test "applying one bundle does not affect another bundle" <|
+            \_ ->
+                sendRequest MultiBundleServer.server "bundle_2.en.json" (MultiBundleTranslations.decodeBundle2Data MultiBundleTranslations.En)
+                    |> Result.map (\loaded -> MultiBundleTranslations.applyTranslations loaded (MultiBundleTranslations.init { lang = MultiBundleTranslations.En, path = "" }))
+                    |> Result.map MultiBundleTranslations.text1
+                    |> Expect.equal (Ok "")
+        , test "switchLanguageData switches the current language" <|
+            \_ ->
+                MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+                    |> MultiBundleLanguageTranslations.switchLanguageData MultiBundleLanguageTranslations.En (always ())
+                    |> Tuple.first
+                    |> MultiBundleLanguageTranslations.currentLanguage
+                    |> Expect.equal MultiBundleLanguageTranslations.En
+        , test "switchLanguageData switches arrived language once translations in the new language are applied" <|
+            \_ ->
+                let
+                    init =
+                        MultiBundleLanguageTranslations.init { lang = MultiBundleLanguageTranslations.De, path = "" }
+
+                    applyFrom path language =
+                        sendRequest MultiBundleLanguageServer.server path (MultiBundleLanguageTranslations.decodeBundle1Data language)
+                            |> Result.map MultiBundleLanguageTranslations.applyTranslations
+                in
+                Result.map2
+                    (\applyDe applyEn ->
+                        applyDe init
+                            |> MultiBundleLanguageTranslations.switchLanguageData MultiBundleLanguageTranslations.En (always ())
+                            |> Tuple.first
+                            |> (\i18n ->
+                                    ( MultiBundleLanguageTranslations.arrivedLanguage i18n
+                                    , MultiBundleLanguageTranslations.arrivedLanguage (applyEn i18n)
+                                    )
+                               )
+                    )
+                    (applyFrom "bundle_1.de.json" MultiBundleLanguageTranslations.De)
+                    (applyFrom "bundle_1.en.json" MultiBundleLanguageTranslations.En)
+                    |> Expect.equal (Ok ( MultiBundleLanguageTranslations.De, MultiBundleLanguageTranslations.En ))
         ]
 
 

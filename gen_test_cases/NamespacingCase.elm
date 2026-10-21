@@ -20,6 +20,8 @@ state =
                 Dict.fromList
                     [ ( "let", ( Text "elm keyword", [] ) )
                     , ( "init", ( Text "reserved name", [] ) )
+                    , ( "loadMessagesData", ( Text "reserved data loader name", [] ) )
+                    , ( "applyTranslations", ( Text "generated helper name", [] ) )
                     ]
             , fallback = Nothing
             , resources = ()
